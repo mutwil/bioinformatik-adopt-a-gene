@@ -20,7 +20,7 @@ live:
 
 # Welcome
 
-This page **runs R live in your browser** (via webR) — nothing to install. First you'll learn the core RNA-seq skills — **normalization, QC, exploration** — then you *adopt* a secondary-cell-wall gene and carry it through **co-expression → network → enrichment → interpretation**, building a *gene dossier*.
+This page **runs R live in your browser** (via webR) — nothing to install. First you'll learn the core RNA-seq skills — **normalization and exploration (PCA & clustering)** — then you *adopt* a secondary-cell-wall gene and carry it through **co-expression → network → enrichment → interpretation**, building a *gene dossier*.
 
 **How it works**
 
@@ -29,7 +29,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. Fir
 - When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
 
-> The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). The QC and differential-expression tables are small **illustrative examples** (the real ones come from the server pipeline — see the teacher guide).
+> The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). The differential-expression table is a small **illustrative example** (the real one comes from the server pipeline — see the teacher guide).
 
 ---
 
@@ -45,7 +45,6 @@ m         <- read.csv("data/expression_matrix.csv", check.names = FALSE)  # gene
 info      <- read.csv("data/gene_info.csv")        # gene_id, symbol, description
 ppi       <- read.csv("data/ppi_edges.csv")        # protein–protein interactions (BioGRID)
 gene_sets <- read.csv("data/gene_sets.csv")        # GO term → gene memberships
-qc        <- read.csv("data/qc_table.csv")         # example kallisto QC
 de        <- read.csv("data/de_results.csv")       # example DESeq2 result
 
 organ_cols <- setdiff(names(m), "gene_id")          # every column except gene_id = the samples
@@ -244,108 +243,64 @@ say(exists("z") && abs(mean(z)) < 1e-6,
 
 ---
 
-## Stage 2 — QC: which sample do we drop?
+## Stage 2 — Explore the structure: PCA & clustering
 
-Pre-computed kallisto QC (example). A bad library poisons everything downstream.
-
-```{webr}
-#| autorun: true
-qc          # typing an object's name just prints it (here, the QC table)
-```
-
-**Instructions:** find the failing sample (lowest % pseudoaligned).
-
-```{webr}
-# which.min(v): the POSITION of the smallest value in v.  qc$col -> the column named col.
-# So this picks the sample row with the lowest pseudoalignment %.
-worst <- qc$sample[which.min(qc$pct_pseudoaligned)]
-cat("Lowest pseudoalignment:", worst, "\n")
-# min(): the smallest value.  paste(): glue text together.
-say(min(qc$pct_pseudoaligned) < 50,
-    paste("drop", worst, "before building the matrix — a bad library distorts PCA & co-expression"),
-    "look again at pct_pseudoaligned")
-```
-
----
-
-## Stage 3 — Exploratory data analysis: PCA & clustering  *(synthetic demo)*
-
-Before analysing real data you **explore its structure**: do samples group the way biology predicts? Any outliers or **batch effects**? We use a small **synthetic** dataset — 3 tissues × 4 replicates, with a deliberate batch effect — so the patterns are crystal clear. Just run the cells and read the plots.
-
-```{webr}
-#| autorun: true
-set.seed(1)                                       # fix the random seed so results are reproducible
-n_genes <- 300
-tissue  <- rep(c("leaf","root","seed"), each = 4) # rep(): repeat -> 12 samples, 3 tissues × 4 reps
-batch   <- rep(c("A","B"), times = 6)             # two sequencing batches, interleaved
-
-# rnorm(n, mean, sd): n random numbers from a normal distribution.
-# matrix(...): a distinct "true" expression profile per tissue (rows = genes, cols = tissues)
-profile <- matrix(rnorm(n_genes * 3, mean = 6, sd = 2), nrow = n_genes,
-                  dimnames = list(NULL, c("leaf","root","seed")))
-
-# sapply(seq, f): apply f to each sample index and bind the results into a matrix (genes × samples).
-# each sample = its tissue's profile + measurement noise (+ a small shift for batch B)
-X <- sapply(seq_along(tissue), function(i)
-       profile[, tissue[i]] + rnorm(n_genes, 0, 0.7) + ifelse(batch[i] == "B", 0.6, 0))
-colnames(X) <- paste0(tissue, "_", batch, seq_along(tissue))   # paste0(): glue text with no separator
-cat("Synthetic data:", nrow(X), "genes ×", ncol(X), "samples\n")
-```
+Now that the matrix is normalized, the aim is to step back and ask whether the **samples** group the way biology predicts — and to catch any outliers or batch effects before doing gene-level work. We run **PCA** and **hierarchical clustering** on **`z`**, the per-gene z-scored matrix you built in Stage 1, so this is the very same toy dataset seen from a whole-sample point of view. *(Run Stage 1 first so `z` exists.)*
 
 ### PCA — do samples separate by tissue?
 
-PCA squeezes the 300 genes into a few **principal components** that capture the most variation between samples.
+PCA squeezes the 12 genes into a few **principal components** that capture the most variation between samples; if normalization did its job, the samples should separate by **tissue**, not by the technical artefacts from Stage 1. We label each of the 7 samples by tissue and plot the first two components.
 
 ```{webr}
-#| autorun: true
-# prcomp(x, scale. = TRUE): principal component analysis (scaled). t() transposes so SAMPLES are rows.
-pca <- prcomp(t(X), scale. = TRUE)
-# pca$x = sample coordinates; [,1] and [,2] are PC1 and PC2.
-# factor(tissue): turn labels into colour groups; pch = 19: filled dots; cex: point size
-plot(pca$x[,1], pca$x[,2], col = factor(tissue), pch = 19, cex = 1.4,
-     xlab = "PC1", ylab = "PC2", main = "PCA — coloured by tissue")
-text(pca$x[,1], pca$x[,2], colnames(X), pos = 3, cex = 0.6)        # text(): label each point
+# label each of the 7 samples by its tissue
+tissue <- c("Root","Root","Root","Leaf","Leaf","Leaf","Pollen")
+
+# prcomp(t(z)): PCA with SAMPLES as rows (t() transposes). z is already z-scored per gene.
+pca <- prcomp(t(z))
+# pca$x = sample coordinates; [,1]/[,2] are PC1/PC2.  factor(tissue): turn labels into colour groups
+plot(pca$x[,1], pca$x[,2], col = factor(tissue), pch = 19, cex = 1.6,
+     xlab = "PC1", ylab = "PC2", main = "PCA of samples (z-scored data)")
+text(pca$x[,1], pca$x[,2], colnames(z), pos = 3, cex = 0.7)   # text(): label each point
 legend("topright", legend = levels(factor(tissue)), col = 1:3, pch = 19)
 ```
 
 How much variation does each component capture? (a **scree** plot)
 
 ```{webr}
-#| autorun: true
 # pca$sdev = standard deviation of each PC; squared = variance. Divide by the total for a proportion.
 var_explained <- pca$sdev^2 / sum(pca$sdev^2)
-barplot(100 * var_explained[1:6], names.arg = paste0("PC", 1:6),
+barplot(100 * var_explained, names.arg = paste0("PC", seq_along(var_explained)),
         ylab = "% variance explained", main = "Scree plot")
 ```
 
 ### Hierarchical clustering — which samples are most alike?
 
+Clustering repeatedly joins the two most similar samples into a tree (a **dendrogram**); samples from the same tissue should join first. We measure similarity as the distance between samples in z-score space.
+
 ```{webr}
-#| autorun: true
-# dist(): all pairwise distances between samples (rows). hclust(): build a tree by repeatedly
-# joining the two closest groups (ward.D2 = a common linkage rule).
-d  <- dist(t(X))
+# dist(): pairwise distances between samples (the rows of t(z)). hclust(): build the tree (ward.D2 linkage).
+d  <- dist(t(z))
 hc <- hclust(d, method = "ward.D2")
-plot(hc, labels = colnames(X), main = "Hierarchical clustering of samples", xlab = "", sub = "")
+plot(hc, labels = colnames(z), main = "Clustering of samples", xlab = "", sub = "")
 ```
 
-**🔮 Your turn:** tissue should dominate, with the A/B batch effect minor. **Fill the blank** with `batch` to recolour the PCA by sequencing batch — running it confirms PCA ran and judges whether batch matters here.
+**🔮 Your turn:** there are **three** tissues here, so cut the tree into three groups and check they match. **Fill the blank** with `3`, then **Run**.
 
 ```{webr}
-plot(pca$x[,1], pca$x[,2], col = factor(______), pch = 19, cex = 1.4,   # <- replace ______ with batch
-     xlab = "PC1", ylab = "PC2", main = "PCA — coloured by batch")
-legend("topright", legend = levels(factor(batch)), col = 1:2, pch = 19)
+# cutree(hc, k): cut the dendrogram into k groups (k = number of tissues here)
+groups <- cutree(hc, k = ______)        # <- blank: 3   (root, leaf, pollen)
+print(data.frame(sample = colnames(z), tissue = tissue, cluster = groups))
 
-say(exists("pca"),
-    "PCA + clustering done — the three tissues form clear clusters; the batch effect is small here.",
-    "run the synthetic-data and PCA cells above first.")
+say(exists("groups") && length(unique(groups)) == 3,
+    "three clusters that line up with root / leaf / pollen — after normalization the structure is biological, not technical.",
+    "we have three tissues, so cut the tree into 3 groups.")
 ```
 
-> In **real** data, if samples cluster by **batch** instead of biology, you correct for it (e.g. add batch to a DESeq2 design, or ComBat) **before** drawing conclusions.
+> In **real** data you also watch for **batch effects**: if samples cluster by sequencing run or date instead of biology, correct for it (add batch to a DESeq2 design, or ComBat) **before** drawing conclusions. Here the three tissues separate cleanly — exactly what you want to see.
 
 ---
 
-## Stage 4 — Claim your gene
+## Stage 3 — Claim your gene
 
 You've got the skills — now make it personal. Pick **one** gene from the pool (your TA prevents duplicates):
 
@@ -372,7 +327,7 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## Stage 5 — Co-expression of YOUR gene  *(the heart of the dossier)*
+## Stage 4 — Co-expression of YOUR gene  *(the heart of the dossier)*
 
 **Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target`, then **Run** — the check confirms your own gene tops the list (PCC = 1.000).
 
@@ -398,7 +353,7 @@ print(head(result, 12))                            # show the top 12 neighbours
 # instant check: row 1 should be your own gene, correlated 1.000 with itself
 say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
     paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
-    "row 1 should be your own gene with PCC = 1.000 — check Stage 4 and the blank above.")
+    "row 1 should be your own gene with PCC = 1.000 — check Stage 3 and the blank above.")
 ```
 
 <details><summary>💡 Hint</summary>
@@ -409,7 +364,7 @@ say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 
 
 ---
 
-## Stage 6 — "Why 0.7 is a guess": choose a threshold
+## Stage 5 — "Why 0.7 is a guess": choose a threshold
 
 We build the all-vs-all correlation among your 100 neighbours and count edges at several cutoffs. Run it, then decide.
 
@@ -438,7 +393,7 @@ for (cut in c(0.5, 0.7, 0.9)) {
 
 ---
 
-## Stage 7 — Build the network (+ protein interactions)
+## Stage 6 — Build the network (+ protein interactions)
 
 Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill the blank** with your cutoff (e.g. `0.8`) and **Run** — it reports the edges and your top hubs.
 
@@ -470,7 +425,7 @@ say(exists("edges") && nrow(edges) > 0,
 
 ---
 
-## Stage 8 — Functional enrichment (GO over-representation)
+## Stage 7 — Functional enrichment (GO over-representation)
 
 Is your neighbourhood enriched for a biological process? We test each GO term with the hypergeometric test (all base R — no packages).
 
@@ -499,12 +454,12 @@ print(ora)
 # instant check: did enrichment return any terms?
 say(exists("ora") && nrow(ora) > 0,
     paste0("top enriched term: ", ora$name[1], " — does it match your prediction?"),
-    "no terms returned — make sure Stage 5 ran first.")
+    "no terms returned — make sure Stage 4 ran first.")
 ```
 
 ---
 
-## Stage 9 — Differential expression to interpret  *(precomputed example)*
+## Stage 8 — Differential expression to interpret  *(precomputed example)*
 
 A volcano from a pre-computed DESeq2-style result (example data). Red = significant (padj < 0.05).
 
@@ -526,13 +481,13 @@ cat("Up-regulated (padj<0.05 & log2FC>1):", sum(de$padj < 0.05 & de$log2FoldChan
 
 ---
 
-## Stage 10 — Close the dossier  *(assessed)*
+## Stage 9 — Close the dossier  *(assessed)*
 
 Write a one-page interpretation, with evidence from *your* analyses:
 
-1. **Enriched process** in your gene's neighbourhood? *(Stage 8)*
-2. **Top hub** gene — a known regulator (NAC/MYB)? *(Stage 7)*
-3. **Verdict:** does the evidence **confirm or revise** your Stage-4 hypothesis? Name the evidence.
+1. **Enriched process** in your gene's neighbourhood? *(Stage 7)*
+2. **Top hub** gene — a known regulator (NAC/MYB)? *(Stage 6)*
+3. **Verdict:** does the evidence **confirm or revise** your Stage-3 hypothesis? Name the evidence.
 
 > **Graded (4 × 25%):** reproducible work · network-figure quality · correct enrichment interpretation · hypothesis revisited with named evidence.
 
