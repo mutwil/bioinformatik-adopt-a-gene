@@ -164,9 +164,9 @@ print(data.frame(gene = names(gene_len), length_bp = gene_len, row.names = NULL)
 
 > Look at the totals: **`Root1` was sequenced far deeper** and **`Root2`'s total is blown up by that one artifact** — both technical, not biological. And by gene, `Gene10` (4500 bp) collects far more reads than `Gene8` (300 bp) at the *same* expression. TPM fixes **both kinds** — length first, then depth.
 
-### Step 1.3 — Compute TPM
+### Step 1.3 — Compute TPM (and watch each step work)
 
-TPM is two normalizations, in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then Run.
+TPM is two normalizations, in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then **Run** — a heatmap after each step shows the effect (all log-scaled so patterns are visible).
 
 ```{webr}
 # step 1 — divide out gene length. gene_len is in bp, so /1000 converts it to kilobases.
@@ -175,6 +175,11 @@ rpk <- counts / (gene_len / ______)            # <- blank: 1000   (bp -> kb)
 
 # step 2 — divide out depth. sweep(x, 2, v, "/") divides each COLUMN by v; * 1e6 scales to per-million.
 tpm <- sweep(rpk, 2, ______, "/") * 1e6        # <- blank: colSums(rpk)
+
+# a heatmap after each step (log2(x + 1) just compresses the scale so patterns show)
+draw_heatmap(log2(counts + 1), "Raw counts — length & depth still in")
+draw_heatmap(log2(rpk + 1),    "After step 1 (RPK) — gene length removed")
+draw_heatmap(log2(tpm + 1),    "After step 2 (TPM) — depth removed too")
 
 say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
     "that's TPM — every sample sums to 1,000,000 and gene length is divided out. This is exactly the form the atlas is in.",
@@ -185,13 +190,7 @@ say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
 RPK = counts ÷ (length in kb). Then for each sample, divide by that sample's own RPK total (<code>colSums(rpk)</code>) and multiply by 1,000,000.
 </details>
 
-### Step 1.4 — See the result
-
-```{webr}
-draw_heatmap(log2(tpm + 1), "log2(TPM + 1)")   # log only compresses the scale so patterns are visible
-```
-
-> Now the biology shows: **Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.** Values are comparable across genes *and* samples — and this is the form the *Arabidopsis* atlas arrives in, ready to analyse.
+> Compare the three heatmaps: the raw panel is dominated by the artefacts; after **RPK** the long genes stop looking artificially high; after **TPM** the samples are comparable and the biology finally shows — **Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.** This is the form the *Arabidopsis* atlas arrives in, ready to analyse.
 
 > **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples.* Never DE-test TPM.
 
