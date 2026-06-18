@@ -20,7 +20,7 @@ live:
 
 # Welcome
 
-This page **runs R live in your browser** (via webR) — nothing to install. You *adopt* a secondary-cell-wall gene and carry it through the analysis: **co-expression → network → enrichment → interpretation**, building a *gene dossier*.
+This page **runs R live in your browser** (via webR) — nothing to install. First you'll learn the core RNA-seq skills — **normalization, QC, exploration** — then you *adopt* a secondary-cell-wall gene and carry it through **co-expression → network → enrichment → interpretation**, building a *gene dossier*.
 
 **How it works**
 
@@ -79,33 +79,6 @@ draw_heatmap <- function(mat, main = ""){
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
-
----
-
-## Stage 0 — Claim your gene
-
-Pick **one** gene from the pool (your TA prevents duplicates):
-
-`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `NST1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
-
-**Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
-
-```{webr}
-MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
-MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
-cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
-
-# instant check: grepl() tests the AGI text pattern; %in% checks the gene is actually in the data
-say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
-    "valid gene, present in the data — onwards!",
-    "not a valid/known locus — pick one from the pool above and re-run.")
-```
-
-<details><summary>💡 Hint</summary>
-An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes: `"AT5G17420"`.
-</details>
-
-**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.*
 
 ---
 
@@ -237,11 +210,9 @@ say(min(qc$pct_pseudoaligned) < 50,
     "look again at pct_pseudoaligned")
 ```
 
-> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples.* Never DE-test TPM.
-
 ---
 
-## Stage 2b — Exploratory data analysis: PCA & clustering  *(synthetic demo)*
+## Stage 3 — Exploratory data analysis: PCA & clustering  *(synthetic demo)*
 
 Before analysing real data you **explore its structure**: do samples group the way biology predicts? Any outliers or **batch effects**? We use a small **synthetic** dataset — 3 tissues × 4 replicates, with a deliberate batch effect — so the patterns are crystal clear. Just run the cells and read the plots.
 
@@ -318,7 +289,34 @@ say(exists("pca"),
 
 ---
 
-## Stage 3 — Co-expression of YOUR gene  *(the heart of the dossier)*
+## Stage 4 — Claim your gene
+
+You've got the skills — now make it personal. Pick **one** gene from the pool (your TA prevents duplicates):
+
+`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `NST1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
+
+**Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
+
+```{webr}
+MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
+MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
+cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
+
+# instant check: grepl() tests the AGI text pattern; %in% checks the gene is actually in the data
+say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
+    "valid gene, present in the data — onwards!",
+    "not a valid/known locus — pick one from the pool above and re-run.")
+```
+
+<details><summary>💡 Hint</summary>
+An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes: `"AT5G17420"`.
+</details>
+
+**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.*
+
+---
+
+## Stage 5 — Co-expression of YOUR gene  *(the heart of the dossier)*
 
 **Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target`, then **Run** — the check confirms your own gene tops the list (PCC = 1.000).
 
@@ -344,7 +342,7 @@ print(head(result, 12))                            # show the top 12 neighbours
 # instant check: row 1 should be your own gene, correlated 1.000 with itself
 say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
     paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
-    "row 1 should be your own gene with PCC = 1.000 — check Stage 0 and the blank above.")
+    "row 1 should be your own gene with PCC = 1.000 — check Stage 4 and the blank above.")
 ```
 
 <details><summary>💡 Hint</summary>
@@ -355,7 +353,7 @@ say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 
 
 ---
 
-## Stage 4 — "Why 0.7 is a guess": choose a threshold
+## Stage 6 — "Why 0.7 is a guess": choose a threshold
 
 We build the all-vs-all correlation among your 100 neighbours and count edges at several cutoffs. Run it, then decide.
 
@@ -384,7 +382,7 @@ for (cut in c(0.5, 0.7, 0.9)) {
 
 ---
 
-## Stage 5 — Build the network (+ protein interactions)
+## Stage 7 — Build the network (+ protein interactions)
 
 Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill the blank** with your cutoff (e.g. `0.8`) and **Run** — it reports the edges and your top hubs.
 
@@ -416,7 +414,7 @@ say(exists("edges") && nrow(edges) > 0,
 
 ---
 
-## Stage 6 — Functional enrichment (GO over-representation)
+## Stage 8 — Functional enrichment (GO over-representation)
 
 Is your neighbourhood enriched for a biological process? We test each GO term with the hypergeometric test (all base R — no packages).
 
@@ -445,12 +443,12 @@ print(ora)
 # instant check: did enrichment return any terms?
 say(exists("ora") && nrow(ora) > 0,
     paste0("top enriched term: ", ora$name[1], " — does it match your prediction?"),
-    "no terms returned — make sure Stage 3 ran first.")
+    "no terms returned — make sure Stage 5 ran first.")
 ```
 
 ---
 
-## Stage 7 — Differential expression to interpret  *(precomputed example)*
+## Stage 9 — Differential expression to interpret  *(precomputed example)*
 
 A volcano from a pre-computed DESeq2-style result (example data). Red = significant (padj < 0.05).
 
@@ -472,13 +470,13 @@ cat("Up-regulated (padj<0.05 & log2FC>1):", sum(de$padj < 0.05 & de$log2FoldChan
 
 ---
 
-## Stage 8 — Close the dossier  *(assessed)*
+## Stage 10 — Close the dossier  *(assessed)*
 
 Write a one-page interpretation, with evidence from *your* analyses:
 
-1. **Enriched process** in your gene's neighbourhood? *(Stage 6)*
-2. **Top hub** gene — a known regulator (NAC/MYB)? *(Stage 5)*
-3. **Verdict:** does the evidence **confirm or revise** your Stage-0 hypothesis? Name the evidence.
+1. **Enriched process** in your gene's neighbourhood? *(Stage 8)*
+2. **Top hub** gene — a known regulator (NAC/MYB)? *(Stage 7)*
+3. **Verdict:** does the evidence **confirm or revise** your Stage-4 hypothesis? Name the evidence.
 
 > **Graded (4 × 25%):** reproducible work · network-figure quality · correct enrichment interpretation · hypothesis revisited with named evidence.
 
