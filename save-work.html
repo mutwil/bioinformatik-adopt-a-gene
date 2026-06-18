@@ -1,0 +1,135 @@
+<!-- Save / restore the student's work on the Adopt-a-Gene page.
+     The site is fully static (webR runs in the browser, no server), so persistence is local:
+       • autosave  — every edit is written to this browser's localStorage and auto-restored on return;
+       • Download   — bundles all code cells into a JSON file the student can keep or submit;
+       • Load       — reads such a file back into the editors.
+     Nothing leaves the browser (no login, no upload to any server), so there is no GDPR exposure. -->
+<style>
+  #biosave-bar{position:fixed;left:18px;bottom:18px;z-index:9998;display:flex;gap:8px;align-items:center;
+    font:600 13px/1 system-ui,sans-serif}
+  .biosave-btn{border:none;border-radius:20px;padding:9px 14px;background:#2f855a;color:#fff;cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.22)}
+  .biosave-btn:hover{background:#276749}
+  .biosave-btn.ghost{background:#fff;color:#2f855a;border:1px solid #cbd5e0}
+  .biosave-btn.ghost:hover{background:#f7fafc}
+  #biosave-status{font-weight:400;font-size:12px;color:#4a5568;background:rgba(255,255,255,.85);
+    padding:4px 8px;border-radius:6px;max-width:240px}
+  #biosave-status a{color:#2b6cb0;cursor:pointer;text-decoration:underline}
+  @media (prefers-color-scheme: dark){
+    .biosave-btn.ghost{background:#1a202c;color:#9ae6b4;border-color:#2d3748}
+    #biosave-status{color:#cbd5e0;background:rgba(26,32,44,.85)}
+  }
+</style>
+
+<div id="biosave-bar">
+  <button class="biosave-btn" id="biosave-download" title="Download all your code as a file">💾 Save my work</button>
+  <button class="biosave-btn ghost" id="biosave-load" title="Load work from a file">📂 Load</button>
+  <input type="file" id="biosave-file" accept=".json,application/json" style="display:none">
+  <span id="biosave-status"></span>
+</div>
+
+<script>
+(function(){
+  const LS_KEY   = "bioinf-m4-work";          // localStorage slot
+  const FILENAME = "bioinformatik-module4-work.json";
+  const status = document.getElementById("biosave-status");
+
+  // --- locate the CodeMirror editors and their EditorView (mirrors EditorView.findFromDOM) ---
+  function contents(){ return Array.from(document.querySelectorAll(".cm-content")); }
+  function viewOf(contentEl){
+    try{
+      let cv = contentEl.cmView; if(!cv) return null;       // ContentView stored on the DOM node
+      let root = cv; while(root.parent) root = root.parent; // walk up to the DocView root
+      return root.view || null;                              // the EditorView
+    }catch(e){ return null; }
+  }
+  function readCell(contentEl){
+    const v = viewOf(contentEl);
+    if (v && v.state && v.state.doc) { try{ return v.state.doc.toString(); }catch(e){} }
+    return contentEl.innerText;                               // fallback (read-only)
+  }
+  function writeCell(contentEl, text){
+    const v = viewOf(contentEl);
+    if (v && v.state && v.state.doc){
+      try{ v.dispatch({changes:{from:0, to:v.state.doc.length, insert:text}}); return true; }catch(e){}
+    }
+    return false;
+  }
+  function readAll(){ return contents().map(readCell); }
+  function writeAll(cells){
+    const c = contents(); let n = 0;
+    for (let i=0; i<Math.min(c.length, cells.length); i++) if (writeCell(c[i], cells[i])) n++;
+    return n;
+  }
+
+  function flash(msg, withReset){
+    status.innerHTML = msg + (withReset ? ' · <a id="biosave-reset">Reset</a>' : '');
+    const r = document.getElementById("biosave-reset");
+    if (r) r.onclick = () => { localStorage.removeItem(LS_KEY); location.reload(); };
+  }
+
+  // --- autosave to localStorage (debounced) ---
+  let timer = null;
+  function autosave(){
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const cells = readAll();
+      if (!cells.length) return;
+      try{
+        localStorage.setItem(LS_KEY, JSON.stringify({ v:1, n:cells.length, page:document.title, cells }));
+        flash("✓ saved in this browser", true);
+      }catch(e){ flash("⚠ couldn't autosave (storage full or blocked)"); }
+    }, 800);
+  }
+
+  // --- download / upload a portable file ---
+  document.getElementById("biosave-download").onclick = () => {
+    const cells = readAll();
+    const blob = new Blob([JSON.stringify({ v:1, n:cells.length, page:document.title,
+                  saved:new Date().toISOString(), cells }, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = FILENAME; a.click();
+    URL.revokeObjectURL(a.href);
+    flash("✓ downloaded " + FILENAME);
+  };
+  document.getElementById("biosave-load").onclick = () => document.getElementById("biosave-file").click();
+  document.getElementById("biosave-file").onchange = (ev) => {
+    const f = ev.target.files[0]; if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try{
+        const data = JSON.parse(fr.result);
+        const cells = Array.isArray(data) ? data : data.cells;
+        if (!Array.isArray(cells)) throw 0;
+        const n = writeAll(cells);
+        autosave();
+        flash(`✓ loaded ${n} cell${n===1?"":"s"}` + (cells.length!==contents().length ?
+              " (file was from a different version — check your code)" : ""), true);
+      }catch(e){ flash("⚠ that file isn't valid saved work"); }
+    };
+    fr.readAsText(f);
+    ev.target.value = "";
+  };
+
+  // --- wait for the webR editors to exist, then restore + start autosaving ---
+  function whenReady(tries){
+    if (contents().length){
+      // auto-restore from localStorage if it matches this version of the page
+      try{
+        const saved = JSON.parse(localStorage.getItem(LS_KEY) || "null");
+        if (saved && Array.isArray(saved.cells) && saved.n === contents().length){
+          const n = writeAll(saved.cells);
+          if (n) flash("↩︎ restored your saved work", true);
+        }
+      }catch(e){}
+      // autosave on any edit inside an editor (contentEditable input bubbles up)
+      document.addEventListener("input", (e) => { if (e.target.closest(".cm-content")) autosave(); }, true);
+    } else if ((tries||0) < 60){
+      setTimeout(() => whenReady((tries||0)+1), 500);   // editors appear after webR boots
+    }
+  }
+  if (document.readyState === "loading")
+    document.addEventListener("DOMContentLoaded", () => whenReady(0));
+  else whenReady(0);
+})();
+</script>

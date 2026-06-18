@@ -5,7 +5,9 @@ format:
   live-html:
     toc: true
     css: editor-theme.css
-    include-after-body: tutor.html
+    include-after-body:
+      - tutor.html
+      - save-work.html
     resources:
       - data
 engine: knitr
@@ -107,9 +109,14 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## Stage 1 — Look at the data: heatmaps, outliers & normalization
+## Stage 1 — From raw counts to TPM (and why we look first)
 
-Real count data is messy — before any analysis, **look at it**. Here is a small *Arabidopsis* count matrix: 12 genes across root, leaf and pollen samples. **Run it** to see the heatmap.
+kallisto gives you **estimated counts** per gene. You **cannot compare counts directly** — two things confound them that have nothing to do with biology:
+
+- **gene length** — a longer gene catches more reads even at the same expression level;
+- **sequencing depth** — a sample sequenced deeper has more reads *everywhere*.
+
+**TPM** (Transcripts Per Million) removes both: divide out length, then scale each sample to a million. The *Arabidopsis* atlas you analyse in the next stages is already in TPM — here you'll see exactly where it comes from. But first: **always look at the raw data.**
 
 ```{webr}
 genes   <- paste0("Gene", 1:12)
@@ -130,10 +137,14 @@ counts <- matrix(c(
     3,     5,   4,  30,  28,  26,   10),
   nrow = 12, byrow = TRUE, dimnames = list(genes, samples))
 
+# each gene's length in base pairs — needed to convert counts -> TPM (longer genes collect more reads)
+gene_len <- c(1500, 2400, 900, 3000, 600, 1200, 1800, 300, 2100, 4500, 750, 1350)
+names(gene_len) <- genes
+
 draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined for you)
 ```
 
-> **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That's a technical **outlier**, and it also makes `Root2` look like a giant sample. Two things to deal with: outliers and differing sequencing depth.
+> **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That single spike is almost certainly a **technical artifact** — and it's exactly why you must *eyeball* the raw matrix before trusting any analysis.
 
 ### Step 1.1 — Find the outlier
 
@@ -143,42 +154,51 @@ hit <- which(counts == max(counts), arr.ind = TRUE)
 cat("Largest value:", max(counts), "→", rownames(counts)[hit[1]], "in", colnames(counts)[hit[2]], "\n")
 
 say(rownames(counts)[hit[1]] == "Gene8" && colnames(counts)[hit[2]] == "Root2",
-    "yes — Gene8 in Root2 is the outlier (a spike that also inflates that whole sample).",
+    "yes — Gene8 in Root2 is the outlier (a spike that also inflates that whole sample's read total).",
     "re-run the matrix cell above first.")
 ```
 
-### Step 1.2 — Tame it with a log transform
+### Step 1.2 — Why raw counts aren't comparable
 
-Huge values hide everything else. **`log2(x + 1)`** compresses the scale so patterns appear (the `+ 1` avoids `log2(0)`). **Fill the blank with `1`**, then Run and compare the heatmap.
+Two numbers can differ for reasons that aren't biological. **Run this** to see both confounds in your toy data:
 
 ```{webr}
-logc <- log2(counts + ______)          # <- the +1 keeps zeros finite: log2(0 + 1) = 0
-draw_heatmap(logc, "log2(counts + 1)")
+colSums(counts)   # total reads per sample = sequencing depth — these differ a lot
+gene_len          # gene length in bp — longer genes collect more reads at equal expression
+```
 
-say(exists("logc") && is.finite(min(logc)) && abs(min(logc)) < 1e-9,
-    "now the biology shows: Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.",
-    "use + 1 so log2(0 + 1) = 0 (no -Inf), then re-run.")
+> `Root2`'s total is blown up by that one artifact, and `Gene10` (4500 bp) collects far more reads than `Gene8` (300 bp) at the *same* expression. TPM fixes **both** — length first, then depth.
+
+### Step 1.3 — Compute TPM
+
+TPM is two normalizations, in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then Run.
+
+```{webr}
+# step 1 — divide out gene length. gene_len is in bp, so /1000 converts it to kilobases.
+# gene_len has one value per gene (per row), so it lines up with the matrix rows automatically.
+rpk <- counts / (gene_len / ______)            # <- blank: 1000   (bp -> kb)
+
+# step 2 — divide out depth. sweep(x, 2, v, "/") divides each COLUMN by v; * 1e6 scales to per-million.
+tpm <- sweep(rpk, 2, ______, "/") * 1e6        # <- blank: colSums(rpk)
+
+say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
+    "that's TPM — every sample sums to 1,000,000 and gene length is divided out. This is exactly the form the atlas is in.",
+    "step 1 blank is 1000 (bp→kb); step 2 blank is colSums(rpk), so each sample sums to 1e6.")
 ```
 
 <details><summary>💡 Hint</summary>
-A log of zero is <code>-Inf</code>. Adding 1 first makes the smallest value <code>log2(1) = 0</code>.
+RPK = counts ÷ (length in kb). Then for each sample, divide by that sample's own RPK total (<code>colSums(rpk)</code>) and multiply by 1,000,000.
 </details>
 
-### Step 1.3 — Normalize for sequencing depth
-
-Logging helps you *see*. To *compare a gene across samples* of different sequencing depth, normalize so every sample sums to the same total (here, one million — "counts per million"). **Fill the blank with `colSums(counts)`.**
+### Step 1.4 — See the result
 
 ```{webr}
-# sweep(x, 2, v, "/"): divide each COLUMN (margin 2) of x by the matching value in v
-cpm <- sweep(counts, 2, ______, "/") * 1e6
-cat("Sample totals after normalization (should all be 1,000,000):\n"); print(colSums(cpm))
-
-say(all(abs(colSums(cpm) - 1e6) < 1),
-    "every sample now sums to 1,000,000 — comparable across depths. (TPM additionally divides by gene length.)",
-    "divide by each column's own total: colSums(counts).")
+draw_heatmap(log2(tpm + 1), "log2(TPM + 1)")   # log only compresses the scale so patterns are visible
 ```
 
-> **Rule for your dossier:** *estimated counts → differential expression; normalized values (TPM/CPM) → comparing a gene across samples.* Never DE-test normalized values.
+> Now the biology shows: **Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.** Values are comparable across genes *and* samples — and this is the form the *Arabidopsis* atlas arrives in, ready to analyse.
+
+> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples.* Never DE-test TPM.
 
 ---
 
