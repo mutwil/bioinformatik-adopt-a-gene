@@ -2,3 +2,4 @@ _site/
 .quarto/
 _extensions/
 .DS_Store
+.wrangler/

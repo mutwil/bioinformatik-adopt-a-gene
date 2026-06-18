@@ -45,19 +45,33 @@ gene_sets <- read.csv("data/gene_sets.csv")        # GO term → gene membership
 qc        <- read.csv("data/qc_table.csv")         # example kallisto QC
 de        <- read.csv("data/de_results.csv")       # example DESeq2 result
 
-# setdiff(a, b): the items in a that are NOT in b -> here, every column except "gene_id" = the sample columns
-organ_cols <- setdiff(names(m), "gene_id")
-# as.matrix(): turn the numeric columns into a matrix (needed for cor() and apply() later)
-EXPR <- as.matrix(m[, organ_cols])
-rownames(EXPR) <- m$gene_id                         # label each row with its gene id, so EXPR["AT5G17420", ] works
-# setNames(values, names): build a quick lookup vector  name -> value  (e.g. desc["AT5G17420"])
-desc <- setNames(info$description, info$gene_id)
+organ_cols <- setdiff(names(m), "gene_id")          # every column except gene_id = the samples
+EXPR <- as.matrix(m[, organ_cols])                  # numeric matrix (needed for cor()/apply())
+rownames(EXPR) <- m$gene_id
+desc <- setNames(info$description, info$gene_id)     # quick lookup: gene_id -> description
 sym  <- setNames(info$symbol,      info$gene_id)
-# a small helper to print ✅ or ❌ feedback (cond = TRUE/FALSE)
-say  <- function(cond, good, bad)
+say  <- function(cond, good, bad)                   # tiny ✅/❌ feedback helper
   cat(if (isTRUE(cond)) paste("✅", good) else paste("❌", bad), "\n")
 
-# sprintf(): build a formatted string; %d = a whole number. nrow()/length() = row count / vector length
+# draw_heatmap(): a small labelled heatmap (genes as rows, samples as columns)
+draw_heatmap <- function(mat, main = ""){
+  mat <- as.matrix(mat); ng <- nrow(mat); ns <- ncol(mat)
+  pal <- hcl.colors(50, "YlGnBu", rev = TRUE)
+  rng <- range(mat); norm <- (mat - rng[1]) / (diff(rng) + 1e-9)
+  idx <- pmax(1, ceiling(norm * length(pal)))
+  op <- par(mar = c(5, 6, 3, 1)); on.exit(par(op))
+  plot(NA, xlim = c(0.5, ns + 0.5), ylim = c(0.5, ng + 0.5),
+       axes = FALSE, xlab = "", ylab = "", main = main)
+  for (i in 1:ng) for (j in 1:ns){
+    yy <- ng - i + 1                                 # row 1 (Gene1) drawn at the top
+    rect(j - 0.5, yy - 0.5, j + 0.5, yy + 0.5, col = pal[idx[i, j]], border = "white")
+    text(j, yy, format(mat[i, j], trim = TRUE), cex = 0.65,
+         col = if (norm[i, j] > 0.55) "white" else "black")
+  }
+  axis(1, at = 1:ns, labels = colnames(mat), las = 2, tick = FALSE, cex.axis = 0.8)
+  axis(2, at = ng:1, labels = rownames(mat), las = 1, tick = FALSE, cex.axis = 0.8)
+}
+
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
@@ -73,7 +87,7 @@ Pick **one** gene from the pool (your TA prevents duplicates):
 **Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
 ```{webr}
-MY_GENE <- "______"   # <- (assignment: name <- value) your gene's AGI locus, e.g. "AT5G17420"
+MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
 MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
 cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
 
@@ -91,30 +105,78 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## Stage 1 — Normalization check (TPM)
+## Stage 1 — Look at the data: heatmaps, outliers & normalization
 
-TPM scales each sample so its values sum to 1,000,000, making genes comparable across samples of different depth. **Fill the blank** so each column is divided by its own total, then **Run** — it checks the columns sum to 1e6.
+Real count data is messy — before any analysis, **look at it**. Here is a small *Arabidopsis* count matrix: 12 genes across root, leaf and pollen samples. **Run it** to see the heatmap.
 
 ```{webr}
-# data.frame(): build a small table. c(): combine values into a vector. row.names: label the rows
-counts    <- data.frame(sampleA = c(10, 20, 5), sampleB = c(20, 40, 10),
-                        row.names = c("gene1","gene2","gene3"))
-length_kb <- c(gene1 = 2.0, gene2 = 1.0, gene3 = 0.5)   # gene lengths in kilobases
-rpk <- counts / length_kb                               # reads per kilobase (each row ÷ its gene length)
-# sweep(x, 2, v, "/"): apply an operation across a margin. 2 = columns -> divide each COLUMN by v.
-# colSums(rpk): the total of each column. So this makes every column sum to 1e6 = TPM.
-tpm <- sweep(rpk, 2, ______, "/") * 1e6
-print(round(tpm, 1))                                    # round() to 1 decimal for display
+genes   <- paste0("Gene", 1:12)
+samples <- c("Root1","Root2","Root3","Leaf1","Leaf2","Leaf3","Pollen1")
+# matrix(values, byrow = TRUE): fill row by row; dimnames = list(row labels, column labels)
+counts <- matrix(c(
+   80,    85,  78,   2,   1,   3,    0,
+   90,   100,  88,   5,   2,   4,    0,
+    2,     1,   3,  70,  75,  80,    0,
+    3,     2,   4,  85,  82,  90,    0,
+    0,     1,   0,   2,   1,   0,  120,
+   20,    20,  20,  20,  20,  20,   20,
+    0,     0,   1,   0,   0,   0,    0,
+    5, 100000,  6,   7,   5,   6,    8,
+   10,    15,  12,  25,  30,  28,    5,
+   40,    38,  42,  45,  47,  50,   41,
+    5,     9,   6,  12,  15,  11,    4,
+    3,     5,   4,  30,  28,  26,   10),
+  nrow = 12, byrow = TRUE, dimnames = list(genes, samples))
 
-# instant check: exists() = was it created? all()/abs() = are all column sums within 1 of 1e6?
-say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
-    "every sample sums to 1,000,000 — that's TPM.",
-    "columns don't sum to 1e6 yet — check the blank.")
+draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined for you)
+```
+
+> **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That's a technical **outlier**, and it also makes `Root2` look like a giant sample. Two things to deal with: outliers and differing sequencing depth.
+
+### Step 1.1 — Find the outlier
+
+```{webr}
+# which(x == max(x), arr.ind = TRUE): the [row, column] position of the largest value
+hit <- which(counts == max(counts), arr.ind = TRUE)
+cat("Largest value:", max(counts), "→", rownames(counts)[hit[1]], "in", colnames(counts)[hit[2]], "\n")
+
+say(rownames(counts)[hit[1]] == "Gene8" && colnames(counts)[hit[2]] == "Root2",
+    "yes — Gene8 in Root2 is the outlier (a spike that also inflates that whole sample).",
+    "re-run the matrix cell above first.")
+```
+
+### Step 1.2 — Tame it with a log transform
+
+Huge values hide everything else. **`log2(x + 1)`** compresses the scale so patterns appear (the `+ 1` avoids `log2(0)`). **Fill the blank with `1`**, then Run and compare the heatmap.
+
+```{webr}
+logc <- log2(counts + ______)          # <- the +1 keeps zeros finite: log2(0 + 1) = 0
+draw_heatmap(logc, "log2(counts + 1)")
+
+say(exists("logc") && is.finite(min(logc)) && abs(min(logc)) < 1e-9,
+    "now the biology shows: Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.",
+    "use + 1 so log2(0 + 1) = 0 (no -Inf), then re-run.")
 ```
 
 <details><summary>💡 Hint</summary>
-You want each column to sum to 1e6, so divide by the column sums: <code>colSums(rpk)</code>.
+A log of zero is <code>-Inf</code>. Adding 1 first makes the smallest value <code>log2(1) = 0</code>.
 </details>
+
+### Step 1.3 — Normalize for sequencing depth
+
+Logging helps you *see*. To *compare a gene across samples* of different sequencing depth, normalize so every sample sums to the same total (here, one million — "counts per million"). **Fill the blank with `colSums(counts)`.**
+
+```{webr}
+# sweep(x, 2, v, "/"): divide each COLUMN (margin 2) of x by the matching value in v
+cpm <- sweep(counts, 2, ______, "/") * 1e6
+cat("Sample totals after normalization (should all be 1,000,000):\n"); print(colSums(cpm))
+
+say(all(abs(colSums(cpm) - 1e6) < 1),
+    "every sample now sums to 1,000,000 — comparable across depths. (TPM additionally divides by gene length.)",
+    "divide by each column's own total: colSums(counts).")
+```
+
+> **Rule for your dossier:** *estimated counts → differential expression; normalized values (TPM/CPM) → comparing a gene across samples.* Never DE-test normalized values.
 
 ---
 
