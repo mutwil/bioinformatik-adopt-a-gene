@@ -256,7 +256,10 @@ cz   <- t(scale(t(log2(ctpm + 1))))                    # log2, then per-gene z-s
 cz[!is.finite(cz)] <- 0
 tissue <- c("Root","Root","Root","Leaf","Leaf","Leaf","Pollen")   # label each sample
 cat("Clean, re-normalized matrix:", nrow(cz), "genes ×", ncol(cz), "samples\n")
+draw_heatmap(cz, "Per-gene z-score of log2(TPM) — Gene8 removed", diverging = TRUE)
 ```
+
+> With the artefact gone, the z-score heatmap already shows clean tissue blocks — root genes high (red) in the root samples, leaf genes high in the leaves, and so on. PCA and clustering below just quantify that structure.
 
 ### PCA — do samples separate by tissue?
 
