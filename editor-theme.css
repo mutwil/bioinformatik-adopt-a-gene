@@ -1,0 +1,88 @@
+/* ───────────────────────────────────────────────────────────────────────────
+   High-contrast syntax-highlighting theme for the webR code editors.
+
+   quarto-live's editors (CodeMirror) colour tokens via --exercise-editor-hl-*
+   variables. The stock light palette is muddy: comments AND operators are the
+   same grey (#5E5E5E), and keyword/control/"other" are all the same dark teal
+   (#003B4F) — so token types are hard to tell apart and comments wash out.
+
+   Here each token type gets a distinct, readable hue. We override the editor
+   variables directly (what the spans actually use) and the matching
+   --quarto-hl-*-color (what the editor vars fall back to + static code blocks),
+   for both light and dark mode.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* comment — green (readable; these explain every line of the lesson) */
+  --exercise-editor-hl-co: #1a7f37;  --quarto-hl-co-color: #1a7f37;
+  --exercise-editor-hl-do: #1a7f37;  --quarto-hl-do-color: #1a7f37;  /* doc comment */
+  --exercise-editor-hl-cv: #1a7f37;  --quarto-hl-cv-color: #1a7f37;  /* comment var  */
+  --exercise-editor-hl-in: #1a7f37;  --quarto-hl-in-color: #1a7f37;  /* information  */
+
+  /* string — dark red */
+  --exercise-editor-hl-st: #b3261e;  --quarto-hl-st-color: #b3261e;
+  --exercise-editor-hl-ss: #b3261e;  --quarto-hl-ss-color: #b3261e;  /* special str */
+  --exercise-editor-hl-ch: #b3261e;  --quarto-hl-ch-color: #b3261e;  /* char        */
+  --exercise-editor-hl-vs: #b3261e;  --quarto-hl-vs-color: #b3261e;  /* verbatim str */
+  --exercise-editor-hl-sc: #b3261e;  --quarto-hl-sc-color: #b3261e;  /* special char */
+
+  /* keyword & control flow (if/for/function/return) — strong blue */
+  --exercise-editor-hl-kw: #0033b3;  --quarto-hl-kw-color: #0033b3;
+  --exercise-editor-hl-cf: #0033b3;  --quarto-hl-cf-color: #0033b3;
+  --exercise-editor-hl-im: #0033b3;  --quarto-hl-im-color: #0033b3;  /* import */
+
+  /* numbers / constants — teal */
+  --exercise-editor-hl-dv: #0e7490;  --quarto-hl-dv-color: #0e7490;  /* decimal */
+  --exercise-editor-hl-fl: #0e7490;  --quarto-hl-fl-color: #0e7490;  /* float   */
+  --exercise-editor-hl-bn: #0e7490;  --quarto-hl-bn-color: #0e7490;  /* base-N  */
+  --exercise-editor-hl-cn: #0e7490;  --quarto-hl-cn-color: #0e7490;  /* constant (TRUE/NA) */
+  --exercise-editor-hl-bu: #0e7490;  --quarto-hl-bu-color: #0e7490;  /* builtin */
+
+  /* function names — purple */
+  --exercise-editor-hl-fu: #8250df;  --quarto-hl-fu-color: #8250df;
+
+  /* operators & assignment ( <-  =  *  / ) and "other" — crisp near-black */
+  --exercise-editor-hl-op: #1f2328;  --quarto-hl-op-color: #1f2328;
+  --exercise-editor-hl-ot: #1f2328;  --quarto-hl-ot-color: #1f2328;
+
+  /* attributes / data types — orange-brown */
+  --exercise-editor-hl-at: #bc4c00;  --quarto-hl-at-color: #bc4c00;
+  --exercise-editor-hl-dt: #bc4c00;  --quarto-hl-dt-color: #bc4c00;
+
+  /* plain identifiers stay near-black for maximum readability */
+  --exercise-editor-hl-va: #1f2328;  --quarto-hl-va-color: #1f2328;
+}
+
+/* Dark mode — GitHub-dark-style palette (Quarto toggles these data attrs/classes) */
+[data-bs-theme="dark"], .quarto-dark {
+  --exercise-editor-hl-co: #7ee787;  --quarto-hl-co-color: #7ee787;
+  --exercise-editor-hl-do: #7ee787;  --quarto-hl-do-color: #7ee787;
+  --exercise-editor-hl-cv: #7ee787;  --quarto-hl-cv-color: #7ee787;
+  --exercise-editor-hl-in: #7ee787;  --quarto-hl-in-color: #7ee787;
+
+  --exercise-editor-hl-st: #ff7b72;  --quarto-hl-st-color: #ff7b72;
+  --exercise-editor-hl-ss: #ff7b72;  --quarto-hl-ss-color: #ff7b72;
+  --exercise-editor-hl-ch: #ff7b72;  --quarto-hl-ch-color: #ff7b72;
+  --exercise-editor-hl-vs: #ff7b72;  --quarto-hl-vs-color: #ff7b72;
+  --exercise-editor-hl-sc: #ff7b72;  --quarto-hl-sc-color: #ff7b72;
+
+  --exercise-editor-hl-kw: #79c0ff;  --quarto-hl-kw-color: #79c0ff;
+  --exercise-editor-hl-cf: #79c0ff;  --quarto-hl-cf-color: #79c0ff;
+  --exercise-editor-hl-im: #79c0ff;  --quarto-hl-im-color: #79c0ff;
+
+  --exercise-editor-hl-dv: #56d4dd;  --quarto-hl-dv-color: #56d4dd;
+  --exercise-editor-hl-fl: #56d4dd;  --quarto-hl-fl-color: #56d4dd;
+  --exercise-editor-hl-bn: #56d4dd;  --quarto-hl-bn-color: #56d4dd;
+  --exercise-editor-hl-cn: #56d4dd;  --quarto-hl-cn-color: #56d4dd;
+  --exercise-editor-hl-bu: #56d4dd;  --quarto-hl-bu-color: #56d4dd;
+
+  --exercise-editor-hl-fu: #d2a8ff;  --quarto-hl-fu-color: #d2a8ff;
+
+  --exercise-editor-hl-op: #e6edf3;  --quarto-hl-op-color: #e6edf3;
+  --exercise-editor-hl-ot: #e6edf3;  --quarto-hl-ot-color: #e6edf3;
+
+  --exercise-editor-hl-at: #ffa657;  --quarto-hl-at-color: #ffa657;
+  --exercise-editor-hl-dt: #ffa657;  --quarto-hl-dt-color: #ffa657;
+
+  --exercise-editor-hl-va: #e6edf3;  --quarto-hl-va-color: #e6edf3;
+}

@@ -4,6 +4,7 @@ subtitle: "Bioinformatik NPLB24004U · runs in your browser, no install"
 format:
   live-html:
     toc: true
+    css: editor-theme.css
     include-after-body: tutor.html
     resources:
       - data
