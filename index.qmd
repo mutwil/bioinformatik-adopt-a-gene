@@ -149,11 +149,24 @@ draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined
 ### Step 1.1 — Find the outlier
 
 ```{webr}
-# which(x == max(x), arr.ind = TRUE): the [row, column] position of the largest value
-hit <- which(counts == max(counts), arr.ind = TRUE)
-cat("Largest value:", max(counts), "→", rownames(counts)[hit[1]], "in", colnames(counts)[hit[2]], "\n")
+# 1. the largest value anywhere in the matrix
+biggest <- max(counts)
 
-say(rownames(counts)[hit[1]] == "Gene8" && colnames(counts)[hit[2]] == "Root2",
+# 2. where is it?  which(..., arr.ind = TRUE) gives the [row, column] position
+pos     <- which(counts == biggest, arr.ind = TRUE)
+row_num <- pos[1]                      # the row number    (which gene)
+col_num <- pos[2]                      # the column number (which sample)
+
+# 3. turn those numbers into the gene and sample names
+gene   <- rownames(counts)[row_num]
+sample <- colnames(counts)[col_num]
+
+# 4. report what we found
+cat("Biggest value:", biggest, "—", gene, "in", sample, "\n")
+
+# 5. check it (TRUE only if both the gene and the sample are right)
+correct <- gene == "Gene8" && sample == "Root2"
+say(correct,
     "yes — Gene8 in Root2 is the outlier (a spike that also inflates that whole sample's read total).",
     "re-run the matrix cell above first.")
 ```
