@@ -21,6 +21,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. You
 **How it works**
 
 - Edit the code where you see `______`, then press **Run** (▶). Cells share state, so run them **top to bottom**.
+- Every code cell is **commented** — each line explains what it does and `# what each function does`, so you can follow the R even if a function is new to you.
 - After many steps a line prints **✅** if you got it right, or a hint.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables, so everything is instant.
 
@@ -32,20 +33,28 @@ This page **runs R live in your browser** (via webR) — nothing to install. You
 
 ```{webr}
 #| autorun: true
-m         <- read.csv("data/expression_matrix.csv", check.names = FALSE)
-info      <- read.csv("data/gene_info.csv")
-ppi       <- read.csv("data/ppi_edges.csv")
-gene_sets <- read.csv("data/gene_sets.csv")
-qc        <- read.csv("data/qc_table.csv")
-de        <- read.csv("data/de_results.csv")
+# read.csv(path): read a comma-separated file into a data.frame (a table)
+# check.names = FALSE keeps the organ column names exactly as written
+m         <- read.csv("data/expression_matrix.csv", check.names = FALSE)  # genes × organ samples (TPM)
+info      <- read.csv("data/gene_info.csv")        # gene_id, symbol, description
+ppi       <- read.csv("data/ppi_edges.csv")        # protein–protein interactions (BioGRID)
+gene_sets <- read.csv("data/gene_sets.csv")        # GO term → gene memberships
+qc        <- read.csv("data/qc_table.csv")         # example kallisto QC
+de        <- read.csv("data/de_results.csv")       # example DESeq2 result
 
+# setdiff(a, b): the items in a that are NOT in b -> here, every column except "gene_id" = the sample columns
 organ_cols <- setdiff(names(m), "gene_id")
-EXPR <- as.matrix(m[, organ_cols]); rownames(EXPR) <- m$gene_id
+# as.matrix(): turn the numeric columns into a matrix (needed for cor() and apply() later)
+EXPR <- as.matrix(m[, organ_cols])
+rownames(EXPR) <- m$gene_id                         # label each row with its gene id, so EXPR["AT5G17420", ] works
+# setNames(values, names): build a quick lookup vector  name -> value  (e.g. desc["AT5G17420"])
 desc <- setNames(info$description, info$gene_id)
 sym  <- setNames(info$symbol,      info$gene_id)
+# a small helper to print ✅ or ❌ feedback (cond = TRUE/FALSE)
 say  <- function(cond, good, bad)
   cat(if (isTRUE(cond)) paste("✅", good) else paste("❌", bad), "\n")
 
+# sprintf(): build a formatted string; %d = a whole number. nrow()/length() = row count / vector length
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
@@ -61,9 +70,9 @@ Pick **one** gene from the pool (your TA prevents duplicates):
 **Instructions:** replace both `______`, then Run.
 
 ```{webr}
-MY_GENE <- "______"   # your gene's AGI locus, e.g. "AT5G17420"
-MY_NAME <- "______"   # a short name, e.g. "CESA7"
-cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")
+MY_GENE <- "______"   # <- (assignment: name <- value) your gene's AGI locus, e.g. "AT5G17420"
+MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
+cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
 ```
 
 <details><summary>💡 Hint</summary>
@@ -71,6 +80,8 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 </details>
 
 ```{webr}
+# grepl(pattern, x): does x match this text pattern? (TRUE/FALSE)  -- here we check the AGI looks valid
+# %in%: is the value present in a set?  -- here, is your gene actually in the data matrix?
 say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     "valid gene, present in the data — onwards!",
     "not a valid/known locus — pick one from the pool above and re-run Stage 0")
@@ -85,12 +96,15 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 TPM scales each sample so its values sum to 1,000,000, making genes comparable across samples of different depth. **Fill the blank** so each column is divided by its own total.
 
 ```{webr}
+# data.frame(): build a small table. c(): combine values into a vector. row.names: label the rows
 counts    <- data.frame(sampleA = c(10, 20, 5), sampleB = c(20, 40, 10),
                         row.names = c("gene1","gene2","gene3"))
-length_kb <- c(gene1 = 2.0, gene2 = 1.0, gene3 = 0.5)
-rpk <- counts / length_kb
-tpm <- sweep(rpk, 2, ______, "/") * 1e6     # divide each column by its total
-round(tpm, 1)
+length_kb <- c(gene1 = 2.0, gene2 = 1.0, gene3 = 0.5)   # gene lengths in kilobases
+rpk <- counts / length_kb                               # reads per kilobase (each row ÷ its gene length)
+# sweep(x, 2, v, "/"): apply an operation across a margin. 2 = columns -> divide each COLUMN by v.
+# colSums(rpk): the total of each column. So this makes every column sum to 1e6 = TPM.
+tpm <- sweep(rpk, 2, ______, "/") * 1e6
+round(tpm, 1)                                           # round() to 1 decimal for display
 ```
 
 <details><summary>💡 Hint</summary>
@@ -98,6 +112,7 @@ You want each column to sum to 1e6, so divide by the column sums: <code>colSums(
 </details>
 
 ```{webr}
+# exists(): has the object been created?  all(): are ALL these TRUE?  abs(): absolute value
 say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
     "every sample sums to 1,000,000 — that's TPM.",
     "columns don't sum to 1e6 yet — check the blank.")
@@ -111,14 +126,17 @@ Pre-computed kallisto QC (example). A bad library poisons everything downstream.
 
 ```{webr}
 #| autorun: true
-qc
+qc          # typing an object's name just prints it (here, the QC table)
 ```
 
 **Instructions:** find the failing sample (lowest % pseudoaligned).
 
 ```{webr}
+# which.min(v): the POSITION of the smallest value in v.  qc$col -> the column named col.
+# So this picks the sample row with the lowest pseudoalignment %.
 worst <- qc$sample[which.min(qc$pct_pseudoaligned)]
 cat("Lowest pseudoalignment:", worst, "\n")
+# min(): the smallest value.  paste(): glue text together.
 say(min(qc$pct_pseudoaligned) < 50,
     paste("drop", worst, "before building the matrix — a bad library distorts PCA & co-expression"),
     "look again at pct_pseudoaligned")
@@ -133,14 +151,23 @@ say(min(qc$pct_pseudoaligned) < 50,
 **Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target` so each gene is compared against your gene's expression.
 
 ```{webr}
+# EXPR[MY_GENE, ]  -> pull ONE row: your gene's expression across all 56 organs
 target <- EXPR[MY_GENE, ]
+
+# apply(X, 1, f): run function f on each ROW of matrix X   (margin 1 = rows, 2 = columns)
+# function(r) ...: r is one gene's expression vector (a single row)
+# cor(a, b): Pearson correlation coefficient (PCC) between two numeric vectors (−1 … +1)
+# suppressWarnings(): hide the harmless warning for genes with no variation (standard deviation = 0)
 pcc <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))
-result <- data.frame(gene = rownames(EXPR),
-                     symbol = sym[rownames(EXPR)],
+
+# data.frame(): assemble a results table.  round(x, 3): keep 3 decimals
+result <- data.frame(gene        = rownames(EXPR),
+                     symbol      = sym[rownames(EXPR)],
                      description = desc[rownames(EXPR)],
-                     PCC = round(pcc, 3))
+                     PCC         = round(pcc, 3))
+# order(-result$PCC): row order sorted by PCC, highest first.  head(x, 100): keep the top 100
 result <- head(result[order(-result$PCC), ], 100)
-head(result, 12)
+head(result, 12)                                   # show the top 12 neighbours
 ```
 
 <details><summary>💡 Hint</summary>
@@ -148,6 +175,7 @@ head(result, 12)
 </details>
 
 ```{webr}
+# nrow(): number of rows.  result$gene[1]: the first gene in the ranked table (should be your own gene).
 say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
     paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
     "row 1 should be your own gene with PCC = 1.000 — check Stage 0 and the blank above.")
@@ -162,14 +190,21 @@ say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 
 We build the all-vs-all correlation among your 100 neighbours and count edges at several cutoffs. Run it, then decide.
 
 ```{webr}
-nb  <- result$gene
-sub <- EXPR[nb, ]
-C   <- cor(t(sub)); ut <- upper.tri(C)
+nb  <- result$gene          # the 100 neighbour gene ids
+sub <- EXPR[nb, ]           # their expression rows only
+# t(): transpose (swap rows/columns) so cor() correlates GENES against each other, not samples.
+# cor(matrix): returns the full gene × gene correlation matrix.
+C   <- cor(t(sub))
+# upper.tri(C): a TRUE/FALSE mask of the upper triangle, so each gene-pair is counted once.
+ut  <- upper.tri(C)
 known <- c("AT5G44030","AT5G17420","AT4G18780","AT2G37090",
-           "AT2G38080","AT5G12870","AT1G32770","AT5G15630")
+           "AT2G38080","AT5G12870","AT1G32770","AT5G15630")   # known cell-wall genes
+# for: repeat the block for each cutoff value
 for (cut in c(0.5, 0.7, 0.9)) {
-  keep  <- ut & C > cut
-  nodes <- unique(c(rownames(C)[row(C)[keep]], colnames(C)[col(C)[keep]]))
+  keep  <- ut & C > cut                              # keep edges above the cutoff (and in the upper triangle)
+  # row(C)/col(C): the row/column index of every cell; [keep] picks the kept edges' genes
+  nodes <- unique(c(rownames(C)[row(C)[keep]], colnames(C)[col(C)[keep]]))  # unique() removes duplicates
+  # sum(keep): how many edges (TRUEs).  %in%: which known genes survived
   cat(sprintf("cutoff %.1f → %5d edges, %4d genes, %d known cell-wall genes kept\n",
               cut, sum(keep), length(nodes), sum(known %in% nodes)))
 }
@@ -185,16 +220,21 @@ Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill 
 
 ```{webr}
 MY_CUTOFF <- ______          # the cutoff you justified, e.g. 0.8
-keep  <- ut & C > MY_CUTOFF
+keep  <- ut & C > MY_CUTOFF   # the co-expression edges to keep
+# build an edge table (source gene, target gene, edge type) for the kept pairs
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
 
+# ppi[ rows , cols ]: filter the PPI table to interactions where BOTH genes are neighbours (%in% nb)
 pp <- ppi[ppi$source %in% nb & ppi$target %in% nb, c("source","target")]
+# rbind(): stack rows -> add the PPI edges underneath the co-expression edges
 if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
 
+# table(): count how many times each gene appears = its degree (number of edges).
+# sort(decreasing = TRUE): biggest first -> the hubs.
 deg <- sort(table(c(edges$source, edges$target)), decreasing = TRUE)
 cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"), ")\n\nTop hubs (by degree):\n")
-print(head(deg, 6))
+print(head(deg, 6))                                  # the 6 most-connected genes
 ```
 
 ```{webr}
@@ -212,20 +252,25 @@ say(exists("edges") && nrow(edges) > 0,
 Is your neighbourhood enriched for a biological process? We test each GO term with the hypergeometric test (all base R — no packages).
 
 ```{webr}
-bg   <- rownames(EXPR); N <- length(bg)
-hits <- result$gene
-gs   <- gene_sets[gene_sets$gene_id %in% bg, ]
+bg   <- rownames(EXPR); N <- length(bg)              # background = all genes in the matrix; N = how many
+hits <- result$gene                                  # our "interesting" list = the co-expression neighbours
+gs   <- gene_sets[gene_sets$gene_id %in% bg, ]       # keep only GO memberships for background genes
+# split(values, groups): make a list, one entry per GO term, holding that term's genes
 terms <- split(gs$gene_id, gs$term_id)
+# tapply(values, groups, fun): apply fun within each group -> here, grab each term's readable name
 tname <- tapply(gs$term_name, gs$term_id, function(x) x[1])
 
+# lapply(items, f): run f on each item, returning a list.  do.call(rbind, list): stack into one data.frame
 ora <- do.call(rbind, lapply(names(terms), function(t) {
-  K <- length(unique(terms[[t]])); k <- sum(hits %in% terms[[t]])
-  if (k < 2) return(NULL)
+  K <- length(unique(terms[[t]]))                    # genes in this term (within background)
+  k <- sum(hits %in% terms[[t]])                     # how many of OUR hits fall in this term
+  if (k < 2) return(NULL)                            # skip tiny overlaps (return nothing)
+  # phyper(k-1, K, N-K, n, lower.tail = FALSE): hypergeometric p-value = chance of ≥k hits by luck
   data.frame(term = t, name = tname[[t]], k = k, K = K,
              p = phyper(k - 1, K, N - K, length(hits), lower.tail = FALSE))
 }))
-ora$padj <- p.adjust(ora$p, "BH")
-ora <- head(ora[order(ora$p), c("name","k","K","padj")], 12)
+ora$padj <- p.adjust(ora$p, "BH")                    # p.adjust(): correct p-values for many tests (BH = FDR)
+ora <- head(ora[order(ora$p), c("name","k","K","padj")], 12)   # most significant terms first
 ora
 ```
 
@@ -243,11 +288,15 @@ A volcano from a pre-computed DESeq2-style result (example data). Red = signific
 
 ```{webr}
 #| autorun: true
+# plot(x, y): scatter plot.  pch = 20: small filled dots.
+# -log10(padj): transforms p-values so SMALL p = HIGH on the plot (more significant = taller).
+# ifelse(cond, a, b): for each gene, choose colour a if significant, else b (vectorised if/else).
 plot(de$log2FoldChange, -log10(de$padj + 1e-300),
      pch = 20, col = ifelse(de$padj < 0.05, "firebrick", "grey70"),
      xlab = "log2 fold change", ylab = "-log10 adjusted p",
      main = "Volcano (precomputed example DESeq2 result)")
-abline(h = -log10(0.05), lty = 2)
+abline(h = -log10(0.05), lty = 2)                    # abline(h=): a horizontal line at the p = 0.05 threshold
+# sum(condition): counts how many genes are TRUE (significant AND up-regulated)
 cat("Up-regulated (padj<0.05 & log2FC>1):", sum(de$padj < 0.05 & de$log2FoldChange > 1), "\n")
 ```
 
