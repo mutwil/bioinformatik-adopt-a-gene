@@ -1,0 +1,131 @@
+<!-- Module 4 "Adopt-a-Gene" AI tutor widget. Injected via include-after-body.
+     Set TUTOR_API_URL below to your deployed Cloudflare Worker URL. Until then the
+     button is hidden (students see nothing). See tutor-proxy/README.md to deploy. -->
+<style>
+  #biotutor-btn{position:fixed;right:18px;bottom:18px;z-index:9999;border:none;border-radius:24px;
+    padding:11px 16px;font:600 14px/1 system-ui,sans-serif;background:#2b6cb0;color:#fff;cursor:pointer;
+    box-shadow:0 3px 12px rgba(0,0,0,.25)}
+  #biotutor-btn:hover{background:#2c5282}
+  #biotutor-panel{position:fixed;right:18px;bottom:70px;z-index:9999;width:min(380px,92vw);height:min(520px,72vh);
+    display:none;flex-direction:column;background:#fff;color:#1a202c;border:1px solid #cbd5e0;border-radius:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.3);overflow:hidden}
+  #biotutor-panel.open{display:flex}
+  #biotutor-head{background:#2b6cb0;color:#fff;padding:10px 12px;font:600 14px/1.3 system-ui,sans-serif}
+  #biotutor-head small{display:block;font-weight:400;opacity:.9;font-size:11px;margin-top:2px}
+  #biotutor-log{flex:1;overflow-y:auto;padding:10px;font:14px/1.45 system-ui,sans-serif}
+  .biotutor-msg{margin:0 0 10px;white-space:pre-wrap;word-wrap:break-word}
+  .biotutor-u{color:#2c5282;font-weight:600}
+  .biotutor-a{background:#f1f5f9;border-radius:8px;padding:8px 10px}
+  #biotutor-foot{border-top:1px solid #e2e8f0;padding:8px}
+  #biotutor-q{width:100%;box-sizing:border-box;resize:none;border:1px solid #cbd5e0;border-radius:8px;
+    padding:8px;font:14px system-ui,sans-serif;height:52px}
+  #biotutor-row{display:flex;align-items:center;justify-content:space-between;margin-top:6px;font:12px system-ui,sans-serif}
+  #biotutor-send{border:none;border-radius:8px;background:#2b6cb0;color:#fff;padding:7px 14px;font:600 13px system-ui;cursor:pointer}
+  #biotutor-send:disabled{opacity:.5;cursor:default}
+  #biotutor-log a{color:#2b6cb0}
+  @media (prefers-color-scheme: dark){
+    #biotutor-panel{background:#1a202c;color:#e2e8f0;border-color:#2d3748}
+    .biotutor-a{background:#2d3748}
+    #biotutor-q{background:#2d3748;color:#e2e8f0;border-color:#4a5568}
+  }
+</style>
+
+<button id="biotutor-btn" aria-label="Ask the tutor">🤖 Tutor</button>
+<div id="biotutor-panel" role="dialog" aria-label="Module 4 tutor">
+  <div id="biotutor-head">Module 4 tutor
+    <small>Hints, not answers · powered by Claude · don't paste anything private</small></div>
+  <div id="biotutor-log"></div>
+  <div id="biotutor-foot">
+    <textarea id="biotutor-q" placeholder="Ask about a step, a function, or an error…"></textarea>
+    <div id="biotutor-row">
+      <label><input type="checkbox" id="biotutor-deep"> deeper answer (slower)</label>
+      <button id="biotutor-send">Ask</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  // ▼▼▼ SET THIS to your deployed Cloudflare Worker URL (see tutor-proxy/README.md) ▼▼▼
+  const TUTOR_API_URL = "https://REPLACE-ME.workers.dev/";
+  // ▲▲▲
+
+  if (TUTOR_API_URL.includes("REPLACE-ME")) return;  // not configured yet → hide the widget
+
+  const btn = document.getElementById("biotutor-btn");
+  const panel = document.getElementById("biotutor-panel");
+  const log = document.getElementById("biotutor-log");
+  const q = document.getElementById("biotutor-q");
+  const send = document.getElementById("biotutor-send");
+  const deep = document.getElementById("biotutor-deep");
+
+  btn.onclick = () => { panel.classList.toggle("open"); if (panel.classList.contains("open")) q.focus(); };
+
+  function add(cls, who, text){
+    const p = document.createElement("p");
+    p.className = "biotutor-msg " + cls;
+    if (who){ const b=document.createElement("span"); b.className="biotutor-u"; b.textContent=who+" "; p.appendChild(b); }
+    const span=document.createElement("span"); span.textContent=text; p.appendChild(span);
+    log.appendChild(p); log.scrollTop = log.scrollHeight; return span;
+  }
+
+  // Grab the student's R code from the on-page editors (CodeMirror), most recent last.
+  function gatherCode(){
+    const eds = Array.from(document.querySelectorAll(".cm-content"));
+    let code = eds.map(e => e.innerText).join("\n\n").trim();
+    if (code.length > 4000) code = code.slice(-4000);
+    return code;
+  }
+
+  async function ask(){
+    const question = q.value.trim();
+    if (!question) return;
+    q.value = ""; send.disabled = true;
+    add("", "You:", question);
+    const out = add("biotutor-a", "Tutor:", "…");
+    let first = true;
+    try{
+      const resp = await fetch(TUTOR_API_URL, {
+        method: "POST",
+        headers: {"content-type":"application/json"},
+        body: JSON.stringify({
+          question: question.slice(0,1000),
+          code: gatherCode(),
+          page: document.title,
+          mode: deep.checked ? "deep" : "hint"
+        })
+      });
+      if (!resp.ok){
+        let msg = "Sorry — the tutor is unavailable right now.";
+        try{ const j = await resp.json(); if (j.error) msg = "Error: " + j.error; }catch(e){}
+        if (resp.status === 429) msg = "Slow down a moment — too many questions. Try again shortly.";
+        out.textContent = msg; return;
+      }
+      const reader = resp.body.getReader();
+      const dec = new TextDecoder(); let buf = "";
+      while(true){
+        const {done, value} = await reader.read(); if (done) break;
+        buf += dec.decode(value, {stream:true});
+        let i; while((i = buf.indexOf("\n")) >= 0){
+          const line = buf.slice(0,i); buf = buf.slice(i+1);
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim(); if (!data) continue;
+          try{
+            const ev = JSON.parse(data);
+            if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta"){
+              if (first){ out.textContent = ""; first = false; }
+              out.textContent += ev.delta.text; log.scrollTop = log.scrollHeight;
+            }
+          }catch(e){}
+        }
+      }
+      if (first) out.textContent = "(no response)";
+    }catch(e){
+      out.textContent = "Network error — check your connection and try again.";
+    }finally{ send.disabled = false; }
+  }
+
+  send.onclick = ask;
+  q.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); ask(); } });
+})();
+</script>

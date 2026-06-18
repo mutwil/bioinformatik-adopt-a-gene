@@ -1,0 +1,10 @@
+name = "bioinf-tutor"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Optional: a soft per-IP rate limiter. Create a KV namespace and uncomment to enable.
+#   wrangler kv namespace create RL
+# then paste the printed id below:
+# [[kv_namespaces]]
+# binding = "RL"
+# id = "PASTE_KV_NAMESPACE_ID_HERE"

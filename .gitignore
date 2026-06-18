@@ -2,5 +2,3 @@ _site/
 .quarto/
 _extensions/
 .DS_Store
-*.html
-*_files/
