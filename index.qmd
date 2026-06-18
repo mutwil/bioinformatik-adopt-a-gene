@@ -110,6 +110,9 @@ counts <- matrix(c(
     3,     5,   4,  30,  28,  26,   10),
   nrow = 12, byrow = TRUE, dimnames = list(genes, samples))
 
+# simulate a whole-sample technical artefact: Root1 was sequenced ~100× deeper than the others
+counts[, "Root1"] <- counts[, "Root1"] * 100
+
 # each gene's length in base pairs — needed to convert counts -> TPM (longer genes collect more reads)
 gene_len <- c(1500, 2400, 900, 3000, 600, 1200, 1800, 300, 2100, 4500, 750, 1350)
 names(gene_len) <- genes
@@ -117,7 +120,7 @@ names(gene_len) <- genes
 draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined for you)
 ```
 
-> **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That single spike is almost certainly a **technical artifact** — and it's exactly why you must *eyeball* the raw matrix before trusting any analysis.
+> **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That single spike is almost certainly a **technical artifact** — and it's exactly why you must *eyeball* the raw matrix before trusting any analysis. Furthermore, **`Root1` (the first column) has far more reads than the other samples** — another technical artefact, this time caused by **deeper sequencing** of that one library.
 
 ### Step 1.1 — Find the outlier
 
@@ -149,11 +152,17 @@ say(correct,
 Two numbers can differ for reasons that aren't biological. **Run this** to see both confounds in your toy data:
 
 ```{webr}
-colSums(counts)   # total reads per sample = sequencing depth — these differ a lot
-gene_len          # gene length in bp — longer genes collect more reads at equal expression
+# 1) sequencing depth = total reads per sample (the sum of each column)
+depth <- colSums(counts)
+cat("── Sequencing depth: total reads per sample ──\n")
+print(data.frame(sample = names(depth), total_reads = as.integer(depth), row.names = NULL))
+
+# 2) gene length in base pairs (one value per gene)
+cat("\n── Gene length (bp): longer genes collect more reads ──\n")
+print(data.frame(gene = names(gene_len), length_bp = gene_len, row.names = NULL))
 ```
 
-> `Root2`'s total is blown up by that one artifact, and `Gene10` (4500 bp) collects far more reads than `Gene8` (300 bp) at the *same* expression. TPM fixes **both** — length first, then depth.
+> Look at the totals: **`Root1` was sequenced far deeper** and **`Root2`'s total is blown up by that one artifact** — both technical, not biological. And by gene, `Gene10` (4500 bp) collects far more reads than `Gene8` (300 bp) at the *same* expression. TPM fixes **both kinds** — length first, then depth.
 
 ### Step 1.3 — Compute TPM
 
