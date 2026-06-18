@@ -56,21 +56,37 @@ sym  <- setNames(info$symbol,      info$gene_id)
 say  <- function(cond, good, bad)                   # tiny ✅/❌ feedback helper
   cat(if (isTRUE(cond)) paste("✅", good) else paste("❌", bad), "\n")
 
-# draw_heatmap(): a small labelled heatmap (genes as rows, samples as columns)
-draw_heatmap <- function(mat, main = ""){
+# draw_heatmap(): a small labelled heatmap (genes as rows, samples as columns).
+# diverging = TRUE uses a blue–white–red scale centred at 0 (for z-scores).
+draw_heatmap <- function(mat, main = "", diverging = FALSE){
   mat <- as.matrix(mat); ng <- nrow(mat); ns <- ncol(mat)
-  pal <- hcl.colors(50, "YlGnBu", rev = TRUE)
-  rng <- range(mat); norm <- (mat - rng[1]) / (diff(rng) + 1e-9)
-  idx <- ceiling(norm * length(pal))            # bin each value into a colour 1..length(pal)
+  if (diverging){                                    # symmetric scale around 0 (z-scores)
+    pal <- hcl.colors(50, "Blue-Red 3")
+    lim <- max(abs(mat), na.rm = TRUE) + 1e-9
+    idx <- ceiling((mat + lim) / (2 * lim) * length(pal))
+  } else {                                            # sequential scale (counts/TPM)
+    pal <- hcl.colors(50, "YlGnBu", rev = TRUE)
+    rng <- range(mat, na.rm = TRUE)
+    idx <- ceiling((mat - rng[1]) / (diff(rng) + 1e-9) * length(pal))
+  }
   idx[idx < 1] <- 1; idx[idx > length(pal)] <- length(pal)   # clamp (keeps idx a matrix)
+  fmt <- function(v){                                 # compact cell label across any scale
+    if (!is.finite(v)) return("")
+    if (v == 0) return("0")
+    if (abs(v) >= 1000) return(paste0(formatC(round(v / 1000), format = "f", digits = 0, big.mark = ","), "k"))
+    if (abs(v) >= 100)  return(formatC(round(v), format = "f", digits = 0))
+    formatC(signif(v, 2), format = "g")
+  }
   op <- par(mar = c(5, 6, 3, 1)); on.exit(par(op))
   plot(NA, xlim = c(0.5, ns + 0.5), ylim = c(0.5, ng + 0.5),
        axes = FALSE, xlab = "", ylab = "", main = main)
   for (i in 1:ng) for (j in 1:ns){
     yy <- ng - i + 1                                 # row 1 (Gene1) drawn at the top
-    rect(j - 0.5, yy - 0.5, j + 0.5, yy + 0.5, col = pal[idx[i, j]], border = "white")
-    text(j, yy, format(mat[i, j], trim = TRUE), cex = 0.65,
-         col = if (norm[i, j] > 0.55) "white" else "black")
+    cellcol <- pal[idx[i, j]]
+    rect(j - 0.5, yy - 0.5, j + 0.5, yy + 0.5, col = cellcol, border = "white")
+    rr <- col2rgb(cellcol)                            # readable text colour for this cell
+    lum <- 0.299 * rr[1] + 0.587 * rr[2] + 0.114 * rr[3]
+    text(j, yy, fmt(mat[i, j]), cex = 0.65, col = if (lum < 140) "white" else "black")
   }
   axis(1, at = 1:ns, labels = colnames(mat), las = 2, tick = FALSE, cex.axis = 0.8)
   axis(2, at = ng:1, labels = rownames(mat), las = 1, tick = FALSE, cex.axis = 0.8)
@@ -82,14 +98,16 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ---
 
-## Stage 1 — From raw counts to TPM (and why we look first)
+## Stage 1 — Normalization: raw counts → TPM → log → z-score
+
+This stage builds the standard normalization pipeline one metric at a time, and shows the matrix as a heatmap after each step so you can *see* what every transformation fixes. The aim is for you to understand **why** each metric exists, not just how to type it.
 
 kallisto gives you **estimated counts** per gene. You **cannot compare counts directly** — two things confound them that have nothing to do with biology:
 
 - **gene length** — a longer gene catches more reads even at the same expression level;
 - **sequencing depth** — a sample sequenced deeper has more reads *everywhere*.
 
-**TPM** (Transcripts Per Million) removes both: divide out length, then scale each sample to a million. The *Arabidopsis* atlas you analyse in the next stages is already in TPM — here you'll see exactly where it comes from. But first: **always look at the raw data.**
+**TPM** (Transcripts Per Million) removes both: divide out length, then scale each sample to a million. We then **log-transform** (to tame the huge dynamic range) and **z-score** (to compare each gene's *pattern* across samples). The *Arabidopsis* atlas you analyse in the next stages is already in TPM — here you'll see exactly where it comes from. But first: **always look at the raw data.**
 
 ```{webr}
 genes   <- paste0("Gene", 1:12)
@@ -124,6 +142,8 @@ draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined
 
 ### Step 1.1 — Find the outlier
 
+The aim here is to **locate the single most extreme value** in the matrix and name the gene and sample it belongs to. Pinning down where a suspicious value sits is the first habit of careful analysis, because one artefactual cell can quietly distort means, totals and correlations computed later. The code does this in small steps: find the maximum, get its row/column position, then translate those numbers into names.
+
 ```{webr}
 # 1. the largest value anywhere in the matrix
 biggest <- max(counts)
@@ -149,7 +169,7 @@ say(correct,
 
 ### Step 1.2 — Why raw counts aren't comparable
 
-Two numbers can differ for reasons that aren't biological. **Run this** to see both confounds in your toy data:
+The aim of this step is to make the two confounds concrete *before* we correct them, so the normalization that follows feels motivated rather than magical. We print the per-sample read totals (sequencing depth) and the per-gene lengths — two technical factors that change counts without any change in real expression. **Run this** to see both in your toy data:
 
 ```{webr}
 # 1) sequencing depth = total reads per sample (the sum of each column)
@@ -162,11 +182,11 @@ cat("\n── Gene length (bp): longer genes collect more reads ──\n")
 print(data.frame(gene = names(gene_len), length_bp = gene_len, row.names = NULL))
 ```
 
-> Look at the totals: **`Root1` was sequenced far deeper** and **`Root2`'s total is blown up by that one artifact** — both technical, not biological. And by gene, `Gene10` (4500 bp) collects far more reads than `Gene8` (300 bp) at the *same* expression. TPM fixes **both kinds** — length first, then depth.
+> Look at the totals: **`Root2` (~100,000 reads) and `Root1` (~26,000) dwarf the others (~300).** `Root1` was simply sequenced deeper; `Root2`'s total is almost entirely the `Gene8` artefact — and a single count that large is itself only possible in a deeply-sequenced library, so `Root2` is deep *too*. Both totals are **technical, not biological**. And gene-wise, **`Gene12` (1350 bp) collects more reads than `Gene11` (750 bp) at the *same* expression**, simply because it is longer. TPM fixes **both kinds** — length first, then depth.
 
-### Step 1.3 — Compute TPM (and watch each step work)
+### Step 1.3 — Compute TPM (length, then depth)
 
-TPM is two normalizations, in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then **Run** — a heatmap after each step shows the effect (all log-scaled so patterns are visible).
+The aim is to remove the two confounds from Step 1.2 and end with **TPM**, the metric the atlas uses. TPM is two normalizations in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then **Run** — a heatmap after each step shows the values on the **raw scale** (no log yet), so the true dynamic range is honest.
 
 ```{webr}
 # step 1 — divide out gene length. gene_len is in bp, so /1000 converts it to kilobases.
@@ -176,10 +196,10 @@ rpk <- counts / (gene_len / ______)            # <- blank: 1000   (bp -> kb)
 # step 2 — divide out depth. sweep(x, 2, v, "/") divides each COLUMN by v; * 1e6 scales to per-million.
 tpm <- sweep(rpk, 2, ______, "/") * 1e6        # <- blank: colSums(rpk)
 
-# a heatmap after each step (log2(x + 1) just compresses the scale so patterns show)
-draw_heatmap(log2(counts + 1), "Raw counts — length & depth still in")
-draw_heatmap(log2(rpk + 1),    "After step 1 (RPK) — gene length removed")
-draw_heatmap(log2(tpm + 1),    "After step 2 (TPM) — depth removed too")
+# a heatmap after each step — raw scale, values shown as-is
+draw_heatmap(counts, "Raw counts — length & depth still in")
+draw_heatmap(rpk,    "After step 1 (RPK) — gene length removed")
+draw_heatmap(tpm,    "After step 2 (TPM) — depth removed too")
 
 say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
     "that's TPM — every sample sums to 1,000,000 and gene length is divided out. This is exactly the form the atlas is in.",
@@ -190,9 +210,37 @@ say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
 RPK = counts ÷ (length in kb). Then for each sample, divide by that sample's own RPK total (<code>colSums(rpk)</code>) and multiply by 1,000,000.
 </details>
 
-> Compare the three heatmaps: the raw panel is dominated by the artefacts; after **RPK** the long genes stop looking artificially high; after **TPM** the samples are comparable and the biology finally shows — **Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific, Gene6 flat.** This is the form the *Arabidopsis* atlas arrives in, ready to analyse.
+> Notice the catch: on the raw scale **a few large values still dominate the colour**, so even TPM looks unreadable (and the `Gene8` artefact is still there — normalization does **not** remove outliers). That is exactly why we next **log-transform** (Step 1.4) and then **z-score** (Step 1.5).
 
-> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples.* Never DE-test TPM.
+### Step 1.4 — Log scaling
+
+The aim is to make a matrix that spans several orders of magnitude actually *readable*. Taking **log2(TPM + 1)** compresses the range — every doubling becomes one even step — so moderate and low-expressed genes stop being invisible next to the high ones; the `+ 1` keeps zeros finite (log2(0 + 1) = 0). Run it and compare with the TPM heatmap above.
+
+```{webr}
+log_tpm <- log2(tpm + 1)                 # +1 so a zero stays finite: log2(0 + 1) = 0
+draw_heatmap(log_tpm, "log2(TPM + 1)")
+
+say(exists("log_tpm") && all(is.finite(log_tpm)),
+    "log scale: the dynamic range is tamed, so the root / leaf / pollen patterns start to show.",
+    "compute tpm in Step 1.3 first, then re-run.")
+```
+
+### Step 1.5 — Z-score (compare each gene's pattern)
+
+The aim is to compare each gene's *pattern* across samples, not its absolute level. A **z-score per gene** — subtract that gene's mean and divide by its standard deviation across samples — recentres every gene on 0, so the heatmap shows where each gene is relatively high (red) or low (blue) regardless of how strongly it is expressed. This is the standard transform behind clustering heatmaps, and here it makes the tissue specificity jump out.
+
+```{webr}
+# scale() z-scores each COLUMN, so transpose: genes become columns, z-score, then transpose back
+z <- t(scale(t(log_tpm)))
+z[!is.finite(z)] <- 0                    # a gene with no variation would divide by 0 -> set to 0
+draw_heatmap(z, "Per-gene z-score of log2(TPM)", diverging = TRUE)
+
+say(exists("z") && abs(mean(z)) < 1e-6,
+    "z-scored: each gene now centres on 0 — Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific stand out clearly.",
+    "run Step 1.4 (log_tpm) first, then re-run.")
+```
+
+> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples; log / z-score → visualising and clustering.* Never DE-test TPM.
 
 ---
 
