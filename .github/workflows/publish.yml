@@ -32,7 +32,13 @@ jobs:
         run: Rscript -e 'install.packages(c("rmarkdown", "knitr"))'
 
       - name: Add the quarto-live (webR) extension
-        run: quarto add r-wasm/quarto-live --no-prompt
+        run: |
+          # Move project files aside so `quarto add` doesn't parse index.qmd's
+          # include directive before the extension exists (chicken-and-egg).
+          mkdir -p .qbak && mv index.qmd _quarto.yml .qbak/
+          quarto add r-wasm/quarto-live --no-prompt
+          mv .qbak/index.qmd .qbak/_quarto.yml ./ && rmdir .qbak
+          test -f _extensions/r-wasm/live/_knitr.qmd && echo "extension installed OK"
 
       - name: Render site
         run: quarto render
