@@ -2,7 +2,7 @@
      Set TUTOR_API_URL below to your deployed Cloudflare Worker URL. Until then the
      button is hidden (students see nothing). See tutor-proxy/README.md to deploy. -->
 <style>
-  #biotutor-btn{position:fixed;right:18px;bottom:18px;z-index:9999;border:none;border-radius:24px;
+  #biotutor-btn{display:none;position:fixed;right:18px;bottom:18px;z-index:9999;border:none;border-radius:24px;
     padding:11px 16px;font:600 14px/1 system-ui,sans-serif;background:#2b6cb0;color:#fff;cursor:pointer;
     box-shadow:0 3px 12px rgba(0,0,0,.25)}
   #biotutor-btn:hover{background:#2c5282}
@@ -53,6 +53,7 @@
   if (TUTOR_API_URL.includes("REPLACE-ME")) return;  // not configured yet → hide the widget
 
   const btn = document.getElementById("biotutor-btn");
+  btn.style.display = "block";   // reveal only when a Worker URL is configured
   const panel = document.getElementById("biotutor-panel");
   const log = document.getElementById("biotutor-log");
   const q = document.getElementById("biotutor-q");
