@@ -13,8 +13,8 @@
   #biotutor-head{background:#2b6cb0;color:#fff;padding:10px 12px;font:600 14px/1.3 system-ui,sans-serif}
   #biotutor-head small{display:block;font-weight:400;opacity:.9;font-size:11px;margin-top:2px}
   #biotutor-log{flex:1;overflow-y:auto;padding:10px;font:14px/1.45 system-ui,sans-serif}
-  .biotutor-msg{margin:0 0 10px;white-space:pre-wrap;word-wrap:break-word}
-  .biotutor-u{color:#2c5282;font-weight:600}
+  .biotutor-msg{margin:0 0 10px;word-wrap:break-word}
+  .biotutor-u{color:#2c5282;font-weight:600;margin-bottom:2px}
   .biotutor-a{background:#f1f5f9;border-radius:8px;padding:8px 10px}
   #biotutor-foot{border-top:1px solid #e2e8f0;padding:8px}
   #biotutor-q{width:100%;box-sizing:border-box;resize:none;border:1px solid #cbd5e0;border-radius:8px;
@@ -23,6 +23,13 @@
   #biotutor-send{border:none;border-radius:8px;background:#2b6cb0;color:#fff;padding:7px 14px;font:600 13px system-ui;cursor:pointer}
   #biotutor-send:disabled{opacity:.5;cursor:default}
   #biotutor-log a{color:#2b6cb0}
+  .biotutor-body code{background:rgba(0,0,0,.08);padding:1px 4px;border-radius:4px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+  .biotutor-body pre{background:#0f172a;color:#e2e8f0;padding:8px 10px;border-radius:6px;overflow-x:auto;margin:6px 0}
+  .biotutor-body pre code{background:none;padding:0;color:inherit}
+  .biotutor-body ul,.biotutor-body ol{margin:4px 0;padding-left:20px}
+  .biotutor-body li{margin:2px 0}
+  .biotutor-body strong{font-weight:700}
   @media (prefers-color-scheme: dark){
     #biotutor-panel{background:#1a202c;color:#e2e8f0;border-color:#2d3748}
     .biotutor-a{background:#2d3748}
@@ -62,12 +69,36 @@
 
   btn.onclick = () => { panel.classList.toggle("open"); if (panel.classList.contains("open")) q.focus(); };
 
-  function add(cls, who, text){
-    const p = document.createElement("p");
-    p.className = "biotutor-msg " + cls;
-    if (who){ const b=document.createElement("span"); b.className="biotutor-u"; b.textContent=who+" "; p.appendChild(b); }
-    const span=document.createElement("span"); span.textContent=text; p.appendChild(span);
-    log.appendChild(p); log.scrollTop = log.scrollHeight; return span;
+  function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+  // Minimal, safe Markdown -> HTML (escape first, then format a known subset).
+  function mdToHtml(src){
+    const blocks=[];
+    // pull fenced code blocks out behind a unique sentinel so formatting doesn't touch them
+    src = src.replace(/```[a-zA-Z0-9]*\n?([\s\S]*?)```/g, (m,c)=>{ blocks.push(c); return "@@CB"+(blocks.length-1)+"@@"; });
+    let t = esc(src);
+    t = t.replace(/`([^`]+)`/g, "<code>$1</code>");
+    t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    t = t.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+    t = t.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    t = t.replace(/^\s{0,3}#{1,6}\s+(.+)$/gm, "<strong>$1</strong>");
+    const lines = t.split(/\n/); let html="", ul=false, ol=false;
+    const close=()=>{ if(ul){html+="</ul>";ul=false;} if(ol){html+="</ol>";ol=false;} };
+    for (const line of lines){
+      let m;
+      if (m = line.match(/^\s*[-*]\s+(.+)$/)){ if(ol){html+="</ol>";ol=false;} if(!ul){html+="<ul>";ul=true;} html+="<li>"+m[1]+"</li>"; }
+      else if (m = line.match(/^\s*\d+\.\s+(.+)$/)){ if(ul){html+="</ul>";ul=false;} if(!ol){html+="<ol>";ol=true;} html+="<li>"+m[1]+"</li>"; }
+      else if (line.trim()===""){ close(); }
+      else { close(); html += line + "<br>"; }
+    }
+    close();
+    return html.replace(/@@CB(\d+)@@(?:<br>)?/g, (m,i)=>"<pre><code>"+esc(blocks[i])+"</code></pre>");
+  }
+  function add(cls, who){
+    const wrap = document.createElement("div");
+    wrap.className = "biotutor-msg " + cls;
+    if (who){ const b=document.createElement("div"); b.className="biotutor-u"; b.textContent=who; wrap.appendChild(b); }
+    const body = document.createElement("div"); body.className="biotutor-body"; wrap.appendChild(body);
+    log.appendChild(wrap); log.scrollTop = log.scrollHeight; return body;
   }
 
   // Grab the student's R code from the on-page editors (CodeMirror), most recent last.
@@ -82,9 +113,9 @@
     const question = q.value.trim();
     if (!question) return;
     q.value = ""; send.disabled = true;
-    add("", "You:", question);
-    const out = add("biotutor-a", "Tutor:", "…");
-    let first = true;
+    add("", "You:").textContent = question;
+    const out = add("biotutor-a", "Tutor:"); out.textContent = "…";
+    let raw = "", first = true;
     try{
       const resp = await fetch(TUTOR_API_URL, {
         method: "POST",
@@ -114,8 +145,8 @@
           try{
             const ev = JSON.parse(data);
             if (ev.type === "content_block_delta" && ev.delta && ev.delta.type === "text_delta"){
-              if (first){ out.textContent = ""; first = false; }
-              out.textContent += ev.delta.text; log.scrollTop = log.scrollHeight;
+              if (first){ raw = ""; first = false; }
+              raw += ev.delta.text; out.innerHTML = mdToHtml(raw); log.scrollTop = log.scrollHeight;
             }
           }catch(e){}
         }

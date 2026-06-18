@@ -23,7 +23,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. You
 
 - Edit the code where you see `______`, then press **Run** (▶). Cells share state, so run them **top to bottom**.
 - Every code cell is **commented** — each line explains what it does and `# what each function does`, so you can follow the R even if a function is new to you.
-- After many steps a line prints **✅** if you got it right, or a hint.
+- When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
 
 > The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). The QC and differential-expression tables are small **illustrative examples** (the real ones come from the server pipeline — see the teacher guide).
@@ -70,25 +70,22 @@ Pick **one** gene from the pool (your TA prevents duplicates):
 
 `CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `NST1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
 
-**Instructions:** replace both `______`, then Run.
+**Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
 ```{webr}
 MY_GENE <- "______"   # <- (assignment: name <- value) your gene's AGI locus, e.g. "AT5G17420"
 MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
 cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
+
+# instant check: grepl() tests the AGI text pattern; %in% checks the gene is actually in the data
+say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
+    "valid gene, present in the data — onwards!",
+    "not a valid/known locus — pick one from the pool above and re-run.")
 ```
 
 <details><summary>💡 Hint</summary>
 An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes: `"AT5G17420"`.
 </details>
-
-```{webr}
-# grepl(pattern, x): does x match this text pattern? (TRUE/FALSE)  -- here we check the AGI looks valid
-# %in%: is the value present in a set?  -- here, is your gene actually in the data matrix?
-say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
-    "valid gene, present in the data — onwards!",
-    "not a valid/known locus — pick one from the pool above and re-run Stage 0")
-```
 
 **✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.*
 
@@ -96,7 +93,7 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 
 ## Stage 1 — Normalization check (TPM)
 
-TPM scales each sample so its values sum to 1,000,000, making genes comparable across samples of different depth. **Fill the blank** so each column is divided by its own total.
+TPM scales each sample so its values sum to 1,000,000, making genes comparable across samples of different depth. **Fill the blank** so each column is divided by its own total, then **Run** — it checks the columns sum to 1e6.
 
 ```{webr}
 # data.frame(): build a small table. c(): combine values into a vector. row.names: label the rows
@@ -107,19 +104,17 @@ rpk <- counts / length_kb                               # reads per kilobase (ea
 # sweep(x, 2, v, "/"): apply an operation across a margin. 2 = columns -> divide each COLUMN by v.
 # colSums(rpk): the total of each column. So this makes every column sum to 1e6 = TPM.
 tpm <- sweep(rpk, 2, ______, "/") * 1e6
-round(tpm, 1)                                           # round() to 1 decimal for display
+print(round(tpm, 1))                                    # round() to 1 decimal for display
+
+# instant check: exists() = was it created? all()/abs() = are all column sums within 1 of 1e6?
+say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
+    "every sample sums to 1,000,000 — that's TPM.",
+    "columns don't sum to 1e6 yet — check the blank.")
 ```
 
 <details><summary>💡 Hint</summary>
 You want each column to sum to 1e6, so divide by the column sums: <code>colSums(rpk)</code>.
 </details>
-
-```{webr}
-# exists(): has the object been created?  all(): are ALL these TRUE?  abs(): absolute value
-say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
-    "every sample sums to 1,000,000 — that's TPM.",
-    "columns don't sum to 1e6 yet — check the blank.")
-```
 
 ---
 
@@ -210,15 +205,13 @@ hc <- hclust(d, method = "ward.D2")
 plot(hc, labels = colnames(X), main = "Hierarchical clustering of samples", xlab = "", sub = "")
 ```
 
-**🔮 Your turn:** tissue should dominate, with the A/B batch effect minor. **Fill the blank** with `batch` to recolour the PCA by sequencing batch and judge whether batch matters here.
+**🔮 Your turn:** tissue should dominate, with the A/B batch effect minor. **Fill the blank** with `batch` to recolour the PCA by sequencing batch — running it confirms PCA ran and judges whether batch matters here.
 
 ```{webr}
 plot(pca$x[,1], pca$x[,2], col = factor(______), pch = 19, cex = 1.4,   # <- replace ______ with batch
      xlab = "PC1", ylab = "PC2", main = "PCA — coloured by batch")
 legend("topright", legend = levels(factor(batch)), col = 1:2, pch = 19)
-```
 
-```{webr}
 say(exists("pca"),
     "PCA + clustering done — the three tissues form clear clusters; the batch effect is small here.",
     "run the synthetic-data and PCA cells above first.")
@@ -230,7 +223,7 @@ say(exists("pca"),
 
 ## Stage 3 — Co-expression of YOUR gene  *(the heart of the dossier)*
 
-**Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target` so each gene is compared against your gene's expression.
+**Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target`, then **Run** — the check confirms your own gene tops the list (PCC = 1.000).
 
 ```{webr}
 # EXPR[MY_GENE, ]  -> pull ONE row: your gene's expression across all 56 organs
@@ -249,19 +242,17 @@ result <- data.frame(gene        = rownames(EXPR),
                      PCC         = round(pcc, 3))
 # order(-result$PCC): row order sorted by PCC, highest first.  head(x, 100): keep the top 100
 result <- head(result[order(-result$PCC), ], 100)
-head(result, 12)                                   # show the top 12 neighbours
+print(head(result, 12))                            # show the top 12 neighbours
+
+# instant check: row 1 should be your own gene, correlated 1.000 with itself
+say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
+    paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
+    "row 1 should be your own gene with PCC = 1.000 — check Stage 0 and the blank above.")
 ```
 
 <details><summary>💡 Hint</summary>
 <code>target</code> holds your gene's expression across all 56 organs — correlate each gene against it.
 </details>
-
-```{webr}
-# nrow(): number of rows.  result$gene[1]: the first gene in the ranked table (should be your own gene).
-say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
-    paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
-    "row 1 should be your own gene with PCC = 1.000 — check Stage 0 and the blank above.")
-```
 
 **✍️ Dossier:** from the neighbours' descriptions, *before any lookup*, predict your gene's function.
 
@@ -298,7 +289,7 @@ for (cut in c(0.5, 0.7, 0.9)) {
 
 ## Stage 5 — Build the network (+ protein interactions)
 
-Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill the blank** with your cutoff (e.g. `0.8`).
+Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill the blank** with your cutoff (e.g. `0.8`) and **Run** — it reports the edges and your top hubs.
 
 ```{webr}
 MY_CUTOFF <- ______          # the cutoff you justified, e.g. 0.8
@@ -317,9 +308,8 @@ if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
 deg <- sort(table(c(edges$source, edges$target)), decreasing = TRUE)
 cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"), ")\n\nTop hubs (by degree):\n")
 print(head(deg, 6))                                  # the 6 most-connected genes
-```
 
-```{webr}
+# instant check: did you build a non-empty network?
 say(exists("edges") && nrow(edges) > 0,
     "network built — note your top hub and whether it's a known regulator (MYB/NAC).",
     "no edges — lower MY_CUTOFF a little and re-run.")
@@ -353,10 +343,9 @@ ora <- do.call(rbind, lapply(names(terms), function(t) {
 }))
 ora$padj <- p.adjust(ora$p, "BH")                    # p.adjust(): correct p-values for many tests (BH = FDR)
 ora <- head(ora[order(ora$p), c("name","k","K","padj")], 12)   # most significant terms first
-ora
-```
+print(ora)
 
-```{webr}
+# instant check: did enrichment return any terms?
 say(exists("ora") && nrow(ora) > 0,
     paste0("top enriched term: ", ora$name[1], " — does it match your prediction?"),
     "no terms returned — make sure Stage 3 ran first.")
