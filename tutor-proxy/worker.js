@@ -79,16 +79,26 @@ export default {
     const mode = body.mode === "deep" ? "deep" : "hint";
     if (!question) return json({ error: "empty question" }, 400, origin);
 
+    // prior turns sent by the page so the tutor remembers the conversation.
+    // Sanitize: only {role:"user"|"assistant", content:string}, alternating, capped.
+    const history = (Array.isArray(body.history) ? body.history : [])
+      .filter(m => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+      .slice(-12)
+      .map(m => ({ role: m.role, content: m.content.toString().slice(0, 4000) }));
+
     const userContent =
       `Page: ${page}\n\n` +
       (code ? `My current code on the page:\n\`\`\`r\n${code}\n\`\`\`\n\n` : "") +
       `My question: ${question}`;
 
+    // Anthropic requires the first message to be "user"; drop any leading assistant turns.
+    while (history.length && history[0].role !== "user") history.shift();
+
     const anthropicReq = {
       model: MODELS[mode],
       max_tokens: MAX_TOKENS[mode],
       system: [{ type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-      messages: [{ role: "user", content: userContent }],
+      messages: [...history, { role: "user", content: userContent }],
       stream: true,
     };
 

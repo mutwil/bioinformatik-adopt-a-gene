@@ -58,7 +58,8 @@ draw_heatmap <- function(mat, main = ""){
   mat <- as.matrix(mat); ng <- nrow(mat); ns <- ncol(mat)
   pal <- hcl.colors(50, "YlGnBu", rev = TRUE)
   rng <- range(mat); norm <- (mat - rng[1]) / (diff(rng) + 1e-9)
-  idx <- pmax(1, ceiling(norm * length(pal)))
+  idx <- ceiling(norm * length(pal))            # bin each value into a colour 1..length(pal)
+  idx[idx < 1] <- 1; idx[idx > length(pal)] <- length(pal)   # clamp (keeps idx a matrix)
   op <- par(mar = c(5, 6, 3, 1)); on.exit(par(op))
   plot(NA, xlim = c(0.5, ns + 0.5), ylim = c(0.5, ng + 0.5),
        axes = FALSE, xlab = "", ylab = "", main = main)
