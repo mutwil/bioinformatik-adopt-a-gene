@@ -1,0 +1,8 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - data
+website:
+  title: "Bioinformatik — Adopt-a-Gene"
+  page-navigation: true

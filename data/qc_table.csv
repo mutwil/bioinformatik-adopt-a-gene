@@ -1,0 +1,4 @@
+sample,tissue,n_processed,n_pseudoaligned,pct_pseudoaligned
+SRR3581681,leaf (mature),24871002,19663012,79.1
+SRR3581705,internode,22014885,17192630,78.1
+SRR34314723,(demo / suspect),20559430,3267448,15.9
