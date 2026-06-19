@@ -417,7 +417,7 @@ say(p_emp < 0.05,
     sprintf("not enriched — %d of 20 random grids reached %d hits, empirical p = %.3f. Raise 'hits' and re-run.", sum(rc >= hits), hits, p_emp))
 ```
 
-> The **empirical p-value** is simply *how often chance did as well as you*: count the random grids with **≥ your hits**, divide by the number of runs. With only 20 runs it's coarse — if **no** random grid reaches your count, p ≈ 1/21 ≈ 0.05, and you'd need thousands of runs to go lower. The formula below gives the exact number in one line.
+> **This is a Monte Carlo simulation.** Each random grid is one draw from the *null hypothesis* — "DEGs are scattered at random, with no preference for the pathway." By repeating the random draw many times we build the null distribution by brute force, and the **empirical p-value** is just the fraction of those draws that match or beat your observed hits. The estimate gets more precise the more simulations you run (the error shrinks roughly like 1/√runs), so 20 grids is only a rough picture — if *no* random grid reaches your count, the best you can say is p ≈ 1/21 ≈ 0.05, and going lower would need thousands of runs. The hypergeometric **formula** below is the *exact* answer this simulation is converging towards — which is why, when an exact formula exists, we use it instead of simulating.
 
 ### The exact p-value — the hypergeometric formula
 
