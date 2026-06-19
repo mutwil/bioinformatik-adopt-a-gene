@@ -1,0 +1,23 @@
+source_symbol,source_AGI,target_symbol,target_AGI,interaction,evidence,reference
+SND1,AT1G32770,MYB46,AT5G12870,activates,ChIP+EMSA+transactivation,Zhong2007
+SND1,AT1G32770,MYB83,AT3G08500,activates,ChIP+transactivation,McCarthy2009
+NST1,AT2G46770,MYB46,AT5G12870,activates,transactivation,Zhong2007
+NST2,AT3G61910,MYB46,AT5G12870,activates,transactivation,Zhong2007
+VND6,AT5G62380,MYB46,AT5G12870,activates,transactivation,Zhong2007
+VND7,AT1G71930,MYB46,AT5G12870,activates,transactivation,Zhong2007
+MYB46,AT5G12870,CESA4,AT5G44030,activates,ChIP+EMSA(M46RE),Kim2013
+MYB46,AT5G12870,CESA7,AT5G17420,activates,ChIP+EMSA(M46RE),Kim2013
+MYB46,AT5G12870,CESA8,AT4G18780,activates,ChIP+EMSA(M46RE),Kim2013
+MYB83,AT3G08500,CESA8,AT4G18780,activates,transactivation,Zhong&Ye2012
+MYB46,AT5G12870,MYB58,AT1G16490,activates,SMRE+transactivation,Zhong&Ye2012
+MYB46,AT5G12870,MYB63,AT1G79180,activates,SMRE(8 sites)+transactivation,Zhong&Ye2012
+MYB46,AT5G12870,MYB85,AT4G22680,induces,transactivation(not confirmed direct),Zhong2007
+MYB46,AT5G12870,MYB52,AT1G17950,activates,SMRE(multiple sites)+transactivation,Zhong&Ye2012
+MYB46,AT5G12870,MYB54,AT1G73410,activates,SMRE+transactivation,Zhong&Ye2012
+MYB46,AT5G12870,MYB103,AT1G63910,activates,transactivation,Zhong&Ye2012
+MYB46,AT5G12870,C3H14,AT1G66810,activates,SMRE+transactivation,Zhong&Ye2012
+MYB46,AT5G12870,KNAT7,AT1G62990,activates,SMRE(multiple sites)+transactivation,Zhong&Ye2012
+SND1,AT1G32770,KNAT7,AT1G62990,activates,transactivation,Zhong&Ye2012
+MYB58,AT1G16490,LAC4,AT2G38080,activates,AC-element+transactivation,Zhou2009
+MYB63,AT1G79180,LAC4,AT2G38080,activates,AC-element+transactivation,Zhou2009
+KNAT7,AT1G62990,CESA8,AT4G18780,represses,genetic(negative regulator),Li2012

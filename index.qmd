@@ -46,6 +46,7 @@ info      <- read.csv("data/gene_info.csv")        # gene_id, symbol, descriptio
 ppi       <- read.csv("data/ppi_edges.csv")        # protein–protein interactions (BioGRID)
 gene_sets <- read.csv("data/gene_sets.csv")        # GO term → gene memberships
 de        <- read.csv("data/de_results.csv")       # example DESeq2 result
+grn       <- read.csv("data/scw_grn_edges.csv")    # curated secondary-cell-wall regulatory edges (MYB46 GRN)
 
 organ_cols <- setdiff(names(m), "gene_id")          # every column except gene_id = the samples
 EXPR <- as.matrix(m[, organ_cols])                  # numeric matrix (needed for cor()/apply())
@@ -94,6 +95,23 @@ draw_heatmap <- function(mat, main = "", diverging = FALSE){
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
+
+---
+
+## Weekly schedule
+
+Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. The interactive page below covers **Stages 1–3** (the in-browser R skills); the **co-expression → network → enrichment** work then happens in the **database exercises** and the **MYB46 gene-regulatory-network exercise** further down this page.
+
+| Session | When | Lecture | Hands-on (this page) | Dossier grows by |
+|---|---|---|---|---|
+| **1** | Tue, uge 43 | RNA-seq background + normalization (F1–F2) | **Stage 1** Normalization + **Stage 3** Claim your gene | seed gene + clean log/z vector |
+| **2** | Thu, uge 43 | EDA + basic analyses (F3–F4) | **Stage 2** PCA & clustering + **Database exercises D1–D2** | tissue figures + neighbour table |
+| **3** | Tue, uge 44 | Networks + the MYB46 GRN concept (F5) + Cytoscape walkthrough | **Database exercises D3–D4** + **MYB46 network N1–N4 (R)** | threshold + network + GRN + GO term |
+| **4** | Thu, uge 44 | Short multi-omic briefing (F6, knowledge-graphs removed) | **Cytoscape figure** + **conference** | finished GRN figure + 1-page dossier + talk |
+
+**Proposed exercises on this page:** Stages 1–3 (R, below) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network** (R + Cytoscape) · **Close the dossier** (conference).
+
+> **Note on scope:** the live in-browser R lesson is **Stages 1–3**. Everything after “Claim your gene” is delivered as the new **database** and **MYB46-GRN network** exercises — the old generic co-expression/threshold/network/GO/DE stages have been folded into those.
 
 ---
 
@@ -315,7 +333,7 @@ say(exists("groups") && length(unique(groups)) == 3,
 
 You've got the skills — now make it personal. Pick **one** gene from the pool (your TA prevents duplicates):
 
-`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `NST1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
+`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `SND1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
 
 **Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
@@ -338,168 +356,177 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## Stage 4 — Co-expression of YOUR gene  *(the heart of the dossier)*
+## Database exercises (D1–D4)
 
-**Guilt by association:** genes switched on/off together often work together. Correlate every gene with **your** gene. **Fill the blank** with `target`, then **Run** — the check confirms your own gene tops the list (PCC = 1.000).
+The atlas you analysed is one resource among many. These four short **web** exercises cross-check your gene in the major plant transcriptomics databases — no coding, just clicking. All four are **assessed** (your TA checks them against an answer key). *URLs verified working 2026-06-19.*
 
-```{webr}
-# EXPR[MY_GENE, ]  -> pull ONE row: your gene's expression across all 56 organs
-target <- EXPR[MY_GENE, ]
+### D1 — Where is my gene switched on?  *(eFP/ePlant + TraVA-DB)*
 
-# apply(X, 1, f): run function f on each ROW of matrix X   (margin 1 = rows, 2 = columns)
-# function(r) ...: r is one gene's expression vector (a single row)
-# cor(a, b): Pearson correlation coefficient (PCC) between two numeric vectors (−1 … +1)
-# suppressWarnings(): hide the harmless warning for genes with no variation (standard deviation = 0)
-pcc <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))
+1. Open **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → type your gene in the **search box** (e.g. `AT5G12870` for MYB46, `AT5G17420` for CESA7) → open the **Plant eFP** view; note the highest organ and the colour scale.
+2. Open **TraVA-DB** ([travadb.org](https://travadb.org/)) → search the same locus → read the bar profile.
+3. Record the single highest-expression organ in **both**.
 
-# data.frame(): assemble a results table.  round(x, 3): keep 3 decimals
-result <- data.frame(gene        = rownames(EXPR),
-                     symbol      = sym[rownames(EXPR)],
-                     description = desc[rownames(EXPR)],
-                     PCC         = round(pcc, 3))
-# order(-result$PCC): row order sorted by PCC, highest first.  head(x, 100): keep the top 100
-result <- head(result[order(-result$PCC), ], 100)
-print(head(result, 12))                            # show the top 12 neighbours
+<details><summary>✅ Expected</summary>Secondary-cell-wall genes (CESA4/7/8, MYB46) peak in <b>inflorescence stem / mature stem</b> (secondary xylem &amp; fibres); the two databases agree on the stem maximum.</details>
 
-# instant check: row 1 should be your own gene, correlated 1.000 with itself
-say(nrow(result) > 0 && result$gene[1] == MY_GENE && round(result$PCC[1], 3) == 1,
-    paste("row 1 is", MY_GENE, "with PCC = 1.000 — your neighbour list is correct."),
-    "row 1 should be your own gene with PCC = 1.000 — check Stage 3 and the blank above.")
-```
+**Q:** A transcription factor and its target peak in the *same* tissue — why does that make sense? What would it mean if they didn't?
 
-<details><summary>💡 Hint</summary>
-<code>target</code> holds your gene's expression across all 56 organs — correlate each gene against it.
-</details>
+### D2 — Who does my gene work with?  *(CoNekT + ATTED-II)*
 
-**✍️ Dossier:** from the neighbours' descriptions, *before any lookup*, predict your gene's function.
+1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search CESA7 `AT5G17420` → open its **co-expression neighbourhood**; tick the secondary-wall neighbours you recognise (CESA4 `AT5G44030`, CESA8 `AT4G18780`, IRX9 `AT2G37090`, COBL4 `AT5G15630`, KNAT7 `AT1G62990`, MYB46 `AT5G12870`).
+2. **ATTED-II** ([atted.jp](https://atted.jp/)) → use the **search box** for the same locus → read the co-expressed list.
+3. Write down the overlap between the two lists.
 
----
+<details><summary>✅ Expected</summary>Both return a tight secondary-wall module; the strongest partners <b>CESA4 + CESA8</b> appear in <i>both</i> — mirroring the physical CESA complex.</details>
 
-## Stage 5 — "Why 0.7 is a guess": choose a threshold
+**Q:** Why would members of a physical complex also co-express? Is co-expression evidence *of* a physical interaction, or only *consistent with* one?
 
-We build the all-vs-all correlation among your 100 neighbours and count edges at several cutoffs. Run it, then decide.
+### D3 — Building the MYB46 GRN  *(CoNekT + STRING)* — the centrepiece
 
-```{webr}
-nb  <- result$gene          # the 100 neighbour gene ids
-sub <- EXPR[nb, ]           # their expression rows only
-# t(): transpose (swap rows/columns) so cor() correlates GENES against each other, not samples.
-# cor(matrix): returns the full gene × gene correlation matrix.
-C   <- cor(t(sub))
-# upper.tri(C): a TRUE/FALSE mask of the upper triangle, so each gene-pair is counted once.
-ut  <- upper.tri(C)
-known <- c("AT5G44030","AT5G17420","AT4G18780","AT2G37090",
-           "AT2G38080","AT5G12870","AT1G32770","AT5G15630")   # known cell-wall genes
-# for: repeat the block for each cutoff value
-for (cut in c(0.5, 0.7, 0.9)) {
-  keep  <- ut & C > cut                              # keep edges above the cutoff (and in the upper triangle)
-  # row(C)/col(C): the row/column index of every cell; [keep] picks the kept edges' genes
-  nodes <- unique(c(rownames(C)[row(C)[keep]], colnames(C)[col(C)[keep]]))  # unique() removes duplicates
-  # sum(keep): how many edges (TRUEs).  %in%: which known genes survived
-  cat(sprintf("cutoff %.1f → %5d edges, %4d genes, %d known cell-wall genes kept\n",
-              cut, sum(keep), length(nodes), sum(known %in% nodes)))
-}
-```
+*(This replaces the old "ask ChatGPT to extract a knowledge graph" step — every edge here comes from a curated database, not a chatbot.)*
 
-> Pick the cutoff that keeps a clean module **without** dropping known partners, and justify it in your dossier. *(WGCNA's soft-thresholding automates exactly this choice.)*
+1. **CoNekT** → look up each regulator (MYB46 `AT5G12870`, MYB83 `AT3G08500`, SND1/NST3 `AT1G32770`, KNAT7 `AT1G62990`) and note its neighbours.
+2. **STRING** ([string-db.org](https://string-db.org/)) → search MYB46 `AT5G12870`, organism *Arabidopsis thaliana*, required score **medium (0.400)**. Note which secondary-wall genes appear and **which evidence channel** links them (experiments / co-expression / text-mining).
+3. Which links does STRING recover by *experiment*, and which only by *co-expression / text-mining*?
+
+<details><summary>✅ Expected</summary>STRING recovers the CESA4/7/8 triangle strongly (experiments + co-expression) but links <b>MYB46 mainly via co-expression / text-mining, not physical experiments</b> — because a TF binds its target's <i>DNA</i>, not its protein.</details>
+
+**Q:** Name one edge that exists in a GRN but not in a PPI database, and one that exists in a PPI database but not a GRN. What does each let you predict?
+
+### D4 — Cross-database consistency  *(TraVA-DB + EBI Expression Atlas + CoNekT)*
+
+1. **TraVA-DB** → CESA4 `AT5G44030` → top organ.
+2. **EBI Expression Atlas** → [ebi.ac.uk/gxa/genes/AT5G44030](https://www.ebi.ac.uk/gxa/genes/AT5G44030) → Baseline → top tissue.
+3. **CoNekT** → `AT5G44030` → specificity → top organ.
+4. Fill a 3-row table: *database | top tissue | agrees?*
+
+<details><summary>✅ Expected</summary>All three converge on <b>stem</b>; the second-ranked tissues may differ.</details>
+
+**Q:** Which discrepancy would worry you more — the top tissue disagreeing, or the rank order of the low-expression tissues?
+
+> **Demo only (not assessed):** the **EBI Single-Cell Expression Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows secondary-wall genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration, so it is projector-only.
 
 ---
 
-## Stage 6 — Build the network (+ protein interactions)
+## The MYB46 gene-regulatory network  *(R + Cytoscape)*
 
-Choose your cutoff, then overlay **physical** interactions from BioGRID. **Fill the blank** with your cutoff (e.g. `0.8`) and **Run** — it reports the edges and your top hubs.
+The rebuilt network exercise. You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature table — *not* an LLM), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — a master transcription factor binds its targets' DNA, so only a *regulatory* layer can connect it.
+
+### N1 — Your gene's co-expression neighbourhood
 
 ```{webr}
-MY_CUTOFF <- ______          # the cutoff you justified, e.g. 0.8
-keep  <- ut & C > MY_CUTOFF   # the co-expression edges to keep
-# build an edge table (source gene, target gene, edge type) for the kept pairs
+HUB    <- MY_GENE                                  # your adopted gene (from "Claim your gene")
+target <- EXPR[HUB, ]                              # its expression across every organ
+# cor(r, target): Pearson correlation of each gene's profile with your gene's profile
+pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))   # <- blank: target
+nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
+                   description = desc[rownames(EXPR)], PCC = round(pcc, 3))
+nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
+print(head(nbhd, 12))
+
+say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
+    paste("row 1 is", MY_NAME, "at PCC = 1.000 — neighbour list ready."),
+    "row 1 should be your own gene at PCC = 1.000 — fill the blank with 'target' and re-run.")
+```
+
+### N2 — Add the physical layer (BioGRID PPI)
+
+```{webr}
+nb <- nbhd$gene                                    # the 60 neighbour ids
+C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation matrix
+ut <- upper.tri(C)                                 # count each pair once
+MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.85
+keep  <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
 
-# ppi[ rows , cols ]: filter the PPI table to interactions where BOTH genes are neighbours (%in% nb)
+# overlay BioGRID physical interactions where BOTH partners are in your neighbourhood
 pp <- ppi[ppi$source %in% nb & ppi$target %in% nb, c("source","target")]
-# rbind(): stack rows -> add the PPI edges underneath the co-expression edges
 if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
 
-# table(): count how many times each gene appears = its degree (number of edges).
-# sort(decreasing = TRUE): biggest first -> the hubs.
-deg <- sort(table(c(edges$source, edges$target)), decreasing = TRUE)
-cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"), ")\n\nTop hubs (by degree):\n")
-print(head(deg, 6))                                  # the 6 most-connected genes
+cesa <- c("AT5G44030","AT5G17420","AT4G18780")     # the secondary-wall CESA triangle
+cesa_ppi <- sum(edges$type == "PPI" & edges$source %in% cesa & edges$target %in% cesa)
+cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"),
+    "; CESA–CESA physical edges:", cesa_ppi, ")\n")
 
-# instant check: did you build a non-empty network?
-say(exists("edges") && nrow(edges) > 0,
-    "network built — note your top hub and whether it's a known regulator (MYB/NAC).",
-    "no edges — lower MY_CUTOFF a little and re-run.")
+say(nrow(edges) > 0,
+    "co-expression + physical layers built. If CESA4/7/8 are in your neighbourhood you'll see their PPI triangle.",
+    "no edges — lower MY_CUTOFF (e.g. 0.8) and re-run.")
 ```
 
-> For a publication figure, export `edges` and open it in **Cytoscape** (Network Analyzer for betweenness). To download: run `write.csv(edges, "edges.csv")` then use your browser's file panel.
-
----
-
-## Stage 7 — Functional enrichment (GO over-representation)
-
-Is your neighbourhood enriched for a biological process? We test each GO term with the hypergeometric test (all base R — no packages).
+### N3 — Add the curated regulatory layer  *(replaces the knowledge-graph step)*
 
 ```{webr}
-bg   <- rownames(EXPR); N <- length(bg)              # background = all genes in the matrix; N = how many
-hits <- result$gene                                  # our "interesting" list = the co-expression neighbours
-gs   <- gene_sets[gene_sets$gene_id %in% bg, ]       # keep only GO memberships for background genes
-# split(values, groups): make a list, one entry per GO term, holding that term's genes
+# the curated SCW regulatory edges — every one cites a paper + an experiment (ChIP/EMSA/transactivation)
+print(grn[, c("source_symbol","target_symbol","interaction","evidence","reference")])
+
+# turn them into typed edges: GRN_activates / GRN_represses / GRN_induces
+grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI,
+                        type = paste0("GRN_", grn$interaction))
+all_edges <- rbind(edges, grn_edges)               # three layers now coexist
+
+say(any(grepl("GRN", all_edges$type)) && any(all_edges$type == "GRN_represses"),
+    "three layers stacked: co-expression, physical (PPI) and curated regulatory — including the KNAT7 ⊣ CESA8 brake. Every regulatory edge is reference-backed.",
+    "make sure 'grn' loaded (it loads when the page opens) and that you stacked grn_edges.")
+```
+
+> **Why this, not ChatGPT?** The old course asked an LLM to read a review and invent the regulatory edges — which can hallucinate. Here each edge carries a `reference` and an `evidence` type, so the network is trustworthy *by construction*. That is the difference between a curated GRN and a guess.
+
+### N4 — Read the hierarchy
+
+```{webr}
+out_deg <- sort(table(grn_edges$source), decreasing = TRUE)   # a regulator's number of targets
+in_deg  <- sort(table(grn_edges$target), decreasing = TRUE)   # a target's number of regulators
+cat("Top regulators (out-degree):\n");      print(head(out_deg, 3))
+cat("\nMost-regulated genes (in-degree):\n"); print(head(in_deg, 3))
+
+say(names(out_deg)[1] == "AT5G12870",
+    "MYB46 (AT5G12870) has the highest out-degree — the hub of the cascade: NAC masters → MYB46/83 → biosynthesis genes.",
+    "MYB46 (AT5G12870) should top the regulator list — run N3 first.")
+```
+
+### N5 — What is this module for?  *(GO over-representation)*
+
+```{webr}
+bg   <- rownames(EXPR); Ntot <- length(bg)          # background = all genes
+hits <- nbhd$gene                                   # your neighbourhood
+gs   <- gene_sets[gene_sets$gene_id %in% bg, ]
 terms <- split(gs$gene_id, gs$term_id)
-# tapply(values, groups, fun): apply fun within each group -> here, grab each term's readable name
 tname <- tapply(gs$term_name, gs$term_id, function(x) x[1])
-
-# lapply(items, f): run f on each item, returning a list.  do.call(rbind, list): stack into one data.frame
 ora <- do.call(rbind, lapply(names(terms), function(t) {
-  K <- length(unique(terms[[t]]))                    # genes in this term (within background)
-  k <- sum(hits %in% terms[[t]])                     # how many of OUR hits fall in this term
-  if (k < 2) return(NULL)                            # skip tiny overlaps (return nothing)
-  # phyper(k-1, K, N-K, n, lower.tail = FALSE): hypergeometric p-value = chance of ≥k hits by luck
-  data.frame(term = t, name = tname[[t]], k = k, K = K,
-             p = phyper(k - 1, K, N - K, length(hits), lower.tail = FALSE))
+  K <- length(unique(terms[[t]])); k <- sum(hits %in% terms[[t]])
+  if (k < 2) return(NULL)                           # skip tiny overlaps
+  data.frame(name = tname[[t]], k = k, K = K,
+             p = phyper(k - 1, K, Ntot - K, length(hits), lower.tail = FALSE))
 }))
-ora$padj <- p.adjust(ora$p, "BH")                    # p.adjust(): correct p-values for many tests (BH = FDR)
-ora <- head(ora[order(ora$p), c("name","k","K","padj")], 12)   # most significant terms first
-print(ora)
-
-# instant check: did enrichment return any terms?
-say(exists("ora") && nrow(ora) > 0,
-    paste0("top enriched term: ", ora$name[1], " — does it match your prediction?"),
-    "no terms returned — make sure Stage 4 ran first.")
+if (is.null(ora)) ora <- data.frame(name=character(0), k=integer(0), K=integer(0), p=numeric(0))
+if (nrow(ora)) {
+  ora$padj <- p.adjust(ora$p, "BH")                 # control the false-discovery rate
+  ora <- head(ora[order(ora$p), c("name","k","K","padj")], 10); print(ora)
+}
+say(nrow(ora) > 0,
+    paste0("top enriched term: ", if (nrow(ora)) ora$name[1] else "", " — does it fit a secondary-cell-wall role?"),
+    "no enriched terms — run N1 first, or try a gene with more neighbours.")
 ```
 
----
-
-## Stage 8 — Differential expression to interpret  *(precomputed example)*
-
-A volcano from a pre-computed DESeq2-style result (example data). Red = significant (padj < 0.05).
+### N6 — Export for Cytoscape & interpret
 
 ```{webr}
-#| autorun: true
-# plot(x, y): scatter plot.  pch = 20: small filled dots.
-# -log10(padj): transforms p-values so SMALL p = HIGH on the plot (more significant = taller).
-# ifelse(cond, a, b): for each gene, choose colour a if significant, else b (vectorised if/else).
-plot(de$log2FoldChange, -log10(de$padj + 1e-300),
-     pch = 20, col = ifelse(de$padj < 0.05, "firebrick", "grey70"),
-     xlab = "log2 fold change", ylab = "-log10 adjusted p",
-     main = "Volcano (precomputed example DESeq2 result)")
-abline(h = -log10(0.05), lty = 2)                    # abline(h=): a horizontal line at the p = 0.05 threshold
-# sum(condition): counts how many genes are TRUE (significant AND up-regulated)
-cat("Up-regulated (padj<0.05 & log2FC>1):", sum(de$padj < 0.05 & de$log2FoldChange > 1), "\n")
+nodes <- unique(c(all_edges$source, all_edges$target))
+write.csv(data.frame(id = nodes, symbol = sym[nodes]), "myb46_nodes.csv", row.names = FALSE)
+write.csv(all_edges, "myb46_edges.csv", row.names = FALSE)
+cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file panel and import into Cytoscape.\n")
 ```
 
-> Why a model (DESeq2) not a t-test on TPM? With few replicates and ~20,000 genes, naive testing yields thousands of false hits; DESeq2 shrinks fold-changes and controls the false-discovery rate. *(Run the real DESeq2 on a replicated dataset using the server notebook.)*
+**Cytoscape walkthrough (printed run-sheet):** (1) *Import → Network from File* → `myb46_edges.csv`, map `source`/`target`/`type`. (2) *Import → Table from File* → `myb46_nodes.csv`, key = `id`. (3) **Style:** edge colour by `type` — co-expression grey, PPI blue, `GRN_activates` green arrow, `GRN_represses` red T-bar, `GRN_induces` dashed; node colour by role (regulator orange, biosynthesis green); diamond shape for the NAC master switches; node size ∝ GRN out-degree. (4) **Layout** hierarchically on the GRN edges → a top-to-bottom cascade. (5) *Tools → Analyze Network* → confirm MYB46 has the highest betweenness. (6) Export PDF/PNG for your dossier.
 
----
+**✍️ Dossier (assessed) — close it out:**
 
-## Stage 9 — Close the dossier  *(assessed)*
+1. **Convergence:** how many NACs point at MYB46? Are they the fibre set (SND1/NST1/NST2) or vessel set (VND6/VND7)?
+2. **Hub:** is MYB46 the top out-degree *and* the highest-betweenness node? What does that mean biologically?
+3. **Three layers:** does a MYB46→CESA edge appear in the co-expression, the PPI, and the GRN layer — or only some? Why?
+4. **The brake:** explain the one red T-bar (KNAT7 ⊣ CESA8) and what it says about the limits of "guilt by association".
+5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name ≥3 pieces of evidence (a co-expression neighbour, a PPI, a curated GRN edge, a GO term, a database hit).
 
-Write a one-page interpretation, with evidence from *your* analyses:
+> **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
 
-1. **Enriched process** in your gene's neighbourhood? *(Stage 7)*
-2. **Top hub** gene — a known regulator (NAC/MYB)? *(Stage 6)*
-3. **Verdict:** does the evidence **confirm or revise** your Stage-3 hypothesis? Name the evidence.
-
-> **Graded (4 × 25%):** reproducible work · network-figure quality · correct enrichment interpretation · hypothesis revisited with named evidence.
-
-*Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO pipeline; heavy steps pre-computed so the analysis runs in your browser.*
+*Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, McCarthy 2009, Kim 2013, Zhong & Ye 2012, Zhou 2009, Li 2012) — not generated by an LLM.*
