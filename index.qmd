@@ -100,18 +100,25 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. The interactive page below covers **Stages 1–3** (the in-browser R skills); the **co-expression → network → enrichment** work then happens in the **database exercises** and the **MYB46 gene-regulatory-network exercise** further down this page.
+Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Networks step in already in Week 1**: by Thursday of Week 1 you've built your gene's co-expression network with the BioGRID PPI and the curated MYB46-GRN overlay. Week 2 reads the regulatory hierarchy, runs enrichment, and assembles the Cytoscape figure for the conference.
 
-| Session | When | Lecture | Hands-on (this page) | Dossier grows by |
-|---|---|---|---|---|
-| **1** | Tue, uge 43 | RNA-seq background + normalization (F1–F2) | **Stage 1** Normalization + **Stage 3** Claim your gene | seed gene + clean log/z vector |
-| **2** | Thu, uge 43 | EDA + basic analyses (F3–F4) | **Stage 2** PCA & clustering + **Database exercises D1–D2** | tissue figures + neighbour table |
-| **3** | Tue, uge 44 | Networks + the MYB46 GRN concept (F5) + Cytoscape walkthrough | **Database exercises D3–D4** + **MYB46 network N1–N4 (R)** | threshold + network + GRN + GO term |
-| **4** | Thu, uge 44 | Short multi-omic briefing (F6, knowledge-graphs removed) | **Cytoscape figure** + **conference** | finished GRN figure + 1-page dossier + talk |
+**Week 1 — uge 43 · from data to a network**
 
-**Proposed exercises on this page:** Stages 1–3 (R, below) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network** (R + Cytoscape) · **Close the dossier** (conference).
+| Session | Lecture | Hands-on (this page) | Dossier grows by |
+|---|---|---|---|
+| **1 · Tue** | F2 normalization + F3 EDA *(F1 background = pre-reading)* | **Stage 1** Normalization + **Stage 2** PCA & clustering | clean log/z matrix + tissue clusters |
+| **2 · Thu** | F4 analyses (DE, co-expression, GO) + **F5 networks & the MYB46-GRN concept** | **Stage 3** Claim your gene + **Network N1–N3** (co-expression → +BioGRID PPI → +curated GRN) + **Database D1–D2** | adopted gene + 3-layer network + DB cross-check |
 
-> **Note on scope:** the live in-browser R lesson is **Stages 1–3**. Everything after “Claim your gene” is delivered as the new **database** and **MYB46-GRN network** exercises — the old generic co-expression/threshold/network/GO/DE stages have been folded into those.
+**Week 2 — uge 44 · regulatory networks & synthesis**
+
+| Session | Lecture | Hands-on (this page) | Dossier grows by |
+|---|---|---|---|
+| **3 · Tue** | Cytoscape walkthrough + **F6** multi-omic briefing (knowledge-graphs removed) | **Network N4–N6** (hierarchy → GO over-representation → Cytoscape export) + **Database D3–D4** | hub/hierarchy + GO term + GRN verdict |
+| **4 · Thu** | — | polish the **Cytoscape MYB46-GRN figure** → **student conference** | finished figure + 1-page dossier + ~10-min talk |
+
+**Exercises on this page:** Stages 1–3 (R) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N6** (R + Cytoscape) · **Close the dossier** (conference).
+
+> **Scope:** the live in-browser R lesson is **Stages 1–3**; everything after “Claim your gene” is the new **database** and **MYB46-GRN network** exercises (they replace the old generic co-expression/threshold/network/GO/DE stages). The network exercise is one continuous section — the schedule above just says how far to get each session (N1–N3 in Week 1, N4–N6 in Week 2).
 
 ---
 
