@@ -100,14 +100,14 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean and asks *what your gene does* with **GSEA**; **Week 2** builds and interprets the **MYB46 gene-regulatory network** in Cytoscape for the conference.
+Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean and asks *what your gene does* with **GO over-representation** (the hypergeometric test); **Week 2** builds and interprets the **MYB46 gene-regulatory network** in Cytoscape for the conference.
 
 **Week 1 — uge 43 · clean data → what does my gene do?**
 
 | Session | Lecture | Hands-on (this page) | Dossier grows by |
 |---|---|---|---|
 | **1 · Tue** | F2 normalization + F3 EDA *(F1 background = pre-reading)* | **Stage 1** Normalization + **Stage 2** PCA & clustering | clean log/z matrix + tissue clusters |
-| **2 · Thu** | F4 analyses (DE, co-expression) + **GSEA** *(replaces the networks lecture)* | **Stage 3** Claim your gene + **GSEA G1–G3** (rank by correlation → enrichment score) + **Database D1–D2** | adopted gene + predicted function (GSEA) + DB cross-check |
+| **2 · Thu** | F4 analyses (DE, co-expression) + **GO enrichment** (hypergeometric) *(replaces the networks lecture)* | **Stage 3** Claim your gene + **GO over-representation** (grid panel + your gene's real terms) + **Database D1–D2** | adopted gene + predicted function (enriched GO term) + DB cross-check |
 
 **Week 2 — uge 44 · gene-regulatory networks**
 
@@ -116,9 +116,9 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 | **3 · Tue** | **F5 networks & the MYB46-GRN concept** + Cytoscape walkthrough | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
 | **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** Cytoscape figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
 
-**Exercises on this page:** Stages 1–3 (R) · **GSEA** (R) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference).
+**Exercises on this page:** Stages 1–3 (R) · **GO over-representation** (R: grid panel + real data) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference).
 
-> **Scope:** the live in-browser R lesson is **Stages 1–3 + GSEA**; the **database** and **MYB46-GRN network** exercises follow. Functional enrichment is taught as **GSEA in Week 1** (ranked-list, no cutoff); the network exercise (Week 2) focuses on building and interpreting the network. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
+> **Scope:** the live in-browser R lesson is **Stages 1–3 + GO over-representation**; the **database** and **MYB46-GRN network** exercises follow. Functional enrichment is taught as the **hypergeometric over-representation test in Week 1** (a 20×20-gene grid panel, then your gene's real GO terms); the network exercise (Week 2) builds and interprets the network. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
 
 ---
 
@@ -363,75 +363,94 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## Functional enrichment with GSEA
+## Functional enrichment — GO over-representation
 
-You can find your gene's *neighbours* by correlation — but the functional question is **what is your gene's module *for*?** **GSEA (Gene Set Enrichment Analysis)** answers it without an arbitrary "top-100" cutoff: it **ranks every gene** by its correlation with your gene and asks whether a gene set (a GO term) **clusters near the top** of that ranking. Weak-but-consistent signal across many genes still counts — that's the advantage over the over-representation test.
+Is your gene's neighbourhood **over-represented** for a biological process? The **hypergeometric test** (the one-sided Fisher exact test) answers it. Picture an urn:
 
-### G1 — Rank every gene by correlation with your gene
+- **Background (N)** — all genes in the genome (every marble).
+- **Pathway (K)** — genes in your GO term of interest (the red marbles).
+- **Signature (n)** — your gene list; here, your gene's co-expression neighbours (the marbles you draw).
+- **Hits (k)** — how many of your signature land in the pathway (red marbles drawn).
 
-```{webr}
-target <- EXPR[MY_GENE, ]                     # your gene's expression profile
-# correlate EVERY gene with yours, then RANK them all (no cutoff — that's the GSEA idea)
-rho <- apply(EXPR, 1, function(g) suppressWarnings(cor(g, ______)))   # <- blank: target
-rho[is.na(rho)] <- 0
-rho <- sort(rho, decreasing = TRUE)           # ranked list: most co-expressed first
-ranked <- names(rho)
-cat("Top of the ranking (most correlated with", MY_NAME, "):\n")
-print(head(data.frame(gene = ranked, symbol = sym[ranked], rho = round(rho, 3)), 8))
+If you draw **more** hits than chance would give, the pathway is enriched — **p = P(X ≥ k)**.
 
-say(ranked[1] == MY_GENE && round(rho[1], 3) == 1,
-    "ranked — your gene tops its own list (rho = 1); every other gene follows by correlation.",
-    "fill the blank with 'target' so each gene is correlated with your gene, then re-run.")
-```
+### Try it — a genome of 400 genes
 
-### G2 — Which gene sets sit at the top?  *(the enrichment score)*
+Each cell of the **20 × 20 grid is a gene** (N = 400). Set how many are **differentially expressed (DEGs)**, how big the **pathway** is, and how many of your DEGs fall **inside** it — then **Run**. You get your grid (red box) next to **10 random** arrangements: if DEGs scattered at random rarely hit the pathway as often as yours do, the pathway is **enriched**.
 
 ```{webr}
-# GSEA enrichment score: walk DOWN the ranking, step UP at a set member (weighted by its
-# correlation) and DOWN at a non-member; the ES is the biggest deviation from zero.
-gsea_es <- function(set){
-  hit <- ranked %in% set
-  if (sum(hit) < 3) return(NA)
-  up   <- ifelse(hit, abs(rho) / sum(abs(rho)[hit]), 0)   # reward hits near the top
-  down <- ifelse(hit, 0, 1 / sum(!hit))                   # penalise the gaps
-  run  <- cumsum(up - down)
-  run[which.max(abs(run))]                                # ES = max deviation from zero
+N <- 400; side <- 20          # 20 x 20 grid = all genes
+# ---- change these three numbers ----
+n_deg        <- 40    # how many genes are differentially expressed (the DEGs you "draw")
+pathway_size <- 60    # how many genes are in your pathway of interest (K)
+hits         <- 12    # how many of your DEGs fall INSIDE that pathway (the observed overlap, k)
+# ------------------------------------
+n_deg <- min(n_deg, N)
+hits  <- min(hits, n_deg, pathway_size)                 # keep the numbers valid
+hits  <- max(hits, n_deg - (N - pathway_size), 0)
+
+pathway <- rep(FALSE, N); pathway[1:pathway_size] <- TRUE   # the pathway = a fixed block of cells
+pal <- c("grey88", "#9ecae1", "#fdae6b", "#e6550d")        # gene · pathway · DEG · DEG-in-pathway
+
+# draw one 20x20 grid: pathway cells coloured, then DEGs (orange; red if they land in the pathway)
+draw_grid <- function(deg, main, hl = FALSE){
+  cat <- ifelse(pathway, 1L, 0L); cat[deg] <- ifelse(pathway[deg], 3L, 2L)
+  image(1:side, 1:side, matrix(cat, side, side), col = pal, breaks = c(-.5,.5,1.5,2.5,3.5),
+        axes = FALSE, xlab = "", ylab = "", main = main)
+  box(col = if (hl) "firebrick" else "grey80", lwd = if (hl) 3 else 1)
 }
-# score every GO term that has at least 5 genes in the ranking
-sets    <- split(gene_sets$gene_id, gene_sets$term_id)
-term_nm <- tapply(gene_sets$term_name, gene_sets$term_id, function(x) x[1])
-big     <- sets[sapply(sets, function(s) sum(ranked %in% s) >= 5)]
-ES      <- sapply(big, gsea_es)
-top     <- head(sort(ES, decreasing = TRUE), 6)
-print(data.frame(term = term_nm[names(top)], ES = round(as.numeric(top), 3)))
 
-say(length(top) > 0 && top[1] > 0.5,
-    paste0("GSEA top hit: ", term_nm[names(top)[1]], " (ES = ", round(top[1], 3), ") — your gene's module, found with NO cutoff."),
-    "no strongly-enriched set — run G1 first so the ranking 'rho' exists.")
+p        <- phyper(hits - 1, pathway_size, N - pathway_size, n_deg, lower.tail = FALSE)  # P(X >= hits)
+expected <- n_deg * pathway_size / N
+
+op <- par(mfrow = c(3, 4), mar = c(1.5, 1, 2.5, 1))
+# YOUR data: k DEGs placed inside the pathway, the rest outside
+obs <- c(sample(which(pathway), hits), sample(which(!pathway), n_deg - hits))
+draw_grid(obs, sprintf("YOUR DATA: %d hits", hits), hl = TRUE)
+# 10 random arrangements: scatter the same number of DEGs anywhere, count how many land in the pathway
+rc <- integer(10)
+for (i in 1:10){ rd <- sample(N, n_deg); rc[i] <- sum(pathway[rd]); draw_grid(rd, sprintf("random: %d", rc[i])) }
+plot.new(); legend("center", fill = pal, bty = "n", cex = 0.95,
+                   legend = c("gene","pathway","DEG","DEG in pathway"))
+par(op)
+
+cat(sprintf("Your %d hits vs ~%.1f expected by chance (random runs here: %d-%d).  p = %.3g\n",
+            hits, expected, min(rc), max(rc), p))
+say(p < 0.05,
+    sprintf("enriched — %d hits is more than random scattering gives (p = %.3g). Compare the red-boxed grid to the 10 random ones.", hits, p),
+    sprintf("p = %.3g — %d hits is about what random gives, so not enriched. Raise 'hits' and re-run.", p, hits))
 ```
 
-### G3 — The GSEA plot, and is it more than chance?
+> Watch the 10 random grids: by chance the DEGs land in the pathway only a handful of times (the **expected** count printed under the plot). If **your** grid (red box) has clearly more, that surplus is exactly what the **hypergeometric p-value** measures — the same population / pathway / overlap logic from the lecture.
+
+### Now with your gene's real numbers
+
+This computes your gene's co-expression neighbours (the signature), tests **every** GO term, and tells you which process is most over-represented — and the exact `hits`/`pathway`/`background` to type into the calculator above.
 
 ```{webr}
-# the iconic GSEA curve: running enrichment score for the top term
-top_id <- names(top)[1]; hit <- ranked %in% sets[[top_id]]
-run <- cumsum(ifelse(hit, abs(rho)/sum(abs(rho)[hit]), 0) - ifelse(hit, 0, 1/sum(!hit)))
-plot(run, type = "l", lwd = 2, col = "forestgreen",
-     xlab = "gene rank  (most → least correlated with your gene)",
-     ylab = "running enrichment score", main = paste("GSEA:", term_nm[top_id]))
-abline(h = 0, lty = 3); rug(which(hit), col = "firebrick")   # red ticks = where the set's genes fall
-
-# permutation: shuffle which genes belong to the set 200×, recompute the biggest score
-obs  <- max(abs(run))
-perm <- replicate(200, { h <- sample(hit)
-  max(abs(cumsum(ifelse(h, abs(rho)/sum(abs(rho)[h]), 0) - ifelse(h, 0, 1/sum(!h))))) })
-pval <- (sum(perm >= obs) + 1) / 201
-say(pval < 0.05,
-    sprintf("ES = %.3f, permutation p = %.3f — the set really is concentrated at the top, not by chance.", obs, pval),
-    sprintf("ES = %.3f, p = %.3f — for a decoy gene this can be non-significant, and that is itself a real result.", obs, pval))
+target <- EXPR[MY_GENE, ]
+pcc <- apply(EXPR, 1, function(g) suppressWarnings(cor(g, ______)))   # <- blank: target
+pcc[is.na(pcc)] <- 0
+sig <- names(sort(pcc, decreasing = TRUE))[1:100]    # signature = your top-100 neighbours
+bg  <- rownames(EXPR); N <- length(bg)               # background = all genes
+sets <- split(gene_sets$gene_id, gene_sets$term_id)
+tnm  <- tapply(gene_sets$term_name, gene_sets$term_id, function(x) x[1])
+res <- do.call(rbind, lapply(names(sets), function(t){
+  K <- sum(sets[[t]] %in% bg); k <- sum(sig %in% sets[[t]])   # pathway size & overlap
+  if (k < 2) return(NULL)
+  data.frame(term = tnm[[t]], hits = k, pathway = K,
+             p = phyper(k - 1, K, N - K, length(sig), lower.tail = FALSE))
+}))
+res$padj <- p.adjust(res$p, "BH")                    # correct for testing many terms (FDR)
+res <- head(res[order(res$p), c("term","hits","pathway","padj")], 8); print(res)
+cat(sprintf("\nTop term -> type into the calculator: hits=%d, pathway=%d, signature=100, background=%d\n",
+            res$hits[1], res$pathway[1], N))
+say(nrow(res) > 0 && res$padj[1] < 0.05,
+    paste0("your gene's neighbourhood is enriched for: ", res$term[1], "  (padj = ", signif(res$padj[1], 2), ")."),
+    "fill the blank with 'target' and re-run; if still nothing, your gene may have a small module.")
 ```
 
-> **GSEA vs over-representation:** the over-representation test throws away everything below a cutoff and counts overlaps; GSEA uses the **whole ranked list**, so a set that is *consistently* a little high scores even when no single gene passes a threshold. **✍️ Dossier:** record your top enriched process and its permutation *p* — that's your gene's predicted function.
+> **✍️ Dossier:** record your top enriched GO process and its adjusted *p*. *(Enrichment is covered in more depth in the Big Data course.)*
 
 ---
 
@@ -565,7 +584,7 @@ say(names(out_deg)[1] == "AT5G12870",
 
 ### N5 — Export for Cytoscape & interpret
 
-*(Functional enrichment of this module was done with GSEA in Week 1 — see "Functional enrichment with GSEA" above.)*
+*(Functional enrichment of this module was done in Week 1 — see "Functional enrichment — GO over-representation" above.)*
 
 ```{webr}
 nodes <- unique(c(all_edges$source, all_edges$target))
@@ -582,7 +601,7 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 2. **Hub:** is MYB46 the top out-degree *and* the highest-betweenness node? What does that mean biologically?
 3. **Three layers:** does a MYB46→CESA edge appear in the co-expression, the PPI, and the GRN layer — or only some? Why?
 4. **The brake:** explain the one red T-bar (KNAT7 ⊣ CESA8) and what it says about the limits of "guilt by association".
-5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name ≥3 pieces of evidence (a co-expression neighbour, a PPI, a curated GRN edge, your GSEA-enriched process, a database hit).
+5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name ≥3 pieces of evidence (a co-expression neighbour, a PPI, a curated GRN edge, your enriched GO process, a database hit).
 
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
 
