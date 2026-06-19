@@ -376,14 +376,14 @@ If you draw **more** hits than chance would give, the pathway is enriched — **
 
 ### Try it — a genome of 400 genes
 
-Each cell of the **20 × 20 grid is a gene** (N = 400). Set how many are **differentially expressed (DEGs)**, how big the **pathway** is, and how many of your DEGs fall **inside** it — then **Run**. You get your grid (red box) next to **10 random** arrangements: if DEGs scattered at random rarely hit the pathway as often as yours do, the pathway is **enriched**.
+Each cell of the **20 × 20 grid is a gene** (N = 400). Set how many are **differentially expressed (DEGs)**, how big the **pathway** is, and how many of your DEGs fall **inside** it — then **Run**. You get your grid (red box) next to **20 random** arrangements, and an **empirical p-value**: how often random scattering does as well as you.
 
 ```{webr}
 N <- 400; side <- 20          # 20 x 20 grid = all genes
 # ---- change these three numbers ----
-n_deg        <- 40    # how many genes are differentially expressed (the DEGs you "draw")
-pathway_size <- 60    # how many genes are in your pathway of interest (K)
-hits         <- 12    # how many of your DEGs fall INSIDE that pathway (the observed overlap, k)
+n_deg        <- 40    # genes that are differentially expressed (the DEGs you "draw")
+pathway_size <- 60    # genes in your pathway of interest (K)
+hits         <- 12    # how many of your DEGs fall INSIDE the pathway (observed overlap, k)
 # ------------------------------------
 n_deg <- min(n_deg, N)
 hits  <- min(hits, n_deg, pathway_size)                 # keep the numbers valid
@@ -400,28 +400,44 @@ draw_grid <- function(deg, main, hl = FALSE){
   box(col = if (hl) "firebrick" else "grey80", lwd = if (hl) 3 else 1)
 }
 
-p        <- phyper(hits - 1, pathway_size, N - pathway_size, n_deg, lower.tail = FALSE)  # P(X >= hits)
-expected <- n_deg * pathway_size / N
-
-op <- par(mfrow = c(3, 4), mar = c(1.5, 1, 2.5, 1))
-# YOUR data: k DEGs placed inside the pathway, the rest outside
-obs <- c(sample(which(pathway), hits), sample(which(!pathway), n_deg - hits))
-draw_grid(obs, sprintf("YOUR DATA: %d hits", hits), hl = TRUE)
-# 10 random arrangements: scatter the same number of DEGs anywhere, count how many land in the pathway
-rc <- integer(10)
-for (i in 1:10){ rd <- sample(N, n_deg); rc[i] <- sum(pathway[rd]); draw_grid(rd, sprintf("random: %d", rc[i])) }
-plot.new(); legend("center", fill = pal, bty = "n", cex = 0.95,
-                   legend = c("gene","pathway","DEG","DEG in pathway"))
+op <- par(mfrow = c(4, 6), mar = c(1.2, 0.8, 2, 0.8))
+obs <- c(sample(which(pathway), hits), sample(which(!pathway), n_deg - hits))   # YOUR data
+draw_grid(obs, sprintf("YOUR DATA: %d", hits), hl = TRUE)
+rc <- integer(20)                                                # 20 random arrangements
+for (i in 1:20){ rd <- sample(N, n_deg); rc[i] <- sum(pathway[rd]); draw_grid(rd, sprintf("random: %d", rc[i])) }
+plot.new(); legend("center", fill = pal, bty = "n", cex = 0.9, legend = c("gene","pathway","DEG","hit"))
 par(op)
 
-cat(sprintf("Your %d hits vs ~%.1f expected by chance (random runs here: %d-%d).  p = %.3g\n",
-            hits, expected, min(rc), max(rc), p))
-say(p < 0.05,
-    sprintf("enriched — %d hits is more than random scattering gives (p = %.3g). Compare the red-boxed grid to the 10 random ones.", hits, p),
-    sprintf("p = %.3g — %d hits is about what random gives, so not enriched. Raise 'hits' and re-run.", p, hits))
+# EMPIRICAL p-value: how often did random scattering match or beat your hits?  (+1 = a pseudocount)
+p_emp <- (sum(rc >= hits) + 1) / (length(rc) + 1)
+cat(sprintf("Your hits = %d; random gave %d-%d (mean %.1f).  Empirical p = (%d+1)/(20+1) = %.3f\n",
+            hits, min(rc), max(rc), mean(rc), sum(rc >= hits), p_emp))
+say(p_emp < 0.05,
+    sprintf("enriched — only %d of 20 random grids reached %d hits, so empirical p = %.3f.", sum(rc >= hits), hits, p_emp),
+    sprintf("not enriched — %d of 20 random grids reached %d hits, empirical p = %.3f. Raise 'hits' and re-run.", sum(rc >= hits), hits, p_emp))
 ```
 
-> Watch the 10 random grids: by chance the DEGs land in the pathway only a handful of times (the **expected** count printed under the plot). If **your** grid (red box) has clearly more, that surplus is exactly what the **hypergeometric p-value** measures — the same population / pathway / overlap logic from the lecture.
+> The **empirical p-value** is simply *how often chance did as well as you*: count the random grids with **≥ your hits**, divide by the number of runs. With only 20 runs it's coarse — if **no** random grid reaches your count, p ≈ 1/21 ≈ 0.05, and you'd need thousands of runs to go lower. The formula below gives the exact number in one line.
+
+### The exact p-value — the hypergeometric formula
+
+Simulating is intuitive but coarse. The **hypergeometric distribution** gives the exact P(X ≥ hits) directly — no simulation. **Fill the blank** (we subtract 1 so the tail *includes* your observed count), **Run**, and compare with the empirical p above.
+
+```{webr}
+# phyper(q, K, N-K, n) = P(X <= q).  We want P(X >= hits) = P(X > hits-1),
+# so use q = hits - 1 with lower.tail = FALSE.
+p_formula <- phyper(hits - ______, pathway_size, N - pathway_size, n_deg, lower.tail = FALSE)  # <- blank: 1
+
+cat(sprintf("Exact (hypergeometric) p = %.4g\n", p_formula))
+cat(sprintf("Empirical p (20 grids above) = %.3f\n", p_emp))
+
+correct <- sum(dhyper(hits:min(n_deg, pathway_size), pathway_size, N - pathway_size, n_deg))  # = P(X >= hits)
+say(abs(p_formula - correct) < 1e-9,
+    sprintf("exact p = %.4g — what 20 (or a million) simulations only estimate, in one line. It agrees with your empirical p.", p_formula),
+    "use hits - 1, so phyper(.., lower.tail = FALSE) gives P(X >= hits) and not P(X > hits).")
+```
+
+> Same logic, two routes: **simulate** (the empirical p) or use the **formula** (the exact p). Every GO-enrichment tool uses the formula — now you know exactly what it computes (population / pathway / overlap, the one-sided Fisher test).
 
 ### Now with your gene's real numbers
 
