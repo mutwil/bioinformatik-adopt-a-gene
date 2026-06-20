@@ -602,6 +602,159 @@ say(names(out_deg)[1] == "AT5G12870",
     "MYB46 (AT5G12870) should top the regulator list — run N3 first.")
 ```
 
+### N4b — Network metrics: don't just look, measure
+
+Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it.
+
+```{webr}
+## base-R network metrics (no igraph). grn_edges (source, target) exists from N3.
+build_adj <- function(edges, directed = FALSE) {
+  nodes <- sort(unique(c(edges$source, edges$target)))
+  A <- matrix(0L, length(nodes), length(nodes), dimnames = list(nodes, nodes))
+  for (i in seq_len(nrow(edges))) {
+    A[edges$source[i], edges$target[i]] <- 1L
+    if (!directed) A[edges$target[i], edges$source[i]] <- 1L
+  }
+  diag(A) <- 0L; A
+}
+A <- build_adj(grn_edges)                       # undirected adjacency
+
+degree_undirected <- rowSums(A)                 # number of connections per node
+
+bfs_dist <- function(A, src) {                  # shortest paths (hops) from one node
+  nm <- rownames(A); dist <- setNames(rep(Inf, length(nm)), nm); dist[src] <- 0; q <- src
+  while (length(q) > 0) { u <- q[1]; q <- q[-1]
+    for (w in nm[A[u, ] == 1L]) if (is.infinite(dist[w])) { dist[w] <- dist[u] + 1; q <- c(q, w) } }
+  dist
+}
+D <- t(sapply(rownames(A), function(s) bfs_dist(A, s)))
+diameter <- max(D[is.finite(D)]); mean_spl <- mean(D[is.finite(D) & D > 0])
+
+betweenness_base <- function(A) {               # Brandes' algorithm (unweighted)
+  nm <- rownames(A); n <- length(nm); CB <- setNames(numeric(n), nm)
+  for (s in nm) {
+    S <- character(0); P <- setNames(vector("list", n), nm)
+    sigma <- setNames(rep(0, n), nm); sigma[s] <- 1
+    d <- setNames(rep(-1, n), nm); d[s] <- 0; q <- s
+    while (length(q) > 0) { v <- q[1]; q <- q[-1]; S <- c(S, v)
+      for (w in nm[A[v, ] == 1L]) {
+        if (d[w] < 0) { d[w] <- d[v] + 1; q <- c(q, w) }
+        if (d[w] == d[v] + 1) { sigma[w] <- sigma[w] + sigma[v]; P[[w]] <- c(P[[w]], v) } } }
+    delta <- setNames(rep(0, n), nm)
+    for (w in rev(S)) { for (v in P[[w]]) delta[v] <- delta[v] + (sigma[v]/sigma[w]) * (1 + delta[w])
+      if (w != s) CB[w] <- CB[w] + delta[w] } }
+  CB / 2                                          # undirected: halve (= Cytoscape "Analyze Network")
+}
+clustering_matrix <- function(A) {              # local clustering via triangle counting
+  k <- rowSums(A); tri <- diag(A %*% (A %*% A)) / 2; denom <- k * (k - 1) / 2
+  ifelse(denom > 0, tri / denom, 0)
+}
+components_base <- function(A) {                # connected components by flood-fill
+  nm <- rownames(A); comp <- setNames(rep(NA_integer_, length(nm)), nm); k <- 0
+  for (start in nm) if (is.na(comp[start])) { k <- k + 1; q <- start; comp[start] <- k
+    while (length(q) > 0) { u <- q[1]; q <- q[-1]
+      for (w in nm[A[u, ] == 1L]) if (is.na(comp[w])) { comp[w] <- k; q <- c(q, w) } } }
+  comp
+}
+btw <- betweenness_base(A); cc <- clustering_matrix(A)
+cat("Betweenness (undirected, halved = Cytoscape's value):\n"); print(round(sort(btw, decreasing = TRUE)[1:4], 1))
+cat("Clustering coefficient:\n"); print(round(sort(cc, decreasing = TRUE)[1:4], 3))
+cat(sprintf("Diameter = %d ; mean shortest path = %.2f ; components = %d\n",
+            diameter, mean_spl, length(unique(components_base(A)))))
+
+say(names(which.max(btw)) == "AT5G12870",
+    "MYB46 is BOTH the hub (top degree) AND the bottleneck (top betweenness, ~18x the next node) — confirm in Cytoscape's Analyze Network.",
+    "expected MYB46 (AT5G12870) on top of betweenness — did grn_edges load (run N3)?")
+```
+
+> **The trap trio:** SND1, CESA8 and KNAT7 all have **degree 3**, yet betweenness 8.0 / 8.0 / 0.3 and clustering 0.333 / 0.333 / 0.667. Same degree, completely different roles — degree alone never tells you what a node *does*.
+
+### N4c — Predict a perturbation (the directed GRN)
+
+The GRN is **directed**, so it is a *predictive* instrument. **The sign rule:** a knockout removes an input, and the target moves **opposite** to the sign of the lost edge — lose an **activator** → target **DOWN**; lose a **repressor** → target **UP**; over-expression moves it *with* the sign. Multiply signs along a path; the prediction is clean only if every path carries the same net sign.
+
+```{webr}
+## trace targets and predict KO/OE outcomes from the directed signed GRN
+sgn <- c(activates = 1L, induces = 1L, represses = -1L)
+E   <- data.frame(from = grn$source_AGI, to = grn$target_AGI, s = sgn[grn$interaction],
+                  stringsAsFactors = FALSE)
+nmof <- function(a) ifelse(is.na(sym[a]), a, sym[a])           # AGI -> symbol (safe)
+
+targets_of <- function(g) {                                   # direct targets + sign
+  d <- E[E$from == g, ]
+  if (!nrow(d)) return("(none — this gene is a terminal effector)")
+  data.frame(target = nmof(d$to), effect = ifelse(d$s > 0, "activates", "represses"))
+}
+predict_perturb <- function(g, mode = c("KO","OE")) {         # downstream prediction
+  mode <- match.arg(mode); acc <- list()
+  walk <- function(u, s, seen) {
+    kids <- E[E$from == u, ]
+    for (i in seq_len(nrow(kids))) { v <- kids$to[i]; sv <- s * kids$s[i]
+      acc[[v]] <<- c(acc[[v]], sv); if (!(v %in% seen)) walk(v, sv, c(seen, v)) }
+  }
+  walk(g, 1L, g)
+  if (!length(acc)) return("(terminal effector — KO/OE changes nothing downstream)")
+  do.call(rbind, lapply(names(acc), function(v) {
+    u <- unique(sign(acc[[v]])); netsign <- if (length(u) > 1) NA else u
+    eff <- if (mode == "KO") -netsign else netsign
+    data.frame(target = nmof(v),
+               prediction = ifelse(is.na(eff), "AMBIGUOUS (conflicting paths)",
+                                   ifelse(eff > 0, "UP", "DOWN")))
+  }))
+}
+targets_of("AT5G12870")               # MYB46's direct targets
+predict_perturb("AT1G62990", "KO")    # knat7 KO -> CESA8 UP (lose the repressor)
+predict_perturb("AT5G12870", "KO")    # myb46 KO -> CESA4/CESA7 DOWN; CESA8 AMBIGUOUS (the feed-forward loop!)
+predict_perturb("AT5G17420", "KO")    # cesa7 KO -> nothing downstream (it's a terminal effector)
+```
+
+> **Why CESA8 is "ambiguous":** MYB46 **activates** CESA8 directly **and** activates KNAT7, which **represses** CESA8 — an **incoherent feed-forward loop** (a pulse generator that limits overshoot, *not* negative feedback: nothing loops back to MYB46). That's why *myb46* and *knat7* mutants move CESA8 in opposite directions. *(knat7 KO → CESA8 up: Li 2012. The snd1 single mutant is near wild-type — NAC redundancy; the strong loss needs the snd1 nst1 double, which spares vessels.)*
+
+### N4d — Topology & robustness
+
+The degree distribution (one hub, many leaves) is **scale-free-like**: such networks are **robust to random failure** but **fragile to targeted attack on the hub** (lethality–centrality). And raising the co-expression cutoff `MY_CUTOFF` steadily breaks the network into more, smaller pieces.
+
+```{webr}
+## degree distribution — look for one lonely bar far to the right
+tot_deg <- rowSums(A); dd <- table(as.integer(tot_deg))
+barplot(dd, xlab = "node degree", ylab = "number of nodes",
+        main = "GRN degree distribution (scale-free?)", col = "steelblue")
+
+## lethality-centrality: which single deletion fragments the network?
+remove_node <- function(A, v) { keep <- setdiff(rownames(A), v); A[keep, keep, drop = FALSE] }
+frag <- sapply(rownames(A), function(g) length(unique(components_base(remove_node(A, g)))))
+cat(sprintf("Intact: %d component. Remove MYB46 -> %d components. Remove any other -> 1.\n",
+            length(unique(components_base(A))), frag["AT5G12870"]))
+
+## how the co-expression network fragments as the cutoff rises (C is from N2)
+sweep_cut <- function(C, cutoffs = c(0.70, 0.80, 0.85, 0.90, 0.95, 0.99)) {
+  do.call(rbind, lapply(cutoffs, function(cut) {
+    Ac <- (C > cut) * 1L; diag(Ac) <- 0L
+    lab <- components_base(`dimnames<-`(Ac, list(rownames(C), rownames(C))))
+    data.frame(cutoff = cut, edges = sum(Ac)/2, components = length(unique(lab)))
+  }))
+}
+print(sweep_cut(C))
+
+say(frag["AT5G12870"] > 5,
+    sprintf("removing MYB46 shatters the GRN into %d components; removing any other single gene leaves 1 — the hub is the only consequential cut-vertex.", frag["AT5G12870"]),
+    "removing MYB46 should fragment the network far more than removing any other node.")
+```
+
+### N4e — What the three edge types mean
+
+An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the GRN layer licenses a knockout prediction.
+
+| | **Co-expression** | **PPI (BioGRID)** | **GRN (regulatory)** |
+|---|---|---|---|
+| Edge means | mRNA levels co-vary | proteins physically interact | a TF controls a target's transcription |
+| Directed? | **No** | **No** | **Yes** (TF → target) |
+| Sign | ± correlation | none | + activates / − represses |
+| Predict a knockout? | no (correlative) | no (physical) | **yes** (causal + directed) |
+| Confirmed by | RNA-seq correlation | Y2H, AP-MS | ChIP, EMSA, transactivation |
+
+Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN proves control.* Two paradoxes from your own data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** — a TF binds its target's DNA, not its protein, so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
+
 ### N5 — Export for Cytoscape & interpret
 
 *(Functional enrichment of this module was done in Week 1 — see "Functional enrichment — GO over-representation" above.)*
