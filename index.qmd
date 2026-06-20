@@ -122,6 +122,8 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 
 ---
 
+# Week 1 — uge 43 · clean data → what does my gene do?
+
 ## Stage 1 — Normalization: raw counts → TPM → log → z-score
 
 This stage builds the standard normalization pipeline one metric at a time, and shows the matrix as a heatmap after each step so you can *see* what every transformation fixes. The aim is for you to understand **why** each metric exists, not just how to type it.
@@ -520,6 +522,8 @@ The atlas you analysed is one resource among many. These four short **web** exer
 > **Demo only (not assessed):** the **EBI Single-Cell Expression Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows secondary-wall genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration, so it is projector-only.
 
 ---
+
+# Week 2 — uge 44 · gene-regulatory networks
 
 ## The MYB46 gene-regulatory network  *(R + Cytoscape)*
 
