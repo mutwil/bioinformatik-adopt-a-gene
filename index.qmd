@@ -63,6 +63,7 @@ sym  <- setNames(info$symbol,      info$gene_id)
 grn_syms <- c(setNames(grn$source_symbol, grn$source_AGI), setNames(grn$target_symbol, grn$target_AGI))
 grn_syms <- grn_syms[!duplicated(names(grn_syms))]
 miss <- setdiff(names(grn_syms), names(sym)); sym[miss] <- grn_syms[miss]
+lab <- function(a){ s <- unname(sym[a]); ifelse(is.na(s) | s == "", a, s) }   # AGI -> symbol, fall back to AGI
 say  <- function(cond, good, bad)                   # tiny ✅/❌ feedback helper
   cat(if (isTRUE(cond)) paste("✅", good) else paste("❌", bad), "\n")
 
@@ -202,7 +203,7 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean (normalization → PCA/clustering) and you *claim a gene*; **Week 2** builds and interprets the **MYB46 gene-regulatory network** in Cytoscape for the conference. *(An optional **GO over-representation** appendix — the hypergeometric test — sits at the end of the page.)*
+Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean (normalization → PCA/clustering) and you *claim a gene*; **Week 2** builds and interprets the **MYB46 gene-regulatory network** in the browser for the conference. *(An optional **GO over-representation** appendix — the hypergeometric test — sits at the end of the page.)*
 
 **Week 1 — uge 43 · clean data → what does my gene do?**
 
@@ -215,10 +216,10 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 
 | Session | Lecture | Hands-on (this page) | Dossier grows by |
 |---|---|---|---|
-| **3 · Tue** | **F5 networks & the MYB46-GRN concept** + Cytoscape walkthrough | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
-| **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** Cytoscape figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
+| **3 · Tue** | **F5 networks & the MYB46-GRN concept** | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
+| **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** network figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
 
-**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
+**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R, interactive in the browser) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
 
 > **Scope:** the live in-browser R lesson is **Stages 1–4** (normalization → PCA/clustering → claim a gene → co-expression neighbourhood); the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
 
@@ -679,11 +680,11 @@ Close the week the way the exam tests it. Answer in 2–4 sentences; the model a
 
 # Week 2 — uge 44 · gene-regulatory networks
 
-## The MYB46 gene-regulatory network  *(R + Cytoscape)*
+## The MYB46 gene-regulatory network  *(R, interactive in the browser)*
 
-You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature-curated table — every edge carries a reference), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — only a *regulatory* layer can connect a master TF to its targets (**N4e** explains why).
+You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature-curated table — every edge carries a reference), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in the interactive viewer. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — only a *regulatory* layer can connect a master TF to its targets (**N4e** explains why).
 
-Each build step (**N1 → N2 → N3**) now **draws the network right in the page**, so you watch it grow layer by layer — co-expression, then physical (PPI), then regulatory (GRN) — before you export the polished figure to Cytoscape.
+Each build step (**N1 → N2 → N3**) **draws the network right in the page** — drag nodes, scroll to zoom — so you watch it grow layer by layer: co-expression, then physical (PPI), then regulatory (GRN).
 
 ### N0 — (Re)claim your gene
 
@@ -708,7 +709,7 @@ target <- EXPR[HUB, ]                              # its expression across every
 pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # (you filled this blank in Week 1)
 nbhd   <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
                      description = desc[rownames(EXPR)], PCC = round(pcc, 3))
-nbhd   <- head(nbhd[order(-nbhd$PCC), ], 40)       # top-40 neighbours (your gene is row 1)
+nbhd   <- head(nbhd[order(-nbhd$PCC), ], 25)       # top-25 neighbours (your gene is row 1)
 print(head(nbhd, 12))
 nb <- nbhd$gene                                    # the neighbour ids
 
@@ -716,8 +717,8 @@ nb <- nbhd$gene                                    # the neighbour ids
 C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation AMONG the neighbours
 ut <- upper.tri(C)                                 # each pair once (not the diagonal)
 hist(C[ut], breaks = 20, col = "grey85", xlab = "Pearson r between neighbour pairs",
-     main = "Where do the strong edges start?")    # look for where the right-hand cluster begins
-MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.85
+     main = "How correlated are your neighbours with each other?")
+MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.95
 keep  <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
@@ -728,10 +729,10 @@ cynet(edges, hub = HUB, id = "cy_n1", title = paste(MY_NAME, "co-expression netw
 
 say(nrow(edges) > 0,
     "co-expression network built — neighbours are linked to each other, not just to your gene.",
-    "no edges yet — fill MY_CUTOFF (e.g. 0.85), and if still empty lower it to 0.8 and re-run.")
+    "no edges yet — fill MY_CUTOFF (e.g. 0.95); if you still get none, lower it a little and re-run.")
 ```
 
-> **🔬 The cutoff is a knob.** The histogram above usually shows a bulk of weak pair-correlations and a separate cluster of strong ones on the right — a defensible cutoff sits **in the valley between them** (often ~0.85). Re-run with `MY_CUTOFF <- 0.95` (fewer, tighter edges) and `0.75` (a denser hairball). A tight module like the secondary-wall genes stays connected even at a high cutoff — that density *is* the biological signal.
+> **🔬 The cutoff is a knob — and your module is dense.** These are your gene's *closest* neighbours, so most pairs are strongly correlated: the histogram bunches to the right, and at a low cutoff the network is almost **complete** (every gene linked to every other). That density is real — it's the hallmark of a tight functional module, not a bug. To pull out just the **strongest core**, push `MY_CUTOFF` into the right tail (try `0.95`, then `0.97`); lower it (`0.85`, `0.75`) and the mesh fills back in. Either way, **drag the nodes apart** in the viewer to read even a dense graph.
 
 ### N2 — Add the physical layer (BioGRID PPI)
 
@@ -741,7 +742,12 @@ Your co-expression edges (N1) say "these genes behave alike." Now overlay **phys
 edges <- edges[edges$type == "coexpression", , drop = FALSE]   # start fresh from your N1 co-expression edges
 # overlay BioGRID physical interactions where BOTH partners are in your neighbourhood
 pp <- ppi[ppi$source %in% nb & ppi$target %in% nb, c("source","target")]
-if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
+if (nrow(pp) > 0) {
+  pp  <- pp[pp$source != pp$target, , drop = FALSE]                       # drop self-loops
+  key <- apply(pp, 1, function(r) paste(sort(r), collapse = "|"))         # PPI is undirected: one key per pair
+  pp  <- pp[!duplicated(key), , drop = FALSE]                             # so A-B and B-A don't draw twice
+  if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
+}
 
 cesa <- c("AT5G44030","AT5G17420","AT4G18780")     # the secondary-wall CESA triangle
 cesa_ppi <- sum(edges$type == "PPI" & edges$source %in% cesa & edges$target %in% cesa)
@@ -783,11 +789,13 @@ say(any(grepl("GRN", all_edges$type)) && any(all_edges$type == "GRN_represses"),
 ```{webr}
 out_deg <- sort(table(grn_edges$source), decreasing = TRUE)   # a regulator's number of targets
 in_deg  <- sort(table(grn_edges$target), decreasing = TRUE)   # a target's number of regulators
-cat("Top regulators (out-degree):\n");      print(head(out_deg, 3))
-cat("\nMost-regulated genes (in-degree):\n"); print(head(in_deg, 3))
+od <- out_deg; names(od) <- lab(names(od))                    # show gene symbols (fall back to AGI)
+ind <- in_deg; names(ind) <- lab(names(ind))
+cat("Top regulators (out-degree):\n");      print(head(od, 3))
+cat("\nMost-regulated genes (in-degree):\n"); print(head(ind, 3))
 
 say(names(out_deg)[1] == "AT5G12870",
-    "MYB46 (AT5G12870) has the highest out-degree — the hub of the cascade: NAC masters → MYB46/83 → biosynthesis genes.",
+    "MYB46 has the highest out-degree — the hub of the cascade: NAC masters → MYB46/83 → biosynthesis genes.",
     "MYB46 (AT5G12870) should top the regulator list — run N3 first.")
 ```
 
@@ -835,7 +843,7 @@ betweenness_base <- function(A) {               # Brandes' algorithm (unweighted
     delta <- setNames(rep(0, n), nm)
     for (w in rev(S)) { for (v in P[[w]]) delta[v] <- delta[v] + (sigma[v]/sigma[w]) * (1 + delta[w])
       if (w != s) CB[w] <- CB[w] + delta[w] } }
-  CB / 2                                          # undirected: halve (= Cytoscape "Analyze Network")
+  CB / 2                                          # undirected convention: each path counted once
 }
 clustering_matrix <- function(A) {              # local clustering via triangle counting
   k <- rowSums(A); tri <- diag(A %*% (A %*% A)) / 2; denom <- k * (k - 1) / 2
@@ -849,8 +857,10 @@ components_base <- function(A) {                # connected components by flood-
   comp
 }
 btw <- betweenness_base(A); cc <- clustering_matrix(A)
-cat("Betweenness (undirected, halved = Cytoscape's value):\n"); print(round(sort(btw, decreasing = TRUE)[1:4], 1))
-cat("Clustering coefficient:\n"); print(round(sort(cc, decreasing = TRUE)[1:4], 3))
+btw_s <- round(sort(btw, decreasing = TRUE)[1:4], 1); names(btw_s) <- lab(names(btw_s))   # symbols, fallback AGI
+cc_s  <- round(sort(cc,  decreasing = TRUE)[1:4], 3); names(cc_s)  <- lab(names(cc_s))
+cat("Betweenness (undirected, halved):\n"); print(btw_s)
+cat("Clustering coefficient:\n"); print(cc_s)
 cat(sprintf("Diameter = %d ; mean shortest path = %.2f ; components = %d\n",
             diameter, mean_spl, length(unique(components_base(A)))))
 
@@ -869,7 +879,7 @@ cat("Encoding — size = degree; fill pale→red = betweenness (MYB46 reddest = 
     "border thick+purple = high clustering (KNAT7), thin = star-like (MYB46).\n")
 
 say(names(which.max(btw)) == "AT5G12870",
-    "MYB46 is BOTH the hub (top degree) AND the bottleneck (top betweenness, ~18x the next node) — confirm in Cytoscape's Analyze Network.",
+    "MYB46 is BOTH the hub (top degree) AND the bottleneck (top betweenness, ~18x the next node) — the single node every NAC signal passes through.",
     "expected MYB46 (AT5G12870) on top of betweenness — did grn_edges load (run N3)?")
 ```
 
@@ -1035,18 +1045,18 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 </script>
 ```
 
-### N5 — Export for Cytoscape & interpret
+### N5 — Save your network & interpret
 
 *(Functional enrichment is an optional extension — see the **Appendix** at the end of this page.)*
 
 ```{webr}
 nodes <- unique(c(all_edges$source, all_edges$target))
-write.csv(data.frame(id = nodes, symbol = sym[nodes]), "myb46_nodes.csv", row.names = FALSE)
+write.csv(data.frame(id = nodes, symbol = lab(nodes)), "myb46_nodes.csv", row.names = FALSE)
 write.csv(all_edges, "myb46_edges.csv", row.names = FALSE)
-cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file panel and import into Cytoscape.\n")
+cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file panel to keep with your dossier.\n")
 ```
 
-**Cytoscape walkthrough (printed run-sheet):** (1) *Import → Network from File* → `myb46_edges.csv`, map `source`/`target`/`type`. (2) *Import → Table from File* → `myb46_nodes.csv`, key = `id`. (3) **Style:** edge colour by `type` — co-expression grey, PPI blue, `GRN_activates` green arrow, `GRN_represses` red T-bar, `GRN_induces` dashed; node colour by role (regulator orange, biosynthesis green); diamond shape for the NAC master switches; node size ∝ GRN out-degree. (4) **Layout** hierarchically on the GRN edges → a top-to-bottom cascade. (5) *Tools → Analyze Network* → confirm MYB46 has the highest betweenness. (6) Export PDF/PNG for your dossier.
+**Your network figure** comes straight from this page — no extra software. Use the **interactive viewer** (your full network in N3, or the curated GRN in N4f): drag the nodes into a clean layout, zoom until the labels read, and **screenshot it** for your dossier. A good figure shows **MYB46 as the obvious hub**, the three edge types distinguishable (grey co-expression · blue PPI · green/red directed GRN), the **NAC → MYB46 → CESA/lignin** cascade reading top-to-bottom, and the one red **KNAT7 ⊣ CESA8** brake. *(The CSVs above are your network **data** — re-loadable, or for your records.)*
 
 **✍️ Dossier (assessed) — close it out:**
 
@@ -1062,7 +1072,7 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.
 3. **Co-expression** (Stage 4) — your top-5 neighbours + the module they name.
 4. **Database cross-check** (D1–D4) — your filled results table.
-5. **Network** (N1–N5) — your Cytoscape figure, MYB46 as the hub (degree + betweenness), and the KNAT7 ⊣ CESA8 brake.
+5. **Network** (N1–N5) — a screenshot of your network from the interactive viewer, MYB46 as the hub (degree + betweenness), and the KNAT7 ⊣ CESA8 brake.
 6. **Verdict** — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
