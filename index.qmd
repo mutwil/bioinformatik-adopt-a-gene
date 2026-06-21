@@ -447,58 +447,90 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 ---
 
-## Database exercises (D1–D4)
+## Database exercises — the database half of your dossier (D1–D4)
 
-The atlas you analysed is one resource among many. These four short **web** exercises cross-check your gene in the major plant transcriptomics databases — no coding, just clicking. All four are **assessed** (your TA checks them against an answer key). *URLs verified working 2026-06-19.*
+Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step also tests what you just built in **Stage 4** (your co-expression list) and sets up the **Week-2 MYB46 network**. All four are **assessed** (TA-checked against an answer key). *URLs verified 2026-06-19; all open in a new tab.*
 
-### D1 — Where is my gene switched on, and what is it?  *(ePlant eFP + PEO)*
+**📋 Your database dossier — fill it in as you go (this table is what's assessed):**
 
-1. Open **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → type your gene in the **search box** (e.g. `AT5G12870` for MYB46, `AT5G17420` for CESA7) → open the **Plant eFP** view; note the **highest organ** and the colour scale.
-2. Still in ePlant, switch the eFP view to **Tissue-Specific Root eFP** → look at **which root cell type** your gene switches on in. Secondary-cell-wall genes light up in the **xylem** (where lignified, thickened walls are built).
-3. Open **PEO — Plant Gene Expression Omnibus** ([peo.ku.dk](https://peo.ku.dk/)) → search the same locus. PEO is rich, so read **three** things:
-   - the **expression profile** — does the highest organ agree with ePlant?
-   - **Top co-expressed genes** — this list is gold. How many of your secondary-wall module do you already recognise (other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`)? Note the top 3.
-   - the **protein domains** (PFAM/InterPro) and **biological function** (MapMan) — the same kind of annotation you mined in the database & sequence modules. What domain family is your gene (e.g. cellulose-synthase domain for a CESA, MYB DNA-binding domain for MYB46)?
-4. Record: highest organ (ePlant + PEO), the **root cell type** (xylem?), your **top 3 co-expressed genes**, and your gene's **domain + MapMan function**.
+| Field | Your gene | From |
+|---|---|---|
+| Protein domain (PFAM/InterPro) | | D1 · PEO |
+| Biological function (MapMan) | | D1 · PEO |
+| Highest organ | | D1, D4 |
+| Root cell type | xylem? | D1 · ePlant |
+| Top 3 co-expressed (databases) | | D2 |
+| Overlap with my Stage-4 list (of 5) | / 5 | D2 |
+| Physical (PPI) partners | | D3 · STRING |
+| Regulator directly above my gene | | D3 · CoNekT |
+| Top organ — agrees across 3 DBs? | yes / no | D4 |
+| **One-line function + 3 evidence types** | | synthesis |
 
-<details><summary>✅ Expected</summary>Secondary-cell-wall genes (CESA4/7/8, MYB46) peak in <b>inflorescence stem / mature stem</b> (secondary xylem &amp; fibres) and, in the root eFP, localise to the <b>xylem</b>. PEO and ePlant agree on the stem maximum; PEO's <i>top co-expressed</i> list is dominated by other SCW genes, and the domain/MapMan annotation matches the family (cellulose synthase, MYB TF, laccase…).</details>
+### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
-**Q:** A transcription factor and its target peak in the *same* tissue (and the *same* root cell type) — why does that make sense? And: did PEO's top-co-expressed list already hint at your gene's function *before* you read its annotation?
+1. **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → search your gene (e.g. `AT5G17420` CESA7, `AT5G12870` MYB46) → **Plant eFP**: record the **highest organ** + colour scale.
+2. Switch to **Tissue-Specific Root eFP** → record **which root cell type** it switches on in (secondary-cell-wall genes → the **xylem**, where thick lignified walls are built).
+3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (PFAM/InterPro) + **MapMan biological function** — the annotation skills from the database & sequence modules.
 
-### D2 — Who does my gene work with?  *(CoNekT + ATTED-II)*
+> ✅ *Expected:* SCW genes peak in **inflorescence/mature stem** and localise to root **xylem**; PEO's top-co-expressed list is full of SCW genes; the domain matches the family (cellulose-synthase domain for a CESA, MYB DNA-binding domain for MYB46, laccase for LAC4).
+> **→ Dossier:** domain · MapMan function · highest organ · root cell type · top 3 co-expressed.
 
-1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search CESA7 `AT5G17420` → open its **co-expression neighbourhood**; tick the secondary-wall neighbours you recognise (CESA4 `AT5G44030`, CESA8 `AT4G18780`, IRX9 `AT2G37090`, COBL4 `AT5G15630`, KNAT7 `AT1G62990`, MYB46 `AT5G12870`).
-2. **ATTED-II** ([atted.jp](https://atted.jp/)) → use the **search box** for the same locus → read the co-expressed list.
-3. Write down the overlap between the two lists.
+### D2 — Who does my gene work with — and does it replicate?  *(CoNekT + ATTED-II)*
 
-<details><summary>✅ Expected</summary>Both return a tight secondary-wall module; the strongest partners <b>CESA4 + CESA8</b> appear in <i>both</i> — mirroring the physical CESA complex.</details>
+1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → your gene → open its **co-expression neighbourhood**; list the SCW neighbours you recognise (e.g. CESA4 `AT5G44030`, CESA8 `AT4G18780`, IRX9 `AT2G37090`, COBL4 `AT5G15630`, KNAT7 `AT1G62990`, MYB46 `AT5G12870`).
+2. **ATTED-II** ([atted.jp](https://atted.jp/)) → search box → same locus → read its co-expressed list.
+3. **Cross-check (the point):** how many of **your Stage-4 top-5** (your atlas) reappear in CoNekT and/or ATTED-II (two *independent* atlases)? Record the overlap **/ 5**.
 
-**Q:** Why would members of a physical complex also co-express? Is co-expression evidence *of* a physical interaction, or only *consistent with* one?
+> ✅ *Expected:* both return a tight SCW module; for a CESA, the strongest partners **CESA4 + CESA8** recur across atlases. Reproducibility across independent datasets is the signal.
+> **→ Dossier:** top 3 databases co-expressed · overlap with your Stage-4 list.
 
-### D3 — Building the MYB46 GRN  *(CoNekT + STRING)* — the centrepiece
+### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
 
-*(This replaces the old "ask ChatGPT to extract a knowledge graph" step — every edge here comes from a curated database, not a chatbot.)*
+*(This replaces the old "ask ChatGPT for a knowledge graph" step — every edge here comes from a curated database, not a chatbot.)*
 
-1. **CoNekT** → look up each regulator (MYB46 `AT5G12870`, MYB83 `AT3G08500`, SND1/NST3 `AT1G32770`, KNAT7 `AT1G62990`) and note its neighbours.
-2. **STRING** ([string-db.org](https://string-db.org/)) → search MYB46 `AT5G12870`, organism *Arabidopsis thaliana*, required score **medium (0.400)**. Note which secondary-wall genes appear and **which evidence channel** links them (experiments / co-expression / text-mining).
-3. Which links does STRING recover by *experiment*, and which only by *co-expression / text-mining*?
+1. **STRING** ([string-db.org](https://string-db.org/)) → your gene, organism *Arabidopsis thaliana*, required score **medium (0.400)** → which neighbours appear, and by **which evidence channel** (experiments / co-expression / text-mining)? Record the **physical (experiment-backed) partners**.
+2. **CoNekT** → look up the regulators **MYB46** `AT5G12870`, **MYB83** `AT3G08500`, **SND1/NST3** `AT1G32770`, **KNAT7** `AT1G62990`. Which one sits **directly above your gene** in the secondary-wall hierarchy? Record it.
 
-<details><summary>✅ Expected</summary>STRING recovers the CESA4/7/8 triangle strongly (experiments + co-expression) but links <b>MYB46 mainly via co-expression / text-mining, not physical experiments</b> — because a TF binds its target's <i>DNA</i>, not its protein.</details>
-
-**Q:** Name one edge that exists in a GRN but not in a PPI database, and one that exists in a PPI database but not a GRN. What does each let you predict?
+> ✅ *Expected:* the CESA4/7/8 triangle is recovered by **experiments**, but **MYB46→CESA links appear only via co-expression / text-mining — never physical experiments**, because a TF binds its target's **DNA**, not its protein. That gap is exactly why Week 2 adds a curated **regulatory** layer.
+> **→ Dossier:** PPI partners · the regulator directly above your gene.
 
 ### D4 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
 
-1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → CESA4 `AT5G44030` → top organ.
-2. **EBI Expression Atlas** → [ebi.ac.uk/gxa/genes/AT5G44030](https://www.ebi.ac.uk/gxa/genes/AT5G44030) → Baseline → top tissue.
-3. **CoNekT** → `AT5G44030` → specificity → top organ.
-4. Fill a 3-row table: *database | top tissue | agrees?*
+1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → your gene → top organ.
+2. **EBI Expression Atlas** → `ebi.ac.uk/gxa/genes/<your AGI>` (e.g. [ebi.ac.uk/gxa/genes/AT5G17420](https://www.ebi.ac.uk/gxa/genes/AT5G17420)) → Baseline → top tissue.
+3. **CoNekT** → your gene → specificity → top organ.
+4. Fill a 3-row table: *database | top organ | agrees?*
 
-<details><summary>✅ Expected</summary>All three converge on <b>stem</b>; the second-ranked tissues may differ.</details>
+> ✅ *Expected:* all three converge on **stem**; the second-ranked organs may differ.
+> **→ Dossier:** "top organ — agrees across 3 DBs? yes / no".
 
-**Q:** Which discrepancy would worry you more — the top tissue disagreeing, or the rank order of the low-expression tissues?
+> **Demo only (not assessed):** the **EBI Single-Cell Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows SCW genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration → projector-only.
 
-> **Demo only (not assessed):** the **EBI Single-Cell Expression Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows secondary-wall genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration, so it is projector-only.
+### Exam-style questions — the database block  *(assessed; 2025-exam style, point-scored)*
+
+Answer in 2–4 sentences. The model answers — and their points — match how the exam is graded.
+
+**Q1 (4 p) — Specificity of evidence.** Your gene and a transcription factor both peak in the mature stem **and** both localise to the xylem in the root eFP. (a) Why is shared tissue *and* shared cell type stronger evidence of a functional link than shared tissue alone? (b) Give one way two genes could share a tissue yet **not** be functionally related.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) The more <i>specific</i> the shared context, the lower the chance of coincidence — co-localising at cell-type resolution rules out the trivial "both are just stem-abundant" explanation, so the guilt-by-association is stronger (2 p). (b) Housekeeping / broadly high genes are abundant everywhere; or both genes respond independently to the same cue (e.g. both stress-induced) without working together (2 p).</details>
+
+**Q2 (4 p) — Reproducibility across atlases.** Three of your Stage-4 top co-expressed genes reappear in CoNekT/ATTED-II; one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
+
+**Q3 (5 p) — PPI vs co-expression vs regulation (core concept).** In STRING the CESA4/7/8 are joined by *experiments*, but MYB46 links to its targets only by *co-expression / text-mining*. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) Which database type *can* draw the MYB46→CESA edge, and what experiment supports it? (c) What general rule about reading a single database follows?
+
+<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Each database reports only <b>one kind</b> of evidence; absence in one (e.g. PPI) is not absence of a relationship — you must combine layers (1 p).</details>
+
+**Q4 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
+
+<details><summary>✅ Model answer (3 p)</summary>(a) The <b>top-organ agreement</b> carries the biological conclusion (where the gene acts); the low-expression rank order sits near the detection floor and is noisy, so reshuffling there is expected and harmless (2 p). (b) Different sample sets / conditions (and sequencing depth / normalization) between atlases (1 p).</details>
+
+**Q5 (4 p) — Synthesis.** In one sentence, state your gene's function, and name the **three independent evidence types** from your dossier that support it.
+
+<details><summary>✅ Model answer (4 p)</summary>One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: (1) <b>expression</b> — stem/xylem peak agreeing across ePlant + PEO + EBI; (2) <b>co-expression</b> — the CESA4/8 module reproduced in your atlas + PEO + CoNekT; (3) <b>physical/regulatory</b> — the CESA triangle by STRING experiments and a MYB46→CESA regulatory edge. Scoring: 1 p for the claim + 1 p per correctly-typed evidence (max 4 p).</details>
+
+> **✍️ Dossier:** your completed table **and** the five answers are the **database cross-check** graded at the conference (rubric criterion 3).
 
 ---
 
