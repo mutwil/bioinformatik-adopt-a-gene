@@ -4,6 +4,8 @@ subtitle: "Bioinformatik NPLB24004U · runs in your browser, no install"
 format:
   live-html:
     toc: true
+    link-external-newwindow: true
+    link-external-icon: true
     css: editor-theme.css
     include-after-body:
       - tutor.html
@@ -100,14 +102,14 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean and asks *what your gene does* with **GO over-representation** (the hypergeometric test); **Week 2** builds and interprets the **MYB46 gene-regulatory network** in Cytoscape for the conference.
+Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean (normalization → PCA/clustering) and you *claim a gene*; **Week 2** builds and interprets the **MYB46 gene-regulatory network** in Cytoscape for the conference. *(An optional **GO over-representation** appendix — the hypergeometric test — sits at the end of the page.)*
 
 **Week 1 — uge 43 · clean data → what does my gene do?**
 
 | Session | Lecture | Hands-on (this page) | Dossier grows by |
 |---|---|---|---|
 | **1 · Tue** | F2 normalization + F3 EDA *(F1 background = pre-reading)* | **Stage 1** Normalization + **Stage 2** PCA & clustering | clean log/z matrix + tissue clusters |
-| **2 · Thu** | F4 analyses (DE, co-expression) + **GO enrichment** (hypergeometric) *(replaces the networks lecture)* | **Stage 3** Claim your gene + **GO over-representation** (grid panel + your gene's real terms) + **Database D1–D2** | adopted gene + predicted function (enriched GO term) + DB cross-check |
+| **2 · Thu** | F4 analyses (DE, co-expression as guilt-by-association) | **Stage 3** Claim your gene + **Database D1–D2** *(optional: GO over-representation appendix)* | adopted gene + predicted function + DB cross-check |
 
 **Week 2 — uge 44 · gene-regulatory networks**
 
@@ -116,9 +118,9 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 | **3 · Tue** | **F5 networks & the MYB46-GRN concept** + Cytoscape walkthrough | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
 | **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** Cytoscape figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
 
-**Exercises on this page:** Stages 1–3 (R) · **GO over-representation** (R: grid panel + real data) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference).
+**Exercises on this page:** Stages 1–3 (R) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
 
-> **Scope:** the live in-browser R lesson is **Stages 1–3 + GO over-representation**; the **database** and **MYB46-GRN network** exercises follow. Functional enrichment is taught as the **hypergeometric over-representation test in Week 1** (a 20×20-gene grid panel, then your gene's real GO terms); the network exercise (Week 2) builds and interprets the network. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
+> **Scope:** the live in-browser R lesson is **Stages 1–3**; the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
 
 ---
 
@@ -262,17 +264,42 @@ z[!is.finite(z)] <- 0                    # a gene with no variation would divide
 draw_heatmap(z, "Per-gene z-score of log2(TPM)", diverging = TRUE)
 
 say(exists("z") && abs(mean(z)) < 1e-6,
-    "z-scored: each gene now centres on 0 — Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific stand out clearly.",
+    "z-scored: each gene now centres on 0 — Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific stand out clearly. But Root2 still looks off (see below).",
     "run Step 1.4 (log_tpm) first, then re-run.")
 ```
 
+> **But look at `Root2`.** Even after z-scoring, `Root2` still doesn't line up with `Root1`/`Root3` — its whole column looks scrambled. That's `Gene8` *still* making trouble: because TPM forces every sample to sum to a million, the `Gene8` spike ate most of `Root2`'s budget and deflated every *other* gene in that sample (Step 1.3). A per-gene z-score recentres each gene on its own mean, but it **cannot** undo a distortion that lives in one entire *column* — so z-scoring did **not** rescue `Root2`. The only fix is to remove `Gene8` and re-normalize, which is exactly what Stage 2 does next.
+>
 > **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples; log / z-score → visualising and clustering.* Never DE-test TPM.
 
 ---
 
 ## Stage 2 — Explore the structure: PCA & clustering
 
-Now that the matrix is normalized, the aim is to step back and ask whether the **samples** group the way biology predicts. But first a clean-up: **Step 1.1 flagged `Gene8` as a technical artefact**, and Step 1.3 showed that TPM can't undo it (one runaway gene even crushes everything else in its sample to near-zero). So before exploring structure we **drop `Gene8` and re-normalize** the clean matrix — the standard "detect → remove → re-normalize" workflow. *(Run Stage 1 first so `counts` exists.)*
+Now that the matrix is normalized, step back and ask whether the **samples** group the way biology predicts — and deal with the `Gene8` artefact honestly. We do it in the right order: **first see the damage** the artefact does to the global picture, **then** remove it and re-normalize, and watch the structure snap into place. *(Run Stage 1 first so `counts`, `gene_len` and `z` exist.)*
+
+### PCA — first, with the artefact still in
+
+PCA squeezes the genes into a few **principal components** that capture the most variation between samples; if normalization worked, samples should separate by **tissue**. Let's run it first on the matrix **from Step 1.5 — `Gene8` still included** — and see what one bad gene does.
+
+```{webr}
+# z is the per-gene z-score from Step 1.5 — it STILL contains Gene8.
+tissue <- c("Root","Root","Root","Leaf","Leaf","Leaf","Pollen")   # label each sample
+pca0 <- prcomp(t(z))                                              # PCA with samples as rows
+op <- par(mar = c(4, 4, 3, 7))                                    # extra right margin for the legend
+plot(pca0$x[,1], pca0$x[,2], col = factor(tissue), pch = 19, cex = 1.6,
+     xlab = "PC1", ylab = "PC2", main = "PCA — Gene8 (artefact) still in")
+text(pca0$x[,1], pca0$x[,2], colnames(z), pos = 3, cex = 0.7)
+legend(par("usr")[2] * 1.02, par("usr")[4], xpd = TRUE, bty = "n",
+       legend = levels(factor(tissue)), col = 1:3, pch = 19)
+par(op)
+```
+
+> **What goes wrong.** `Root2` is dragged away from `Root1`/`Root3` — the three roots **don't** group. The `Gene8` spike, even after per-gene z-scoring, distorts `Root2`'s whole profile (TPM's sum-to-million crushed every other gene in that sample, Step 1.5). One bad gene is enough to break the global picture.
+
+### Remove the artefact and re-normalize
+
+Sometimes a gene — or even a whole sample — is so badly behaved that **no normalization can rescue it**; you detect it, document *why*, and remove it. `Gene8` is exactly such a case. We drop it and re-run the **same** TPM → log → z-score pipeline on the clean matrix.
 
 ```{webr}
 # Gene8 was the artefact (Step 1.1). Drop it, then re-run the SAME pipeline — this is the compact,
@@ -288,13 +315,13 @@ cat("Clean, re-normalized matrix:", nrow(cz), "genes ×", ncol(cz), "samples\n")
 draw_heatmap(cz, "Per-gene z-score of log2(TPM) — Gene8 removed", diverging = TRUE)
 ```
 
-> With the artefact gone, the z-score heatmap already shows clean tissue blocks — root genes high (red) in the root samples, leaf genes high in the leaves, and so on. PCA and clustering below just quantify that structure.
+> With the artefact gone, the z-score heatmap already shows clean tissue blocks — root genes high (red) in the root samples, leaf genes high in the leaves, and so on.
 >
-> **🔬 Task:** change the first line to **keep** Gene8 — e.g. `keep <- rownames(counts) != "none"` — and re-run this cell *and* the clustering further down. Watch `Root2` turn into an outlier and the three tissue groups fall apart. Then change it back. That's *why* you remove artefacts before analysis.
+> **🔬 Task:** change the first line to **keep** Gene8 — e.g. `keep <- rownames(counts) != "none"` — re-run this cell, the PCA below, *and* the clustering. Watch `Root2` break away again. That's *why* you remove artefacts before analysis.
 
-### PCA — do samples separate by tissue?
+### PCA — after removing the artefact
 
-PCA squeezes the genes into a few **principal components** that capture the most variation between samples; if normalization and clean-up did their job, the samples should separate by **tissue**. We plot the first two components, coloured by tissue.
+Now the same PCA on the **clean** matrix `cz`. The three tissues should fall into three tight groups.
 
 ```{webr}
 # prcomp(t(cz)): PCA with SAMPLES as rows (t() transposes). cz is already z-scored per gene.
@@ -302,12 +329,14 @@ pca <- prcomp(t(cz))
 op <- par(mar = c(4, 4, 3, 7))                                 # extra right margin for the legend
 # pca$x = sample coordinates; [,1]/[,2] are PC1/PC2.  factor(tissue): turn labels into colour groups
 plot(pca$x[,1], pca$x[,2], col = factor(tissue), pch = 19, cex = 1.6,
-     xlab = "PC1", ylab = "PC2", main = "PCA of samples (clean, z-scored)")
+     xlab = "PC1", ylab = "PC2", main = "PCA of samples — Gene8 removed")
 text(pca$x[,1], pca$x[,2], colnames(cz), pos = 3, cex = 0.7)   # text(): label each point
 legend(par("usr")[2] * 1.02, par("usr")[4], xpd = TRUE, bty = "n",   # just OUTSIDE the plot, top-right
        legend = levels(factor(tissue)), col = 1:3, pch = 19)
 par(op)
 ```
+
+> Compare with the first PCA: removing one gene and re-normalizing pulled `Root2` back in with the other roots. **That** is the payoff of `detect → remove → re-normalize`.
 
 How much of the variation does each component capture? The **scree plot** answers that — and tells you whether the 2-D PCA picture can be trusted.
 
@@ -341,9 +370,17 @@ plot(hc, labels = colnames(cz), main = paste("Clustering of samples —", LINK, 
 # cutree(hc, k): cut the dendrogram into k groups (k = number of tissues here)
 groups <- cutree(hc, k = ______)        # <- blank: 3   (root, leaf, pollen)
 
-# redraw the tree and box the clusters in colour so you can see the cut
-plot(hc, labels = colnames(cz), main = "Samples cut into clusters", xlab = "", sub = "")
-rect.hclust(hc, k = length(unique(groups)), border = c("forestgreen","firebrick","steelblue","orange"))
+# colour each LEAF LABEL by its cluster, so you can read the cut straight off the tree
+pal3 <- c("forestgreen", "firebrick", "steelblue", "orange")   # one colour per cluster
+dend <- as.dendrogram(hc)
+dend <- dendrapply(dend, function(node){
+  if (is.leaf(node)) {                                  # only the tips carry sample names
+    s <- attr(node, "label")                            # the sample at this leaf
+    attr(node, "nodePar") <- list(lab.col = pal3[groups[s]], pch = NA)
+  }
+  node
+})
+plot(dend, main = "Samples coloured by cluster", ylab = "Height")
 print(data.frame(sample = colnames(cz), tissue = tissue, cluster = groups))
 
 say(exists("groups") && length(unique(groups)) == 3,
@@ -379,113 +416,6 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 </details>
 
 **✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.*
-
----
-
-## Functional enrichment — GO over-representation
-
-Is your gene's neighbourhood **over-represented** for a biological process? The **hypergeometric test** (the one-sided Fisher exact test) answers it. Picture an urn:
-
-- **Background (N)** — all genes in the genome (every marble).
-- **Pathway (K)** — genes in your GO term of interest (the red marbles).
-- **Signature (n)** — your gene list; here, your gene's co-expression neighbours (the marbles you draw).
-- **Hits (k)** — how many of your signature land in the pathway (red marbles drawn).
-
-If you draw **more** hits than chance would give, the pathway is enriched — **p = P(X ≥ k)**.
-
-### Try it — a genome of 400 genes
-
-Each cell of the **20 × 20 grid is a gene** (N = 400). Set how many are **differentially expressed (DEGs)**, how big the **pathway** is, and how many of your DEGs fall **inside** it — then **Run**. You get your grid (red box) next to **20 random** arrangements, and an **empirical p-value**: how often random scattering does as well as you.
-
-```{webr}
-N <- 400; side <- 20          # 20 x 20 grid = all genes
-# ---- change these three numbers ----
-n_deg        <- 40    # genes that are differentially expressed (the DEGs you "draw")
-pathway_size <- 60    # genes in your pathway of interest (K)
-hits         <- 12    # how many of your DEGs fall INSIDE the pathway (observed overlap, k)
-# ------------------------------------
-n_deg <- min(n_deg, N)
-hits  <- min(hits, n_deg, pathway_size)                 # keep the numbers valid
-hits  <- max(hits, n_deg - (N - pathway_size), 0)
-
-pathway <- rep(FALSE, N); pathway[1:pathway_size] <- TRUE   # the pathway = a fixed block of cells
-pal <- c("grey88", "#9ecae1", "#fdae6b", "#e6550d")        # gene · pathway · DEG · DEG-in-pathway
-
-# draw one 20x20 grid: pathway cells coloured, then DEGs (orange; red if they land in the pathway)
-draw_grid <- function(deg, main, hl = FALSE){
-  cat <- ifelse(pathway, 1L, 0L); cat[deg] <- ifelse(pathway[deg], 3L, 2L)
-  image(1:side, 1:side, matrix(cat, side, side), col = pal, breaks = c(-.5,.5,1.5,2.5,3.5),
-        axes = FALSE, xlab = "", ylab = "", main = main)
-  box(col = if (hl) "firebrick" else "grey80", lwd = if (hl) 3 else 1)
-}
-
-op <- par(mfrow = c(4, 6), mar = c(1.2, 0.8, 2, 0.8))
-obs <- c(sample(which(pathway), hits), sample(which(!pathway), n_deg - hits))   # YOUR data
-draw_grid(obs, sprintf("YOUR DATA: %d", hits), hl = TRUE)
-rc <- integer(20)                                                # 20 random arrangements
-for (i in 1:20){ rd <- sample(N, n_deg); rc[i] <- sum(pathway[rd]); draw_grid(rd, sprintf("random: %d", rc[i])) }
-plot.new(); legend("center", fill = pal, bty = "n", cex = 0.9, legend = c("gene","pathway","DEG","hit"))
-par(op)
-
-# EMPIRICAL p-value: how often did random scattering match or beat your hits?  (+1 = a pseudocount)
-p_emp <- (sum(rc >= hits) + 1) / (length(rc) + 1)
-cat(sprintf("Your hits = %d; random gave %d-%d (mean %.1f).  Empirical p = (%d+1)/(20+1) = %.3f\n",
-            hits, min(rc), max(rc), mean(rc), sum(rc >= hits), p_emp))
-say(p_emp < 0.05,
-    sprintf("enriched — only %d of 20 random grids reached %d hits, so empirical p = %.3f.", sum(rc >= hits), hits, p_emp),
-    sprintf("not enriched — %d of 20 random grids reached %d hits, empirical p = %.3f. Raise 'hits' and re-run.", sum(rc >= hits), hits, p_emp))
-```
-
-> **This is a Monte Carlo simulation.** Each random grid is one draw from the *null hypothesis* — "DEGs are scattered at random, with no preference for the pathway." By repeating the random draw many times we build the null distribution by brute force, and the **empirical p-value** is just the fraction of those draws that match or beat your observed hits. The estimate gets more precise the more simulations you run (the error shrinks roughly like 1/√runs), so 20 grids is only a rough picture — if *no* random grid reaches your count, the best you can say is p ≈ 1/21 ≈ 0.05, and going lower would need thousands of runs. The hypergeometric **formula** below is the *exact* answer this simulation is converging towards — which is why, when an exact formula exists, we use it instead of simulating.
-
-### The exact p-value — the hypergeometric formula
-
-Simulating is intuitive but coarse. The **hypergeometric distribution** gives the exact P(X ≥ hits) directly — no simulation. **Fill the blank** (we subtract 1 so the tail *includes* your observed count), **Run**, and compare with the empirical p above.
-
-```{webr}
-# phyper(q, K, N-K, n) = P(X <= q).  We want P(X >= hits) = P(X > hits-1),
-# so use q = hits - 1 with lower.tail = FALSE.
-p_formula <- phyper(hits - ______, pathway_size, N - pathway_size, n_deg, lower.tail = FALSE)  # <- blank: 1
-
-cat(sprintf("Exact (hypergeometric) p = %.4g\n", p_formula))
-cat(sprintf("Empirical p (20 grids above) = %.3f\n", p_emp))
-
-correct <- sum(dhyper(hits:min(n_deg, pathway_size), pathway_size, N - pathway_size, n_deg))  # = P(X >= hits)
-say(abs(p_formula - correct) < 1e-9,
-    sprintf("exact p = %.4g — what 20 (or a million) simulations only estimate, in one line. It agrees with your empirical p.", p_formula),
-    "use hits - 1, so phyper(.., lower.tail = FALSE) gives P(X >= hits) and not P(X > hits).")
-```
-
-> Same logic, two routes: **simulate** (the empirical p) or use the **formula** (the exact p). Every GO-enrichment tool uses the formula — now you know exactly what it computes (population / pathway / overlap, the one-sided Fisher test).
-
-### Now with your gene's real numbers
-
-This computes your gene's co-expression neighbours (the signature), tests **every** GO term, and tells you which process is most over-represented — and the exact `hits`/`pathway`/`background` to type into the calculator above.
-
-```{webr}
-target <- EXPR[MY_GENE, ]
-pcc <- apply(EXPR, 1, function(g) suppressWarnings(cor(g, ______)))   # <- blank: target
-pcc[is.na(pcc)] <- 0
-sig <- names(sort(pcc, decreasing = TRUE))[1:100]    # signature = your top-100 neighbours
-bg  <- rownames(EXPR); N <- length(bg)               # background = all genes
-sets <- split(gene_sets$gene_id, gene_sets$term_id)
-tnm  <- tapply(gene_sets$term_name, gene_sets$term_id, function(x) x[1])
-res <- do.call(rbind, lapply(names(sets), function(t){
-  K <- sum(sets[[t]] %in% bg); k <- sum(sig %in% sets[[t]])   # pathway size & overlap
-  if (k < 2) return(NULL)
-  data.frame(term = tnm[[t]], hits = k, pathway = K,
-             p = phyper(k - 1, K, N - K, length(sig), lower.tail = FALSE))
-}))
-res$padj <- p.adjust(res$p, "BH")                    # correct for testing many terms (FDR)
-res <- head(res[order(res$p), c("term","hits","pathway","padj")], 8); print(res)
-cat(sprintf("\nTop term -> type into the calculator: hits=%d, pathway=%d, signature=100, background=%d\n",
-            res$hits[1], res$pathway[1], N))
-say(nrow(res) > 0 && res$padj[1] < 0.05,
-    paste0("your gene's neighbourhood is enriched for: ", res$term[1], "  (padj = ", signif(res$padj[1], 2), ")."),
-    "fill the blank with 'target' and re-run; if still nothing, your gene may have a small module.")
-```
-
-> **✍️ Dossier:** record your top enriched GO process and its adjusted *p*. *(Enrichment is covered in more depth in the Big Data course.)*
 
 ---
 
@@ -838,7 +768,7 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 
 ### N5 — Export for Cytoscape & interpret
 
-*(Functional enrichment of this module was done in Week 1 — see "Functional enrichment — GO over-representation" above.)*
+*(Functional enrichment is an optional extension — see the **Appendix** at the end of this page.)*
 
 ```{webr}
 nodes <- unique(c(all_edges$source, all_edges$target))
@@ -860,3 +790,113 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
 
 *Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, McCarthy 2009, Kim 2013, Zhong & Ye 2012, Zhou 2009, Li 2012) — not generated by an LLM.*
+
+
+---
+
+# Appendix — Functional enrichment (GO over-representation)
+
+*Optional extension (also covered in more depth in the Big Data course). Run it any time **after** you've claimed a gene — Stage 3 in Week 1 or N0 in Week 2 — it needs `MY_GENE`, `EXPR` and `gene_sets`, which are all in place by then.*
+
+Is your gene's neighbourhood **over-represented** for a biological process? The **hypergeometric test** (the one-sided Fisher exact test) answers it. Picture an urn:
+
+- **Background (N)** — all genes in the genome (every marble).
+- **Pathway (K)** — genes in your GO term of interest (the red marbles).
+- **Signature (n)** — your gene list; here, your gene's co-expression neighbours (the marbles you draw).
+- **Hits (k)** — how many of your signature land in the pathway (red marbles drawn).
+
+If you draw **more** hits than chance would give, the pathway is enriched — **p = P(X ≥ k)**.
+
+### Try it — a genome of 400 genes
+
+Each cell of the **20 × 20 grid is a gene** (N = 400). Set how many are **differentially expressed (DEGs)**, how big the **pathway** is, and how many of your DEGs fall **inside** it — then **Run**. You get your grid (red box) next to **20 random** arrangements, and an **empirical p-value**: how often random scattering does as well as you.
+
+```{webr}
+N <- 400; side <- 20          # 20 x 20 grid = all genes
+# ---- change these three numbers ----
+n_deg        <- 40    # genes that are differentially expressed (the DEGs you "draw")
+pathway_size <- 60    # genes in your pathway of interest (K)
+hits         <- 12    # how many of your DEGs fall INSIDE the pathway (observed overlap, k)
+# ------------------------------------
+n_deg <- min(n_deg, N)
+hits  <- min(hits, n_deg, pathway_size)                 # keep the numbers valid
+hits  <- max(hits, n_deg - (N - pathway_size), 0)
+
+pathway <- rep(FALSE, N); pathway[1:pathway_size] <- TRUE   # the pathway = a fixed block of cells
+pal <- c("grey88", "#9ecae1", "#fdae6b", "#e6550d")        # gene · pathway · DEG · DEG-in-pathway
+
+# draw one 20x20 grid: pathway cells coloured, then DEGs (orange; red if they land in the pathway)
+draw_grid <- function(deg, main, hl = FALSE){
+  cat <- ifelse(pathway, 1L, 0L); cat[deg] <- ifelse(pathway[deg], 3L, 2L)
+  image(1:side, 1:side, matrix(cat, side, side), col = pal, breaks = c(-.5,.5,1.5,2.5,3.5),
+        axes = FALSE, xlab = "", ylab = "", main = main)
+  box(col = if (hl) "firebrick" else "grey80", lwd = if (hl) 3 else 1)
+}
+
+op <- par(mfrow = c(4, 6), mar = c(1.2, 0.8, 2, 0.8))
+obs <- c(sample(which(pathway), hits), sample(which(!pathway), n_deg - hits))   # YOUR data
+draw_grid(obs, sprintf("YOUR DATA: %d", hits), hl = TRUE)
+rc <- integer(20)                                                # 20 random arrangements
+for (i in 1:20){ rd <- sample(N, n_deg); rc[i] <- sum(pathway[rd]); draw_grid(rd, sprintf("random: %d", rc[i])) }
+plot.new(); legend("center", fill = pal, bty = "n", cex = 0.9, legend = c("gene","pathway","DEG","hit"))
+par(op)
+
+# EMPIRICAL p-value: how often did random scattering match or beat your hits?  (+1 = a pseudocount)
+p_emp <- (sum(rc >= hits) + 1) / (length(rc) + 1)
+cat(sprintf("Your hits = %d; random gave %d-%d (mean %.1f).  Empirical p = (%d+1)/(20+1) = %.3f\n",
+            hits, min(rc), max(rc), mean(rc), sum(rc >= hits), p_emp))
+say(p_emp < 0.05,
+    sprintf("enriched — only %d of 20 random grids reached %d hits, so empirical p = %.3f.", sum(rc >= hits), hits, p_emp),
+    sprintf("not enriched — %d of 20 random grids reached %d hits, empirical p = %.3f. Raise 'hits' and re-run.", sum(rc >= hits), hits, p_emp))
+```
+
+> **This is a Monte Carlo simulation.** Each random grid is one draw from the *null hypothesis* — "DEGs are scattered at random, with no preference for the pathway." By repeating the random draw many times we build the null distribution by brute force, and the **empirical p-value** is just the fraction of those draws that match or beat your observed hits. The estimate gets more precise the more simulations you run (the error shrinks roughly like 1/√runs), so 20 grids is only a rough picture — if *no* random grid reaches your count, the best you can say is p ≈ 1/21 ≈ 0.05, and going lower would need thousands of runs. The hypergeometric **formula** below is the *exact* answer this simulation is converging towards — which is why, when an exact formula exists, we use it instead of simulating.
+
+### The exact p-value — the hypergeometric formula
+
+Simulating is intuitive but coarse. The **hypergeometric distribution** gives the exact P(X ≥ hits) directly — no simulation. **Fill the blank** (we subtract 1 so the tail *includes* your observed count), **Run**, and compare with the empirical p above.
+
+```{webr}
+# phyper(q, K, N-K, n) = P(X <= q).  We want P(X >= hits) = P(X > hits-1),
+# so use q = hits - 1 with lower.tail = FALSE.
+p_formula <- phyper(hits - ______, pathway_size, N - pathway_size, n_deg, lower.tail = FALSE)  # <- blank: 1
+
+cat(sprintf("Exact (hypergeometric) p = %.4g\n", p_formula))
+cat(sprintf("Empirical p (20 grids above) = %.3f\n", p_emp))
+
+correct <- sum(dhyper(hits:min(n_deg, pathway_size), pathway_size, N - pathway_size, n_deg))  # = P(X >= hits)
+say(abs(p_formula - correct) < 1e-9,
+    sprintf("exact p = %.4g — what 20 (or a million) simulations only estimate, in one line. It agrees with your empirical p.", p_formula),
+    "use hits - 1, so phyper(.., lower.tail = FALSE) gives P(X >= hits) and not P(X > hits).")
+```
+
+> Same logic, two routes: **simulate** (the empirical p) or use the **formula** (the exact p). Every GO-enrichment tool uses the formula — now you know exactly what it computes (population / pathway / overlap, the one-sided Fisher test).
+
+### Now with your gene's real numbers
+
+This computes your gene's co-expression neighbours (the signature), tests **every** GO term, and tells you which process is most over-represented — and the exact `hits`/`pathway`/`background` to type into the calculator above.
+
+```{webr}
+target <- EXPR[MY_GENE, ]
+pcc <- apply(EXPR, 1, function(g) suppressWarnings(cor(g, ______)))   # <- blank: target
+pcc[is.na(pcc)] <- 0
+sig <- names(sort(pcc, decreasing = TRUE))[1:100]    # signature = your top-100 neighbours
+bg  <- rownames(EXPR); N <- length(bg)               # background = all genes
+sets <- split(gene_sets$gene_id, gene_sets$term_id)
+tnm  <- tapply(gene_sets$term_name, gene_sets$term_id, function(x) x[1])
+res <- do.call(rbind, lapply(names(sets), function(t){
+  K <- sum(sets[[t]] %in% bg); k <- sum(sig %in% sets[[t]])   # pathway size & overlap
+  if (k < 2) return(NULL)
+  data.frame(term = tnm[[t]], hits = k, pathway = K,
+             p = phyper(k - 1, K, N - K, length(sig), lower.tail = FALSE))
+}))
+res$padj <- p.adjust(res$p, "BH")                    # correct for testing many terms (FDR)
+res <- head(res[order(res$p), c("term","hits","pathway","padj")], 8); print(res)
+cat(sprintf("\nTop term -> type into the calculator: hits=%d, pathway=%d, signature=100, background=%d\n",
+            res$hits[1], res$pathway[1], N))
+say(nrow(res) > 0 && res$padj[1] < 0.05,
+    paste0("your gene's neighbourhood is enriched for: ", res$term[1], "  (padj = ", signif(res$padj[1], 2), ")."),
+    "fill the blank with 'target' and re-run; if still nothing, your gene may have a small module.")
+```
+
+> **✍️ Dossier:** record your top enriched GO process and its adjusted *p*. *(Enrichment is covered in more depth in the Big Data course.)*
