@@ -422,15 +422,19 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 The atlas you analysed is one resource among many. These four short **web** exercises cross-check your gene in the major plant transcriptomics databases — no coding, just clicking. All four are **assessed** (your TA checks them against an answer key). *URLs verified working 2026-06-19.*
 
-### D1 — Where is my gene switched on?  *(eFP/ePlant + TraVA-DB)*
+### D1 — Where is my gene switched on, and what is it?  *(ePlant eFP + PEO)*
 
-1. Open **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → type your gene in the **search box** (e.g. `AT5G12870` for MYB46, `AT5G17420` for CESA7) → open the **Plant eFP** view; note the highest organ and the colour scale.
-2. Open **TraVA-DB** ([travadb.org](https://travadb.org/)) → search the same locus → read the bar profile.
-3. Record the single highest-expression organ in **both**.
+1. Open **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → type your gene in the **search box** (e.g. `AT5G12870` for MYB46, `AT5G17420` for CESA7) → open the **Plant eFP** view; note the **highest organ** and the colour scale.
+2. Still in ePlant, switch the eFP view to **Tissue-Specific Root eFP** → look at **which root cell type** your gene switches on in. Secondary-cell-wall genes light up in the **xylem** (where lignified, thickened walls are built).
+3. Open **PEO — Plant Gene Expression Omnibus** ([peo.ku.dk](https://peo.ku.dk/)) → search the same locus. PEO is rich, so read **three** things:
+   - the **expression profile** — does the highest organ agree with ePlant?
+   - **Top co-expressed genes** — this list is gold. How many of your secondary-wall module do you already recognise (other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`)? Note the top 3.
+   - the **protein domains** (PFAM/InterPro) and **biological function** (MapMan) — the same kind of annotation you mined in the database & sequence modules. What domain family is your gene (e.g. cellulose-synthase domain for a CESA, MYB DNA-binding domain for MYB46)?
+4. Record: highest organ (ePlant + PEO), the **root cell type** (xylem?), your **top 3 co-expressed genes**, and your gene's **domain + MapMan function**.
 
-<details><summary>✅ Expected</summary>Secondary-cell-wall genes (CESA4/7/8, MYB46) peak in <b>inflorescence stem / mature stem</b> (secondary xylem &amp; fibres); the two databases agree on the stem maximum.</details>
+<details><summary>✅ Expected</summary>Secondary-cell-wall genes (CESA4/7/8, MYB46) peak in <b>inflorescence stem / mature stem</b> (secondary xylem &amp; fibres) and, in the root eFP, localise to the <b>xylem</b>. PEO and ePlant agree on the stem maximum; PEO's <i>top co-expressed</i> list is dominated by other SCW genes, and the domain/MapMan annotation matches the family (cellulose synthase, MYB TF, laccase…).</details>
 
-**Q:** A transcription factor and its target peak in the *same* tissue — why does that make sense? What would it mean if they didn't?
+**Q:** A transcription factor and its target peak in the *same* tissue (and the *same* root cell type) — why does that make sense? And: did PEO's top-co-expressed list already hint at your gene's function *before* you read its annotation?
 
 ### D2 — Who does my gene work with?  *(CoNekT + ATTED-II)*
 
@@ -454,9 +458,9 @@ The atlas you analysed is one resource among many. These four short **web** exer
 
 **Q:** Name one edge that exists in a GRN but not in a PPI database, and one that exists in a PPI database but not a GRN. What does each let you predict?
 
-### D4 — Cross-database consistency  *(TraVA-DB + EBI Expression Atlas + CoNekT)*
+### D4 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
 
-1. **TraVA-DB** → CESA4 `AT5G44030` → top organ.
+1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → CESA4 `AT5G44030` → top organ.
 2. **EBI Expression Atlas** → [ebi.ac.uk/gxa/genes/AT5G44030](https://www.ebi.ac.uk/gxa/genes/AT5G44030) → Baseline → top tissue.
 3. **CoNekT** → `AT5G44030` → specificity → top organ.
 4. Fill a 3-row table: *database | top tissue | agrees?*
