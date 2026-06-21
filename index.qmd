@@ -4,12 +4,11 @@ subtitle: "Bioinformatik NPLB24004U · runs in your browser, no install"
 format:
   live-html:
     toc: true
-    link-external-newwindow: true
-    link-external-icon: true
     css: editor-theme.css
     include-after-body:
       - tutor.html
       - save-work.html
+      - external-links.html
     resources:
       - data
 engine: knitr

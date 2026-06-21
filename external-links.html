@@ -1,0 +1,23 @@
+<script>
+// Make every external link open in a new tab (link-external-newwindow is not
+// honoured for this standalone live-html doc, so we do it here, deterministically).
+(function () {
+  function openExternalInNewTab() {
+    var here = location.hostname;
+    document.querySelectorAll('a[href]').forEach(function (a) {
+      try {
+        var u = new URL(a.getAttribute('href'), location.href);
+        if (/^https?:$/.test(u.protocol) && u.hostname && u.hostname !== here) {
+          a.setAttribute('target', '_blank');
+          a.setAttribute('rel', 'noopener noreferrer');
+        }
+      } catch (e) { /* relative or in-page anchors: leave as-is */ }
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', openExternalInNewTab);
+  } else {
+    openExternalInNewTab();
+  }
+})();
+</script>
