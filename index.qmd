@@ -93,6 +93,62 @@ draw_heatmap <- function(mat, main = "", diverging = FALSE){
   axis(2, at = ng:1, labels = rownames(mat), las = 1, tick = FALSE, cex.axis = 0.8)
 }
 
+# draw_network(): a tiny base-R network drawer (no igraph). edges = data.frame(source, target[, type]).
+# Force-directed (Fruchterman–Reingold) layout; edge colour by type; GRN edges drawn as directed arrows.
+draw_network <- function(edges, hub = NULL, main = "", max_nodes = 40){
+  edges <- edges[as.character(edges$source) != as.character(edges$target), , drop = FALSE]   # no self-loops
+  if (nrow(edges) == 0){ plot.new(); title(main); text(0.5, 0.5, "no edges yet"); return(invisible()) }
+  edges$source <- as.character(edges$source); edges$target <- as.character(edges$target)
+  capped <- FALSE; nodes <- unique(c(edges$source, edges$target))
+  if (length(nodes) > max_nodes){                              # keep the highest-degree nodes (+ the hub)
+    deg  <- sort(table(c(edges$source, edges$target)), decreasing = TRUE)
+    keep <- names(deg)[seq_len(max_nodes)]; if (!is.null(hub)) keep <- union(hub, keep)
+    edges <- edges[edges$source %in% keep & edges$target %in% keep, , drop = FALSE]
+    nodes <- unique(c(edges$source, edges$target)); capped <- TRUE
+  }
+  n <- length(nodes); id <- setNames(seq_len(n), nodes)
+  A <- matrix(0, n, n); ai <- id[edges$source]; bi <- id[edges$target]   # undirected adjacency for layout
+  for (i in seq_len(nrow(edges))){ A[ai[i], bi[i]] <- 1; A[bi[i], ai[i]] <- 1 }
+  set.seed(1)                                                  # reproducible layout
+  x <- cos(2*pi*(seq_len(n)-1)/n) + runif(n, -0.02, 0.02)
+  y <- sin(2*pi*(seq_len(n)-1)/n) + runif(n, -0.02, 0.02)
+  k <- 1/sqrt(n)
+  for (it in 1:250){                                           # repel all pairs, attract along edges
+    dx <- outer(x, x, "-"); dy <- outer(y, y, "-")
+    d  <- sqrt(dx^2 + dy^2); d[d < 1e-3] <- 1e-3
+    f  <- (k^2/d) - (d^2/k)*A
+    fx <- rowSums(f * dx / d); fy <- rowSums(f * dy / d)
+    fl <- sqrt(fx^2 + fy^2); fl[fl < 1e-6] <- 1e-6
+    step <- 0.08*(1 - it/250) + 0.004
+    x <- x + step*fx/fl; y <- y + step*fy/fl
+  }
+  etype <- if ("type" %in% names(edges)) as.character(edges$type) else rep("coexpression", nrow(edges))
+  pal_e <- c(coexpression = "grey72", PPI = "#2c7fb8", GRN_activates = "forestgreen",
+             GRN_represses = "firebrick", GRN_induces = "forestgreen")
+  ecol <- pal_e[etype]; ecol[is.na(ecol)] <- "grey72"
+  elty <- ifelse(etype == "GRN_induces", 2, 1); isgrn <- grepl("^GRN", etype)
+  op <- par(mar = c(1, 1, 3, 1)); on.exit(par(op))
+  rng <- range(c(x, y)); pad <- 0.12*diff(rng) + 1e-6
+  plot(NA, xlim = rng + c(-pad, pad), ylim = rng + c(-pad, pad), asp = 1, axes = FALSE,
+       xlab = "", ylab = "", main = if (capped) paste0(main, "  (top ", n, " nodes)") else main)
+  ax <- x[ai]; ay <- y[ai]; bx <- x[bi]; by <- y[bi]
+  sh <- 0.045*diff(rng); ux <- bx-ax; uy <- by-ay; L <- sqrt(ux^2+uy^2); L[L < 1e-6] <- 1e-6
+  for (i in seq_len(nrow(edges))){
+    if (isgrn[i]) suppressWarnings(arrows(ax[i]+sh*ux[i]/L[i], ay[i]+sh*uy[i]/L[i],
+                  bx[i]-sh*ux[i]/L[i], by[i]-sh*uy[i]/L[i],
+                  length = 0.07, lwd = 2.2, col = ecol[i], lty = elty[i]))
+    else segments(ax[i], ay[i], bx[i], by[i], col = ecol[i], lwd = 1.6, lty = elty[i])
+  }
+  ishub <- if (is.null(hub)) rep(FALSE, n) else nodes == hub
+  points(x, y, pch = 21, cex = ifelse(ishub, 3.4, 2.3),
+         bg = ifelse(ishub, "gold", "white"), col = "grey25", lwd = 1.4)
+  labs <- sym[nodes]; bad <- is.na(labs) | labs == ""; labs[bad] <- nodes[bad]
+  text(x, y, labs, cex = 0.62, font = ifelse(ishub, 2, 1))
+  present <- intersect(c("coexpression","PPI","GRN_activates","GRN_represses","GRN_induces"), etype)
+  legend("topright", bty = "n", cex = 0.72, legend = present, col = pal_e[present],
+         lwd = 2, lty = ifelse(present == "GRN_induces", 2, 1))
+}
+
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
@@ -534,11 +590,37 @@ Answer in 2–4 sentences. The model answers — and their points — match how 
 
 ---
 
+## 📝 Week 1 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
+
+Close the week the way the exam tests it. Answer in 2–4 sentences; the model answers and their points match the grading. *(These cover Stages 1–4; the **database block** above carries its own five questions — together they are the Week-1 exam set.)*
+
+**W1·Q1 (4 p) — Why normalize.** Raw counts can't be compared (a) between two *genes* in one sample, nor (b) for one *gene* between two samples. Give the confound in each case and the TPM step that removes it.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) <b>Gene length</b> — a longer gene collects more reads at equal expression; divide each count by gene length in kb (the RPK step) (2 p). (b) <b>Sequencing depth</b> — samples differ in total reads; scale each sample so its values sum to 1,000,000 (the per-million step) (2 p).</details>
+
+**W1·Q2 (4 p) — The artefact normalization can't fix.** One gene (`Gene8`) had a huge count in `Root2`. (a) Why did TPM fail to remove the distortion — and even push the *other* genes in `Root2` down? (b) How did PCA reveal it, and why did removing the gene + re-normalizing repair the clustering?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) TPM forces every sample to sum to 1e6, so one runaway gene eats most of `Root2`'s budget and <b>deflates every other gene</b> in that column — a composition effect scaling cannot undo (2 p). (b) In PCA `Root2` separated from the other roots; dropping `Gene8` and re-normalizing restored each sample's true composition, so samples clustered by tissue (2 p).</details>
+
+**W1·Q3 (4 p) — z-score & clustering.** (a) Why z-score each gene before clustering samples? (b) Your three clusters match root/leaf/pollen — what would it mean if samples instead clustered by *sequencing run*, and what would you do?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Per-gene z-scoring compares each gene's <b>pattern</b>, not its magnitude, so highly expressed genes don't dominate the distance and weakly expressed but informative genes still count (2 p). (b) That is a <b>batch effect</b> — technical variation outweighs biology; correct for batch (a batch term in DESeq2, or ComBat) before interpreting (2 p).</details>
+
+**W1·Q4 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97 — give one mechanism that produces this *without* the two genes interacting.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) A shared expression pattern is a <b>hypothesis</b> that the genes share a process or regulator (1 p); it is <b>not</b> proof of physical interaction or direct regulation — correlation ≠ causation (1 p). (b) Both are independently switched on by the same cue or master regulator (e.g. both stem/xylem-specific, or both stress-induced), with no direct link between them (2 p).</details>
+
+> **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, correlation vs causation) is exactly what the conference Q&A probes.
+
+---
+
 # Week 2 — uge 44 · gene-regulatory networks
 
 ## The MYB46 gene-regulatory network  *(R + Cytoscape)*
 
 The rebuilt network exercise. You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature table — *not* an LLM), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — a master transcription factor binds its targets' DNA, so only a *regulatory* layer can connect it.
+
+Each build step (**N1 → N2 → N3**) now **draws the network right in the page**, so you watch it grow layer by layer — co-expression, then physical (PPI), then regulatory (GRN) — before you export the polished figure to Cytoscape.
 
 ### N0 — (Re)claim your gene
 
@@ -566,6 +648,11 @@ nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
 nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
 print(head(nbhd, 12))
 
+# show your gene at the centre of its co-expression neighbourhood — Layer 1 of the network
+top15 <- head(nbhd$gene[nbhd$gene != HUB], 15)
+draw_network(data.frame(source = HUB, target = top15, type = "coexpression"),
+             hub = HUB, main = paste(MY_NAME, "— co-expression neighbourhood (Layer 1)"))
+
 say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB,
     paste("neighbourhood reloaded for", MY_NAME, "— ready to build the network."),
     "run N0 first to set MY_GENE, then re-run.")
@@ -591,6 +678,9 @@ cesa_ppi <- sum(edges$type == "PPI" & edges$source %in% cesa & edges$target %in%
 cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"),
     "; CESA–CESA physical edges:", cesa_ppi, ")\n")
 
+# draw the network so far — Layers 1+2
+draw_network(edges, hub = MY_GENE, main = "Layers 1+2: co-expression (grey) + physical PPI (blue)")
+
 say(nrow(edges) > 0,
     "co-expression + physical layers built. If CESA4/7/8 are in your neighbourhood you'll see their PPI triangle.",
     "no edges — lower MY_CUTOFF (e.g. 0.8) and re-run.")
@@ -606,6 +696,10 @@ print(grn[, c("source_symbol","target_symbol","interaction","evidence","referenc
 grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI,
                         type = paste0("GRN_", grn$interaction))
 all_edges <- rbind(edges, grn_edges)               # three layers now coexist
+
+# the full network — Layers 1+2+3 (arrows = directed regulatory edges)
+draw_network(all_edges, hub = MY_GENE,
+             main = "Layers 1+2+3: + curated regulatory GRN (green = activates, red = represses)")
 
 say(any(grepl("GRN", all_edges$type)) && any(all_edges$type == "GRN_represses"),
     "three layers stacked: co-expression, physical (PPI) and curated regulatory — including the KNAT7 ⊣ CESA8 brake. Every regulatory edge is reference-backed.",
@@ -853,6 +947,34 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name ≥3 pieces of evidence (a co-expression neighbour, a PPI, a curated GRN edge, your enriched GO process, a database hit).
 
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
+
+## 📝 Week 2 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
+
+The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these five are the core.)*
+
+**W2·Q1 (4 p) — Read the hub.** In the MYB46 GRN, MYB46 has the highest **out-degree**, the highest **betweenness**, and a **near-zero clustering coefficient**. Interpret each metric biologically, then say what network position they describe together.
+
+<details><summary>✅ Model answer (4 p)</summary>High out-degree = it directly regulates many targets (master switch); high betweenness = most shortest paths run through it (a bottleneck — NAC signals reach the biosynthesis genes only via MYB46); near-zero clustering = its targets don't connect to each other (a <b>star</b>, not a clique) (3 p, 1 each). Together: a central <b>hub / bottleneck</b> the whole cascade is funnelled through (1 p).</details>
+
+**W2·Q2 (4 p) — Why a TF has no PPI edge.** MYB46 has many co-expression and regulatory edges but **zero** BioGRID PPI edges, whereas CESA4/7/8 form a PPI triangle. (a) Explain both mechanistically. (b) Which database type can draw the MYB46→CESA edge, and what experiment supports it?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) MYB46 is a transcription factor — it binds its targets' <b>promoter DNA</b>, not their proteins, so protein-interaction assays detect nothing; CESA4/7/8 physically assemble into the cellulose-synthase complex, giving a real PPI triangle (2 p). (b) A curated <b>GRN</b> edge, supported by ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters (+ transactivation) (2 p).</details>
+
+**W2·Q3 (4 p) — Predict a perturbation.** (a) `KNAT7 ⊣ CESA8` is repression — predict CESA8 in a *knat7* knockout, and explain. (b) The *snd1* single mutant looks almost wild-type — why, and which double mutant exposes the phenotype?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Removing a repressor <b>de-represses</b> CESA8 → CESA8 goes <b>up</b> (matches Li 2012) (2 p). (b) <b>NAC redundancy</b>: NST1/NST2 substitute for SND1, so <i>snd1</i> alone ≈ wild-type; the <i>snd1 nst1</i> double loses fibre secondary walls (vessels, driven by VND6/7, are spared) (2 p).</details>
+
+**W2·Q4 (4 p) — Name the motif.** MYB46 activates **both** CESA8 and KNAT7, and KNAT7 represses CESA8. (a) Name this motif. (b) Why is it *not* negative feedback, and what behaviour does it produce?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) An <b>incoherent feed-forward loop</b> (type-1 IFFL) (2 p). (b) It is feed-<i>forward</i>, not feedback: MYB46 sits upstream of both arms and KNAT7 never acts back on MYB46. It gives a <b>self-limiting / pulse-like</b> activation of CESA8 — a built-in brake that sharpens the response rather than a sustained on/off loop (2 p).</details>
+
+**W2·Q5 (4 p) — Robustness.** Deleting MYB46 *in silico* splits the network into 13 components; deleting a single CESA barely changes it. (a) What does this say about each node's role and the network's fragility? (b) What is the one-word graph term for a node like MYB46?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) MYB46 holds the cascade together — losing it <b>fragments</b> the network (high lethality-centrality; the architecture is fragile to losing this one hub), whereas a peripheral CESA loses only its own few edges, leaving the rest connected (robust) (3 p). (b) An <b>articulation point</b> (cut vertex) (1 p).</details>
+
+> **✍️ Dossier:** these five are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
+
+---
 
 *Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, McCarthy 2009, Kim 2013, Zhong & Ye 2012, Zhou 2009, Li 2012) — not generated by an LLM.*
 
