@@ -701,38 +701,44 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 
 ### N1 — Build your co-expression network
 
-You *ranked* your gene's neighbours in **Week 1 (Stage 4)**; webR forgets on reload, so we rebuild that ranking here and then turn it into a **network** — drawing an edge for **every pair of genes** (your gene *and* its neighbours) whose profiles correlate above a cutoff. So the neighbours connect to **each other**, not just to your gene. *(Run N0 first so `MY_GENE` is set.)*
+webR forgets on reload, so we recompute how strongly **every** gene correlates with yours, then build a network with **one knob**: a correlation **cutoff** that decides *both* which genes are in (those correlated with your gene above it, capped at 200) *and* which gene-pairs get an edge. Raise the cutoff → fewer, tighter genes; lower it → more. *(Run N0 first so `MY_GENE` is set.)*
 
 ```{webr}
 HUB    <- MY_GENE                                  # your adopted gene (from N0)
 target <- EXPR[HUB, ]                              # its expression across every organ
-pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # (you filled this blank in Week 1)
-nbhd   <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
+pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # corr of EVERY gene with yours
+pcc[is.na(pcc)] <- 0                               # a flat gene gives NA -> treat as uncorrelated
+nbhd   <- data.frame(gene = rownames(EXPR), symbol = lab(rownames(EXPR)),
                      description = desc[rownames(EXPR)], PCC = round(pcc, 3))
-nbhd   <- head(nbhd[order(-nbhd$PCC), ], 25)       # top-25 neighbours (your gene is row 1)
-print(head(nbhd, 12))
-nb <- nbhd$gene                                    # the neighbour ids
+nbhd   <- nbhd[order(-nbhd$PCC), ]
+print(head(nbhd, 12))                              # your closest neighbours (row 1 = your gene, PCC = 1.000)
 
-# turn the neighbourhood into a NETWORK: keep every gene-PAIR correlated above a cutoff
-C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation AMONG the neighbours
-ut <- upper.tri(C)                                 # each pair once (not the diagonal)
-hist(C[ut], breaks = 20, col = "grey85", xlab = "Pearson r between neighbour pairs",
-     main = "How correlated are your neighbours with each other?")
-MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.95
-keep  <- ut & C > MY_CUTOFF
+# guide — how big is the network at each cutoff? (genes correlated with YOUR gene above it, capped at 200)
+for (cut0 in c(0.70, 0.80, 0.90, 0.95, 0.99))
+  cat("  cutoff", cut0, "->", min(200, sum(pcc >= cut0)), "genes\n")
+
+# ONE knob: genes correlated with your gene above the cutoff = the network's nodes (your gene is always in)
+MY_CUTOFF <- ______                                # <- e.g. 0.9   (raise -> fewer genes; lower -> more, up to 200)
+nb <- head(nbhd$gene[nbhd$PCC >= MY_CUTOFF], 200)  # capped at 200 for the browser
+
+# draw an edge between any TWO of those genes whose profiles also correlate above the cutoff
+C    <- cor(t(EXPR[nb, , drop = FALSE]))            # gene × gene correlation among the selected genes
+ut   <- upper.tri(C)                               # each pair once (not the diagonal)
+keep <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
 
-cat("Co-expression network:", length(unique(c(edges$source, edges$target))),
-    "genes,", nrow(edges), "edges (cutoff", MY_CUTOFF, ")\n")
-cynet(edges, hub = HUB, id = "cy_n1", title = paste(MY_NAME, "co-expression network (Layer 1)"))
+cat("\nAt cutoff", MY_CUTOFF, "->", length(nb), "genes",
+    if (length(nb) >= 200) "(capped at 200)" else "", "and", nrow(edges), "edges.\n")
+cynet(edges, hub = HUB, id = "cy_n1", title = paste(MY_NAME, "co-expression network (cutoff", MY_CUTOFF, ")"))
 
-say(nrow(edges) > 0,
-    "co-expression network built — neighbours are linked to each other, not just to your gene.",
-    "no edges yet — fill MY_CUTOFF (e.g. 0.95); if you still get none, lower it a little and re-run.")
+say(length(nb) > 1 && nrow(edges) > 0,
+    paste0("network at cutoff ", MY_CUTOFF, ": ", length(nb), " genes, ", nrow(edges),
+           " edges. Raise the cutoff to shrink it; lower it to grow it (up to 200)."),
+    "fill MY_CUTOFF (e.g. 0.9). If you get almost nothing, lower it.")
 ```
 
-> **🔬 The cutoff is a knob — and your module is dense.** These are your gene's *closest* neighbours, so most pairs are strongly correlated: the histogram bunches to the right, and at a low cutoff the network is almost **complete** (every gene linked to every other). That density is real — it's the hallmark of a tight functional module, not a bug. To pull out just the **strongest core**, push `MY_CUTOFF` into the right tail (try `0.95`, then `0.97`); lower it (`0.85`, `0.75`) and the mesh fills back in. Either way, **drag the nodes apart** in the viewer to read even a dense graph.
+> **🔬 One knob, one network.** The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module grows toward the 200-gene cap. Because these genes are *defined* by being co-expressed with yours, the network stays **densely connected** even at high cutoffs — that density is the hallmark of a real functional module, not a bug. **Drag nodes apart** in the viewer to read it; a very low cutoff makes a large, slow mesh, so start around `0.9`.
 
 ### N2 — Add the physical layer (BioGRID PPI)
 
