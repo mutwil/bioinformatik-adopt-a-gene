@@ -95,15 +95,22 @@ draw_heatmap <- function(mat, main = "", diverging = FALSE){
 
 # draw_network(): a tiny base-R network drawer (no igraph). edges = data.frame(source, target[, type]).
 # Force-directed (Fruchterman–Reingold) layout; edge colour by type; GRN edges drawn as directed arrows.
-draw_network <- function(edges, hub = NULL, main = "", max_nodes = 40){
+# If there are too many nodes it keeps the hub + EVERY regulatory (GRN) node, then the highest-degree rest,
+# so the regulatory layer is never dropped.
+draw_network <- function(edges, hub = NULL, main = "", max_nodes = 44,
+                         node_col = NULL, node_cex = NULL, node_border = NULL, node_lwd = NULL){
   edges <- edges[as.character(edges$source) != as.character(edges$target), , drop = FALSE]   # no self-loops
   if (nrow(edges) == 0){ plot.new(); title(main); text(0.5, 0.5, "no edges yet"); return(invisible()) }
   edges$source <- as.character(edges$source); edges$target <- as.character(edges$target)
+  etype <- if ("type" %in% names(edges)) as.character(edges$type) else rep("coexpression", nrow(edges))
+  isgrn <- grepl("^GRN", etype)
   capped <- FALSE; nodes <- unique(c(edges$source, edges$target))
-  if (length(nodes) > max_nodes){                              # keep the highest-degree nodes (+ the hub)
+  if (length(nodes) > max_nodes){                              # always keep hub + all GRN nodes, then top-degree
+    must <- intersect(unique(c(if (!is.null(hub)) hub, edges$source[isgrn], edges$target[isgrn])), nodes)
     deg  <- sort(table(c(edges$source, edges$target)), decreasing = TRUE)
-    keep <- names(deg)[seq_len(max_nodes)]; if (!is.null(hub)) keep <- union(hub, keep)
-    edges <- edges[edges$source %in% keep & edges$target %in% keep, , drop = FALSE]
+    keep <- c(must, head(setdiff(names(deg), must), max(0, max_nodes - length(must))))
+    sel  <- edges$source %in% keep & edges$target %in% keep
+    edges <- edges[sel, , drop = FALSE]; etype <- etype[sel]; isgrn <- isgrn[sel]
     nodes <- unique(c(edges$source, edges$target)); capped <- TRUE
   }
   n <- length(nodes); id <- setNames(seq_len(n), nodes)
@@ -122,26 +129,30 @@ draw_network <- function(edges, hub = NULL, main = "", max_nodes = 40){
     step <- 0.08*(1 - it/250) + 0.004
     x <- x + step*fx/fl; y <- y + step*fy/fl
   }
-  etype <- if ("type" %in% names(edges)) as.character(edges$type) else rep("coexpression", nrow(edges))
   pal_e <- c(coexpression = "grey72", PPI = "#2c7fb8", GRN_activates = "forestgreen",
              GRN_represses = "firebrick", GRN_induces = "forestgreen")
   ecol <- pal_e[etype]; ecol[is.na(ecol)] <- "grey72"
-  elty <- ifelse(etype == "GRN_induces", 2, 1); isgrn <- grepl("^GRN", etype)
+  elty <- ifelse(etype == "GRN_induces", 2, 1)
   op <- par(mar = c(1, 1, 3, 1)); on.exit(par(op))
   rng <- range(c(x, y)); pad <- 0.12*diff(rng) + 1e-6
   plot(NA, xlim = rng + c(-pad, pad), ylim = rng + c(-pad, pad), asp = 1, axes = FALSE,
-       xlab = "", ylab = "", main = if (capped) paste0(main, "  (top ", n, " nodes)") else main)
+       xlab = "", ylab = "", main = if (capped) paste0(main, "  (", n, " nodes shown)") else main)
   ax <- x[ai]; ay <- y[ai]; bx <- x[bi]; by <- y[bi]
   sh <- 0.045*diff(rng); ux <- bx-ax; uy <- by-ay; L <- sqrt(ux^2+uy^2); L[L < 1e-6] <- 1e-6
-  for (i in seq_len(nrow(edges))){
-    if (isgrn[i]) suppressWarnings(arrows(ax[i]+sh*ux[i]/L[i], ay[i]+sh*uy[i]/L[i],
+  for (i in which(!isgrn))                                     # co-expression / PPI as plain segments
+    segments(ax[i], ay[i], bx[i], by[i], col = ecol[i], lwd = 1.5, lty = elty[i])
+  for (i in which(isgrn))                                      # regulatory edges as arrows, drawn on top
+    suppressWarnings(arrows(ax[i]+sh*ux[i]/L[i], ay[i]+sh*uy[i]/L[i],
                   bx[i]-sh*ux[i]/L[i], by[i]-sh*uy[i]/L[i],
-                  length = 0.07, lwd = 2.2, col = ecol[i], lty = elty[i]))
-    else segments(ax[i], ay[i], bx[i], by[i], col = ecol[i], lwd = 1.6, lty = elty[i])
-  }
+                  length = 0.08, lwd = 2.6, col = ecol[i], lty = elty[i]))
   ishub <- if (is.null(hub)) rep(FALSE, n) else nodes == hub
-  points(x, y, pch = 21, cex = ifelse(ishub, 3.4, 2.3),
-         bg = ifelse(ishub, "gold", "white"), col = "grey25", lwd = 1.4)
+  fillv <- if (!is.null(node_col))    node_col[nodes]    else ifelse(ishub, "gold", "white")
+  cexv  <- if (!is.null(node_cex))    node_cex[nodes]    else ifelse(ishub, 3.4, 2.3)
+  bordv <- if (!is.null(node_border)) node_border[nodes] else rep("grey25", n)
+  lwdv  <- if (!is.null(node_lwd))    node_lwd[nodes]    else rep(1.4, n)
+  fillv[is.na(fillv)] <- "white"; bordv[is.na(bordv)] <- "grey25"
+  cexv[is.na(cexv)] <- 2.3; lwdv[is.na(lwdv)] <- 1.4
+  points(x, y, pch = 21, cex = cexv, bg = fillv, col = bordv, lwd = lwdv)
   labs <- sym[nodes]; bad <- is.na(labs) | labs == ""; labs[bad] <- nodes[bad]
   text(x, y, labs, cex = 0.62, font = ifelse(ishub, 2, 1))
   present <- intersect(c("coexpression","PPI","GRN_activates","GRN_represses","GRN_induces"), etype)
@@ -635,55 +646,60 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\", MY_NAME <- \"CESA7\") and re-run.")
 ```
 
-### N1 — Reload your co-expression neighbourhood
+### N1 — Build your co-expression network
 
-You built this in **Week 1 (Stage 4 — Co-expression)**. webR forgets everything on reload, so re-run it here to put your neighbourhood (`nbhd`) back in memory for the network steps below. *(Run N0 first so `MY_GENE` is set.)*
+You *ranked* your gene's neighbours in **Week 1 (Stage 4)**; webR forgets on reload, so we rebuild that ranking here and then turn it into a **network** — drawing an edge for **every pair of genes** (your gene *and* its neighbours) whose profiles correlate above a cutoff. So the neighbours connect to **each other**, not just to your gene. *(Run N0 first so `MY_GENE` is set.)*
 
 ```{webr}
 HUB    <- MY_GENE                                  # your adopted gene (from N0)
 target <- EXPR[HUB, ]                              # its expression across every organ
-pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))   # (you filled this blank in Week 1)
-nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
-                   description = desc[rownames(EXPR)], PCC = round(pcc, 3))
-nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
+pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # (you filled this blank in Week 1)
+nbhd   <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
+                     description = desc[rownames(EXPR)], PCC = round(pcc, 3))
+nbhd   <- head(nbhd[order(-nbhd$PCC), ], 40)       # top-40 neighbours (your gene is row 1)
 print(head(nbhd, 12))
+nb <- nbhd$gene                                    # the neighbour ids
 
-# show your gene at the centre of its co-expression neighbourhood — Layer 1 of the network
-top15 <- head(nbhd$gene[nbhd$gene != HUB], 15)
-draw_network(data.frame(source = HUB, target = top15, type = "coexpression"),
-             hub = HUB, main = paste(MY_NAME, "— co-expression neighbourhood (Layer 1)"))
-
-say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB,
-    paste("neighbourhood reloaded for", MY_NAME, "— ready to build the network."),
-    "run N0 first to set MY_GENE, then re-run.")
-```
-
-### N2 — Add the physical layer (BioGRID PPI)
-
-```{webr}
-nb <- nbhd$gene                                    # the 60 neighbour ids
-C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation matrix
-ut <- upper.tri(C)                                 # count each pair once
+# turn the neighbourhood into a NETWORK: keep every gene-PAIR correlated above a cutoff
+C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation AMONG the neighbours
+ut <- upper.tri(C)                                 # each pair once (not the diagonal)
 MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.85
 keep  <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
 
+cat("Co-expression network:", length(unique(c(edges$source, edges$target))),
+    "genes,", nrow(edges), "edges (cutoff", MY_CUTOFF, ")\n")
+draw_network(edges, hub = HUB, main = paste(MY_NAME, "— co-expression network (Layer 1)"))
+
+say(nrow(edges) > 0,
+    "co-expression network built — neighbours are linked to each other, not just to your gene.",
+    "no edges yet — fill MY_CUTOFF (e.g. 0.85), and if still empty lower it to 0.8 and re-run.")
+```
+
+> **🔬 The cutoff is a knob.** Re-run with `MY_CUTOFF <- 0.95` (fewer, tighter edges) and `0.75` (a denser hairball). A tight module like the secondary-wall genes stays connected even at a high cutoff — that density *is* the biological signal.
+
+### N2 — Add the physical layer (BioGRID PPI)
+
+Your co-expression edges (N1) say "these genes behave alike." Now overlay **physical** protein–protein interactions from BioGRID — where two neighbours actually *touch*. *(Run N1 first so `edges` and `nb` exist.)*
+
+```{webr}
+edges <- edges[edges$type == "coexpression", , drop = FALSE]   # start fresh from your N1 co-expression edges
 # overlay BioGRID physical interactions where BOTH partners are in your neighbourhood
 pp <- ppi[ppi$source %in% nb & ppi$target %in% nb, c("source","target")]
 if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
 
 cesa <- c("AT5G44030","AT5G17420","AT4G18780")     # the secondary-wall CESA triangle
 cesa_ppi <- sum(edges$type == "PPI" & edges$source %in% cesa & edges$target %in% cesa)
-cat("Edges:", nrow(edges), " (PPI:", sum(edges$type == "PPI"),
+cat("Edges now:", nrow(edges), " (PPI:", sum(edges$type == "PPI"),
     "; CESA–CESA physical edges:", cesa_ppi, ")\n")
 
-# draw the network so far — Layers 1+2
+# draw the network so far — Layers 1+2 (blue edges = physical PPI)
 draw_network(edges, hub = MY_GENE, main = "Layers 1+2: co-expression (grey) + physical PPI (blue)")
 
-say(nrow(edges) > 0,
-    "co-expression + physical layers built. If CESA4/7/8 are in your neighbourhood you'll see their PPI triangle.",
-    "no edges — lower MY_CUTOFF (e.g. 0.8) and re-run.")
+say(exists("edges") && nrow(edges) > 0,
+    "physical layer overlaid in blue. If CESA4/7/8 are in your neighbourhood, their PPI triangle appears.",
+    "run N1 first so 'edges' and 'nb' exist, then re-run.")
 ```
 
 ### N3 — Add the curated regulatory layer  *(replaces the knowledge-graph step)*
@@ -723,7 +739,7 @@ say(names(out_deg)[1] == "AT5G12870",
 
 ### N4b — Network metrics: don't just look, measure
 
-Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it.
+Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it. The plot at the end renders all three metrics **on the network at once** — node **size** = degree, **fill** = betweenness, **border** = clustering — so MYB46 shows up big, red and thin-bordered (hub-bottleneck-star), while KNAT7 is small but thick-bordered (buried in a triangle).
 
 ```{webr}
 ## base-R network metrics (no igraph). grn_edges (source, target) exists from N3.
@@ -780,6 +796,20 @@ cat("Betweenness (undirected, halved = Cytoscape's value):\n"); print(round(sort
 cat("Clustering coefficient:\n"); print(round(sort(cc, decreasing = TRUE)[1:4], 3))
 cat(sprintf("Diameter = %d ; mean shortest path = %.2f ; components = %d\n",
             diameter, mean_spl, length(unique(components_base(A)))))
+
+# ---- plot the metrics ON the network: node SIZE = degree, FILL = betweenness, BORDER = clustering ----
+nn   <- rownames(A)
+nrm  <- function(v) if (diff(range(v)) > 0) (v - min(v)) / diff(range(v)) else rep(0.5, length(v))
+heat <- colorRampPalette(c("#f7f7f7", "#fdae6b", "#e6550d", "#a50f15"))(24)   # pale → red
+node_fill <- setNames(heat[1 + round(nrm(btw[nn]) * 23)], nn)        # fill  = betweenness (the bottleneck)
+node_size <- setNames(2.2 + 3.2 * nrm(degree_undirected[nn]), nn)    # size  = degree
+node_bord <- setNames(ifelse(cc[nn] >= 0.5, "purple", "grey35"), nn) # border colour = clustering
+node_blwd <- setNames(1 + 4 * nrm(cc[nn]), nn)                       # border width  = clustering
+draw_network(grn_edges, hub = "AT5G12870",
+             main = "GRN metrics on the network — size: degree | fill: betweenness | border: clustering",
+             node_col = node_fill, node_cex = node_size, node_border = node_bord, node_lwd = node_blwd)
+cat("Encoding — size = degree; fill pale→red = betweenness (MYB46 reddest = bottleneck);",
+    "border thick+purple = high clustering (KNAT7), thin = star-like (MYB46).\n")
 
 say(names(which.max(btw)) == "AT5G12870",
     "MYB46 is BOTH the hub (top degree) AND the bottleneck (top betweenness, ~18x the next node) — confirm in Cytoscape's Analyze Network.",
