@@ -45,12 +45,24 @@
     cy.fit(undefined, 20);
   }
 
+  // Remove the @@CYNET@@…@@END@@ marker even when webR has split it across MANY text nodes
+  // (big networks): join all text, find the span, then trim it out node-by-node.
   function stripMarker(root) {
-    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    var t;
-    while ((t = w.nextNode())) {
-      if (t.nodeValue && t.nodeValue.indexOf("@@CYNET@@") !== -1)
-        t.nodeValue = t.nodeValue.replace(/@@CYNET@@[\s\S]*?@@END@@/g, "");
+    var nodes = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), t;
+    while ((t = w.nextNode())) nodes.push(t);
+    var full = "", i;
+    for (i = 0; i < nodes.length; i++) full += nodes[i].nodeValue;
+    var m = full.match(/@@CYNET@@[\s\S]*?@@END@@/);     // first complete marker
+    if (!m) return;
+    var start = full.indexOf(m[0]), end = start + m[0].length, pos = 0;
+    for (i = 0; i < nodes.length; i++) {
+      var v = nodes[i].nodeValue, a = pos, b = pos + v.length;
+      if (b > start && a < end) {                       // this node overlaps the marker span
+        var head = a < start ? v.slice(0, start - a) : "";
+        var tail = b > end   ? v.slice(end - a)       : "";
+        nodes[i].nodeValue = head + tail;
+      }
+      pos = b;
     }
   }
 
