@@ -1,0 +1,105 @@
+<!-- interactive network bridge: webR R cells emit a @@CYNET@@{json}@@END@@ marker via cat();
+     this script catches it in the DOM, strips the raw marker, and renders an interactive
+     cytoscape.js graph (drag / zoom / pan) right below the cell output. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<script>
+(function () {
+  var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
+
+  function render(div, data) {
+    div.innerHTML = "";
+    var els = [];
+    data.nodes.forEach(function (n) {
+      els.push({ data: { id: n.id, label: n.label, hub: !!n.hub, reg: !!n.reg,
+                         col: n.col || "", sz: +n.sz || 0, bc: n.bc || "", bw: +n.bw || 0 } });
+    });
+    data.edges.forEach(function (e) {
+      els.push({ data: { id: e.s + "__" + e.t + "__" + e.ty, source: e.s, target: e.t, kind: e.ty } });
+    });
+    var cy = cytoscape({
+      container: div,
+      elements: els,
+      wheelSensitivity: 0.25,
+      style: [
+        { selector: "node", style: {
+            "label": "data(label)", "font-size": 10, "text-valign": "center", "color": "#111",
+            "text-outline-width": 2, "text-outline-color": "#fff",
+            "background-color": function (e) { return e.data("col") || (e.data("hub") ? "#f4c430" : (e.data("reg") ? "#e6973c" : "#9ecae1")); },
+            "width":  function (e) { return e.data("sz") > 0 ? e.data("sz") : (e.data("hub") ? 42 : 26); },
+            "height": function (e) { return e.data("sz") > 0 ? e.data("sz") : (e.data("hub") ? 42 : 26); },
+            "border-width": function (e) { return e.data("bw") > 0 ? e.data("bw") : (e.data("hub") ? 3 : 1); },
+            "border-color": function (e) { return e.data("bc") || "#555"; },
+            "font-weight": function (e) { return e.data("hub") ? "bold" : "normal"; } } },
+        { selector: "edge", style: { "width": 1.5, "line-color": "#cfcfcf", "curve-style": "bezier" } },
+        { selector: 'edge[kind="PPI"]', style: { "line-color": "#2c7fb8", "width": 2.2 } },
+        { selector: 'edge[kind ^= "GRN"]', style: {
+            "target-arrow-shape": "triangle", "target-arrow-color": "#2e8b2e",
+            "line-color": "#2e8b2e", "width": 2.6, "arrow-scale": 1.1 } },
+        { selector: 'edge[kind="GRN_induces"]', style: { "line-style": "dashed" } },
+        { selector: 'edge[kind="GRN_represses"]', style: {
+            "line-color": "#c0392b", "target-arrow-color": "#c0392b", "target-arrow-shape": "tee", "width": 3 } }
+      ],
+      layout: { name: "cose", animate: false, padding: 16, nodeRepulsion: 9000,
+                idealEdgeLength: 60, gravity: 0.3, randomize: false }
+    });
+    cy.fit(undefined, 20);
+  }
+
+  function stripMarker(root) {
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var t;
+    while ((t = w.nextNode())) {
+      if (t.nodeValue && t.nodeValue.indexOf("@@CYNET@@") !== -1)
+        t.nodeValue = t.nodeValue.replace(/@@CYNET@@[\s\S]*?@@END@@/g, "");
+    }
+  }
+
+  function handle(node) {
+    if (!node) return;
+    var host = node.nodeType === 3 ? node.parentElement : node;
+    if (!host || !host.textContent || host.textContent.indexOf("@@CYNET@@") === -1) return;
+    var m = host.textContent.match(RE);
+    if (!m) return;                                 // marker not complete yet — wait for next mutation
+    var data; try { data = JSON.parse(m[1]); } catch (e) { return; }
+
+    var box = (host.closest && host.closest(".cell-output, .cell-output-display, .exercise-cell-output, pre")) || host;
+    if (box.dataset && box.dataset.cynetId === data.id) return;   // already handled this output
+    if (box.dataset) box.dataset.cynetId = data.id;
+
+    stripMarker(box);                               // remove the raw JSON, keep summary + ✅ feedback
+
+    var divId = "cynet-" + data.id;
+    var div = document.getElementById(divId), cap;
+    if (!div) {
+      div = document.createElement("div");
+      div.id = divId;
+      div.style.cssText = "width:100%;height:480px;border:1px solid #ddd;border-radius:8px;margin:4px 0 14px;background:#fff;";
+      cap = document.createElement("div");
+      cap.className = "cynet-cap";
+      cap.style.cssText = "font-size:12px;color:#555;padding:3px 2px;";
+    } else {
+      cap = div.previousElementSibling;
+    }
+    cap.textContent = "🕸 " + (data.title || "network") + "  —  drag nodes · scroll to zoom · drag background to pan";
+    // (re)place the caption + graph just after the current cell output
+    box.parentNode.insertBefore(cap, box.nextSibling);
+    box.parentNode.insertBefore(div, cap.nextSibling);
+
+    if (window.cytoscape) render(div, data);
+    else { var iv = setInterval(function () { if (window.cytoscape) { clearInterval(iv); render(div, data); } }, 150); }
+  }
+
+  function scanAll() { document.querySelectorAll("pre, .cell-output, .cell-output-display").forEach(handle); }
+
+  function start() {
+    new MutationObserver(function (muts) {
+      muts.forEach(function (mu) {
+        if (mu.type === "characterData") handle(mu.target);
+        else mu.addedNodes.forEach(handle);
+      });
+    }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    scanAll();
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
+</script>

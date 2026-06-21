@@ -9,6 +9,7 @@ format:
       - tutor.html
       - save-work.html
       - external-links.html
+      - cynet.html
     resources:
       - data
 engine: knitr
@@ -158,6 +159,31 @@ draw_network <- function(edges, hub = NULL, main = "", max_nodes = 44,
   present <- intersect(c("coexpression","PPI","GRN_activates","GRN_represses","GRN_induces"), etype)
   legend("topright", bty = "n", cex = 0.72, legend = present, col = pal_e[present],
          lwd = 2, lty = ifelse(present == "GRN_induces", 2, 1))
+}
+
+# cynet(): emit a network as a text marker that cynet.html turns into an INTERACTIVE cytoscape.js
+# graph (drag / zoom / pan) — the same viewer as N4f, but showing the network you just built.
+cynet <- function(edges, hub = NULL, id = "cy", title = "",
+                  node_fill = NULL, node_size = NULL, node_border = NULL, node_lwd = NULL){
+  edges <- edges[as.character(edges$source) != as.character(edges$target), , drop = FALSE]
+  if (nrow(edges) == 0){ cat("(no edges to draw yet)\n"); return(invisible(NULL)) }
+  src <- as.character(edges$source); tgt <- as.character(edges$target)
+  ty  <- if ("type" %in% names(edges)) as.character(edges$type) else rep("coexpression", length(src))
+  nodes <- unique(c(src, tgt)); grn_src <- unique(src[grepl("^GRN", ty)])
+  clean <- function(s){ s <- gsub('[\\\\"]', '', s); gsub('@@', '', s) }     # keep JSON + marker safe
+  lab <- sym[nodes]; lab[is.na(lab) | lab == ""] <- nodes[is.na(lab) | lab == ""]
+  hubv <- if (is.null(hub)) rep(FALSE, length(nodes)) else nodes == hub
+  pick <- function(v, d){ if (is.null(v)) return(rep(d, length(nodes))); x <- v[nodes]; x[is.na(x)] <- d; x }
+  fillv <- pick(node_fill, ""); sizev <- pick(node_size, 0)
+  bordv <- pick(node_border, ""); lwdv <- pick(node_lwd, 0)
+  nj <- paste0('{"id":"', nodes, '","label":"', clean(lab),
+               '","hub":', tolower(as.character(hubv)),
+               ',"reg":', tolower(as.character(nodes %in% grn_src)),
+               ',"col":"', fillv, '","sz":', sizev, ',"bc":"', bordv, '","bw":', lwdv, '}', collapse = ",")
+  ej <- paste0('{"s":"', src, '","t":"', tgt, '","ty":"', ty, '"}', collapse = ",")
+  cat("\n@@CYNET@@", '{"id":"', id, '","title":"', clean(title),
+      '","nodes":[', nj, '],"edges":[', ej, ']}', "@@END@@\n", sep = "")
+  invisible(NULL)
 }
 
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
@@ -553,8 +579,6 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 ### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
 
-*(This replaces the old "ask ChatGPT for a knowledge graph" step — every edge here comes from a curated database, not a chatbot.)*
-
 1. **STRING** ([string-db.org](https://string-db.org/)) → your gene, organism *Arabidopsis thaliana*, required score **medium (0.400)** → which neighbours appear, and by **which evidence channel** (experiments / co-expression / text-mining)? Record the **physical (experiment-backed) partners**.
 2. **CoNekT** → look up the regulators **MYB46** `AT5G12870`, **MYB83** `AT3G08500`, **SND1/NST3** `AT1G32770`, **KNAT7** `AT1G62990`. Which one sits **directly above your gene** in the secondary-wall hierarchy? Record it.
 
@@ -670,7 +694,7 @@ edges <- data.frame(source = rownames(C)[row(C)[keep]],
 
 cat("Co-expression network:", length(unique(c(edges$source, edges$target))),
     "genes,", nrow(edges), "edges (cutoff", MY_CUTOFF, ")\n")
-draw_network(edges, hub = HUB, main = paste(MY_NAME, "— co-expression network (Layer 1)"))
+cynet(edges, hub = HUB, id = "cy_n1", title = paste(MY_NAME, "co-expression network (Layer 1)"))
 
 say(nrow(edges) > 0,
     "co-expression network built — neighbours are linked to each other, not just to your gene.",
@@ -695,14 +719,14 @@ cat("Edges now:", nrow(edges), " (PPI:", sum(edges$type == "PPI"),
     "; CESA–CESA physical edges:", cesa_ppi, ")\n")
 
 # draw the network so far — Layers 1+2 (blue edges = physical PPI)
-draw_network(edges, hub = MY_GENE, main = "Layers 1+2: co-expression (grey) + physical PPI (blue)")
+cynet(edges, hub = MY_GENE, id = "cy_n2", title = "Layers 1+2: co-expression (grey) + physical PPI (blue)")
 
 say(exists("edges") && nrow(edges) > 0,
     "physical layer overlaid in blue. If CESA4/7/8 are in your neighbourhood, their PPI triangle appears.",
     "run N1 first so 'edges' and 'nb' exist, then re-run.")
 ```
 
-### N3 — Add the curated regulatory layer  *(replaces the knowledge-graph step)*
+### N3 — Add the curated regulatory layer
 
 ```{webr}
 # the curated SCW regulatory edges — every one cites a paper + an experiment (ChIP/EMSA/transactivation)
@@ -714,15 +738,15 @@ grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI,
 all_edges <- rbind(edges, grn_edges)               # three layers now coexist
 
 # the full network — Layers 1+2+3 (arrows = directed regulatory edges)
-draw_network(all_edges, hub = MY_GENE,
-             main = "Layers 1+2+3: + curated regulatory GRN (green = activates, red = represses)")
+cynet(all_edges, hub = MY_GENE, id = "cy_n3",
+      title = "Layers 1+2+3: + curated regulatory GRN (green = activates, red = represses)")
 
 say(any(grepl("GRN", all_edges$type)) && any(all_edges$type == "GRN_represses"),
     "three layers stacked: co-expression, physical (PPI) and curated regulatory — including the KNAT7 ⊣ CESA8 brake. Every regulatory edge is reference-backed.",
     "make sure 'grn' loaded (it loads when the page opens) and that you stacked grn_edges.")
 ```
 
-> **Why this, not ChatGPT?** The old course asked an LLM to read a review and invent the regulatory edges — which can hallucinate. Here each edge carries a `reference` and an `evidence` type, so the network is trustworthy *by construction*. That is the difference between a curated GRN and a guess.
+> Each regulatory edge carries a **`reference`** and an **`evidence` type** (ChIP / EMSA / transactivation), so the network is trustworthy by construction — you can point to the experiment behind every arrow.
 
 ### N4 — Read the hierarchy
 
@@ -797,17 +821,17 @@ cat("Clustering coefficient:\n"); print(round(sort(cc, decreasing = TRUE)[1:4], 
 cat(sprintf("Diameter = %d ; mean shortest path = %.2f ; components = %d\n",
             diameter, mean_spl, length(unique(components_base(A)))))
 
-# ---- plot the metrics ON the network: node SIZE = degree, FILL = betweenness, BORDER = clustering ----
+# ---- plot the metrics ON the interactive network: node SIZE = degree, FILL = betweenness, BORDER = clustering ----
 nn   <- rownames(A)
 nrm  <- function(v) if (diff(range(v)) > 0) (v - min(v)) / diff(range(v)) else rep(0.5, length(v))
 heat <- colorRampPalette(c("#f7f7f7", "#fdae6b", "#e6550d", "#a50f15"))(24)   # pale → red
-node_fill <- setNames(heat[1 + round(nrm(btw[nn]) * 23)], nn)        # fill  = betweenness (the bottleneck)
-node_size <- setNames(2.2 + 3.2 * nrm(degree_undirected[nn]), nn)    # size  = degree
-node_bord <- setNames(ifelse(cc[nn] >= 0.5, "purple", "grey35"), nn) # border colour = clustering
-node_blwd <- setNames(1 + 4 * nrm(cc[nn]), nn)                       # border width  = clustering
-draw_network(grn_edges, hub = "AT5G12870",
-             main = "GRN metrics on the network — size: degree | fill: betweenness | border: clustering",
-             node_col = node_fill, node_cex = node_size, node_border = node_bord, node_lwd = node_blwd)
+node_fill <- setNames(heat[1 + round(nrm(btw[nn]) * 23)], nn)        # fill = betweenness (the bottleneck)
+node_size <- setNames(24 + 34 * nrm(degree_undirected[nn]), nn)      # node size (px) = degree
+node_bord <- setNames(ifelse(cc[nn] >= 0.5, "purple", "#666666"), nn)# border colour = clustering
+node_blwd <- setNames(1 + 6 * nrm(cc[nn]), nn)                       # border width (px) = clustering
+cynet(grn_edges, hub = "AT5G12870", id = "cy_n4b",
+      title = "GRN metrics — size: degree | fill: betweenness | border (purple/thick): clustering",
+      node_fill = node_fill, node_size = node_size, node_border = node_bord, node_lwd = node_blwd)
 cat("Encoding — size = degree; fill pale→red = betweenness (MYB46 reddest = bottleneck);",
     "border thick+purple = high clustering (KNAT7), thin = star-like (MYB46).\n")
 
@@ -827,12 +851,12 @@ The GRN is **directed**, so it is a *predictive* instrument. **The sign rule:** 
 sgn <- c(activates = 1L, induces = 1L, represses = -1L)
 E   <- data.frame(from = grn$source_AGI, to = grn$target_AGI, s = sgn[grn$interaction],
                   stringsAsFactors = FALSE)
-nmof <- function(a) ifelse(is.na(sym[a]), a, sym[a])           # AGI -> symbol (safe)
+nmof <- function(a) { s <- unname(sym[a]); ifelse(is.na(s), a, s) }   # AGI -> symbol (unnamed: no stray names)
 
 targets_of <- function(g) {                                   # direct targets + sign
   d <- E[E$from == g, ]
   if (!nrow(d)) return("(none — this gene is a terminal effector)")
-  data.frame(target = nmof(d$to), effect = ifelse(d$s > 0, "activates", "represses"))
+  data.frame(target = nmof(d$to), effect = ifelse(d$s > 0, "activates", "represses"), row.names = NULL)
 }
 predict_perturb <- function(g, mode = c("KO","OE")) {         # downstream prediction
   mode <- match.arg(mode); acc <- list()
@@ -848,7 +872,7 @@ predict_perturb <- function(g, mode = c("KO","OE")) {         # downstream predi
     eff <- if (mode == "KO") -netsign else netsign
     data.frame(target = nmof(v),
                prediction = ifelse(is.na(eff), "AMBIGUOUS (conflicting paths)",
-                                   ifelse(eff > 0, "UP", "DOWN")))
+                                   ifelse(eff > 0, "UP", "DOWN")), row.names = NULL)
   }))
 }
 targets_of("AT5G12870")               # MYB46's direct targets
@@ -861,13 +885,17 @@ predict_perturb("AT5G17420", "KO")    # cesa7 KO -> nothing downstream (it's a t
 
 ### N4d — Topology & robustness
 
-The degree distribution (one hub, many leaves) is **scale-free-like**: such networks are **robust to random failure** but **fragile to targeted attack on the hub** (lethality–centrality). And raising the co-expression cutoff `MY_CUTOFF` steadily breaks the network into more, smaller pieces.
+The degree distribution (one hub, many leaves) is **scale-free-like**: such networks are **robust to random failure** but **fragile to targeted attack on the hub** (lethality–centrality). On **log-log axes** a true power law (scale-free) shows up as a roughly **straight line** — and the hub sits as one lonely point far to the lower-right (high degree, only one such node). And raising the co-expression cutoff `MY_CUTOFF` steadily breaks the network into more, smaller pieces.
 
 ```{webr}
-## degree distribution — look for one lonely bar far to the right
+## degree distribution on LOG-LOG axes — a power law (scale-free) is a straight line
 tot_deg <- rowSums(A); dd <- table(as.integer(tot_deg))
-barplot(dd, xlab = "node degree", ylab = "number of nodes",
-        main = "GRN degree distribution (scale-free?)", col = "steelblue")
+kk <- as.integer(names(dd)); ff <- as.integer(dd)            # degree k and how many nodes have it
+plot(kk, ff, log = "xy", pch = 19, col = "steelblue", cex = 1.6,
+     xlab = "degree k (log scale)", ylab = "number of nodes (log scale)",
+     main = "GRN degree distribution — log-log (scale-free ≈ straight line)")
+if (length(kk) > 1) abline(lm(log10(ff) ~ log10(kk)), col = "grey60", lty = 2)   # power-law guide line
+text(kk, ff, labels = paste0("k=", kk), pos = 3, cex = 0.7, col = "grey40")
 
 ## lethality-centrality: which single deletion fragments the network?
 remove_node <- function(A, v) { keep <- setdiff(rownames(A), v); A[keep, keep, drop = FALSE] }
