@@ -755,6 +755,57 @@ An edge isn't just a line — its meaning is fixed by **what it represents, whet
 
 Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN proves control.* Two paradoxes from your own data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** — a TF binds its target's DNA, not its protein, so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
 
+### N4f — Interactive network viewer
+
+**Drag the nodes, scroll to zoom.** This is the curated **MYB46 secondary-cell-wall GRN** (the same directed edges you loaded in N3), laid out as a cascade: **NAC master switches** at the top → **MYB46 / MYB83** (the hubs, drawn larger) → downstream **MYB/KNAT/C3H14** TFs → **biosynthesis genes** (CESA, LAC4) at the bottom. Green arrows = activation; the **red ⊣ edge** is the one repression (**KNAT7 ⊣ CESA8**); the dashed edge is MYB46→MYB85 (induced). *Find your adopted gene and trace what regulates it and what it regulates.*
+
+```{=html}
+<div id="grn-cy" style="width:100%;height:520px;border:1px solid #cbd5e0;border-radius:8px;background:#fff;margin:6px 0"></div>
+<div style="font:12px system-ui,sans-serif;color:#4a5568;margin-bottom:10px">
+  <span style="color:#dd8452">●</span> NAC master &nbsp;
+  <span style="color:#c44e52">●</span> MYB46/83 hub &nbsp;
+  <span style="color:#f2c08a">●</span> downstream TF &nbsp;
+  <span style="color:#55a868">●</span> biosynthesis &nbsp;|&nbsp;
+  <span style="color:#7faf7f">→</span> activates &nbsp; <span style="color:#c0392b">⊣</span> represses
+</div>
+<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script>
+(function(){
+  function draw(){
+    if (typeof cytoscape === "undefined") { setTimeout(draw, 150); return; }
+    var el = document.getElementById("grn-cy"); if (!el || el.dataset.done) return; el.dataset.done = "1";
+    var tier = { SND1:0,NST1:0,NST2:0,VND6:0,VND7:0, MYB46:1,MYB83:1,
+      MYB58:2,MYB63:2,MYB85:2,MYB52:2,MYB54:2,MYB103:2,C3H14:2,KNAT7:2,
+      CESA4:3,CESA7:3,CESA8:3,LAC4:3 };
+    var col = function(n){ return tier[n]===0?"#dd8452": tier[n]===1?"#c44e52": tier[n]===2?"#f2c08a":"#55a868"; };
+    var E = [["SND1","MYB46","act"],["SND1","MYB83","act"],["NST1","MYB46","act"],["NST2","MYB46","act"],
+      ["VND6","MYB46","act"],["VND7","MYB46","act"],["MYB46","CESA4","act"],["MYB46","CESA7","act"],
+      ["MYB46","CESA8","act"],["MYB83","CESA8","act"],["MYB46","MYB58","act"],["MYB46","MYB63","act"],
+      ["MYB46","MYB85","ind"],["MYB46","MYB52","act"],["MYB46","MYB54","act"],["MYB46","MYB103","act"],
+      ["MYB46","C3H14","act"],["MYB46","KNAT7","act"],["SND1","KNAT7","act"],["MYB58","LAC4","act"],
+      ["MYB63","LAC4","act"],["KNAT7","CESA8","rep"]];
+    var nd = {}; E.forEach(function(e){ nd[e[0]]=1; nd[e[1]]=1; });
+    var els = Object.keys(nd).map(function(n){ return {data:{id:n, c:col(n)}}; })
+      .concat(E.map(function(e){ return {data:{source:e[0], target:e[1], kind:e[2]}}; }));
+    cytoscape({
+      container: el, elements: els, wheelSensitivity: 0.25,
+      style: [
+        {selector:"node", style:{ "label":"data(id)","background-color":"data(c)","width":34,"height":34,
+          "font-size":11,"text-valign":"center","color":"#111","text-outline-width":2,"text-outline-color":"#fff" }},
+        {selector:"#MYB46,#MYB83", style:{ "width":50,"height":50,"font-weight":"bold","font-size":13 }},
+        {selector:"edge", style:{ "width":2,"curve-style":"bezier","target-arrow-shape":"triangle",
+          "line-color":"#7faf7f","target-arrow-color":"#7faf7f","arrow-scale":1.1 }},
+        {selector:"edge[kind='ind']", style:{ "line-style":"dashed" }},
+        {selector:"edge[kind='rep']", style:{ "line-color":"#c0392b","target-arrow-color":"#c0392b",
+          "target-arrow-shape":"tee","width":3 }} ],
+      layout:{ name:"breadthfirst", directed:true, roots:"#SND1,#NST1,#NST2,#VND6,#VND7", spacingFactor:1.15, padding:12 }
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", draw); else draw();
+})();
+</script>
+```
+
 ### N5 — Export for Cytoscape & interpret
 
 *(Functional enrichment of this module was done in Week 1 — see "Functional enrichment — GO over-representation" above.)*
