@@ -138,59 +138,56 @@ kallisto gives you **estimated counts** per gene. You **cannot compare counts di
 ```{webr}
 genes   <- paste0("Gene", 1:12)
 samples <- c("Root1","Root2","Root3","Leaf1","Leaf2","Leaf3","Pollen1")
-# matrix(values, byrow = TRUE): fill row by row; dimnames = list(row labels, column labels)
-counts <- matrix(c(
-   80,    85,  78,   2,   1,   3,    0,
-   90,   100,  88,   5,   2,   4,    0,
-    2,     1,   3,  70,  75,  80,    0,
-    3,     2,   4,  85,  82,  90,    0,
-    0,     1,   0,   2,   1,   0,  120,
-   20,    20,  20,  20,  20,  20,   20,
-    0,     0,   1,   0,   0,   0,    0,
-    5, 100000,  6,   7,   5,   6,    8,
-   10,    15,  12,  25,  30,  28,    5,
-   40,    38,  42,  45,  47,  50,   41,
-    5,     9,   6,  12,  15,  11,    4,
-    3,     5,   4,  30,  28,  26,   10),
-  nrow = 12, byrow = TRUE, dimnames = list(genes, samples))
+# ONE table to play with: the 7 sample counts + each gene's length (bp) in the last column.
+# matrix(values, byrow = TRUE) fills it row by row. Change any number and re-run — nothing else needs editing.
+mat <- matrix(c(
+#  Root1  Root2 Root3 Leaf1 Leaf2 Leaf3 Pollen1   length
+   80,    85,   78,   2,    1,    3,    0,        1500,
+   90,   100,   88,   5,    2,    4,    0,        2400,
+    2,     1,    3,  70,   75,   80,    0,         900,
+    3,     2,    4,  85,   82,   90,    0,        3000,
+    0,     1,    0,   2,    1,    0,  120,         600,
+   20,    20,   20,  20,   20,   20,   20,        1200,
+    0,     0,    1,   0,    0,    0,    0,        1800,
+    5,100000,    6,   7,    5,    6,    8,         300,
+   10,    15,   12,  25,   30,   28,    5,        2100,
+   40,    38,   42,  45,   47,   50,   41,        4500,
+    5,     9,    6,  12,   15,   11,    4,         750,
+    3,     5,    4,  30,   28,   26,   10,        1350),
+  nrow = 12, byrow = TRUE, dimnames = list(genes, c(samples, "length")))
 
-# simulate a whole-sample technical artefact: Root1 was sequenced ~100× deeper than the others
-counts[, "Root1"] <- counts[, "Root1"] * 100
+mat[, "Root1"] <- mat[, "Root1"] * 100   # simulate Root1 sequenced ~100x deeper (a whole-sample depth artefact)
 
-# each gene's length in base pairs — needed to convert counts -> TPM (longer genes collect more reads)
-gene_len <- c(1500, 2400, 900, 3000, 600, 1200, 1800, 300, 2100, 4500, 750, 1350)
-names(gene_len) <- genes
+counts   <- mat[, samples]               # the count matrix (genes x samples) — what we analyse and plot
+gene_len <- mat[, "length"]              # each gene's length (bp), read straight from the table above
 
-draw_heatmap(counts, "Raw counts")     # labelled heatmap (helper is pre-defined for you)
+draw_heatmap(counts, "Raw counts")       # labelled heatmap (helper is pre-defined for you)
 ```
 
 > **Look closely:** can you see any tissue pattern? You can't — **one cell, `Gene8` in `Root2` = 100000, swamps the entire colour scale.** That single spike is almost certainly a **technical artifact** — and it's exactly why you must *eyeball* the raw matrix before trusting any analysis. Furthermore, **`Root1` (the first column) has far more reads than the other samples** — another technical artefact, this time caused by **deeper sequencing** of that one library.
 
 ### Step 1.1 — Find the outlier
 
-The aim here is to **locate the single most extreme value** in the matrix and name the gene and sample it belongs to. Pinning down where a suspicious value sits is the first habit of careful analysis, because one artefactual cell can quietly distort means, totals and correlations computed later. The code does this in small steps: find the maximum, get its row/column position, then translate those numbers into names.
+The aim here is to **locate the single most extreme value** and name the gene and sample it belongs to — one artefactual cell can quietly distort every mean, total and correlation you compute later. This also teaches **matrix indexing**: in R you read a matrix as `counts[row, column]`.
 
 ```{webr}
-# 1. the largest value anywhere in the matrix
-biggest <- max(counts)
+# In R a matrix is indexed counts[row, column]:
+#   ROWS    are the genes   (row 1 = Gene1, ..., row 12 = Gene12)
+#   COLUMNS are the samples (column 1 = Root1, column 2 = Root2, ..., column 7 = Pollen1)
+biggest <- max(counts)                    # the largest value anywhere in the matrix
 
-# 2. where is it?  which(..., arr.ind = TRUE) gives the [row, column] position
-pos     <- which(counts == biggest, arr.ind = TRUE)
-row_num <- pos[1]                      # the row number    (which gene)
-col_num <- pos[2]                      # the column number (which sample)
+# From the heatmap, the spike sits in the Root2 column. Enter that COLUMN number:
+col_num <- ______                         # <- blank: 2   (Root2 is the 2nd column)
 
-# 3. turn those numbers into the gene and sample names
-gene   <- rownames(counts)[row_num]
-sample <- colnames(counts)[col_num]
+# now find which ROW (gene) holds that maximum within the chosen column
+row_num <- which(counts[, col_num] == biggest)
+gene    <- rownames(counts)[row_num]      # row number  -> gene name
+sample  <- colnames(counts)[col_num]      # column number -> sample name
+cat("counts[", row_num, ",", col_num, "] =", counts[row_num, col_num], "->", gene, "in", sample, "\n")
 
-# 4. report what we found
-cat("Biggest value:", biggest, "—", gene, "in", sample, "\n")
-
-# 5. check it (TRUE only if both the gene and the sample are right)
-correct <- gene == "Gene8" && sample == "Root2"
-say(correct,
-    "yes — Gene8 in Root2 is the outlier (a spike that also inflates that whole sample's read total).",
-    "re-run the matrix cell above first.")
+say(length(row_num) == 1 && sample == "Root2" && gene == "Gene8",
+    "correct — counts[8, 2] = Gene8 in Root2 is the outlier (a spike that also inflates that whole sample).",
+    "the spike is in the 2nd column (Root2) — set col_num <- 2 and re-run.")
 ```
 
 ### Step 1.2 — Why raw counts aren't comparable
@@ -236,19 +233,19 @@ say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
 RPK = counts ÷ (length in kb). Then for each sample, divide by that sample's own RPK total (<code>colSums(rpk)</code>) and multiply by 1,000,000.
 </details>
 
-> Notice the catch: on the raw scale **a few large values still dominate the colour**, so even TPM looks unreadable (and the `Gene8` artefact is still there — normalization does **not** remove outliers). That is exactly why we next **log-transform** (Step 1.4) and then **z-score** (Step 1.5).
+> Look carefully at the TPM heatmap: you can **just** start to make out **Leaf1–Leaf3 sharing a pattern**, and **Root1 & Root3** sharing another — but **Root2 still looks odd**, because the `Gene8` artefact dominates it (normalization does **not** remove outliers). It's still hard to read, since a few large values dominate the colour scale — which is exactly why we next **log-transform** (Step 1.4) and then **z-score** (Step 1.5).
 
 ### Step 1.4 — Log scaling
 
-The aim is to make a matrix that spans several orders of magnitude actually *readable*. Taking **log2(TPM + 1)** compresses the range — every doubling becomes one even step — so moderate and low-expressed genes stop being invisible next to the high ones; the `+ 1` keeps zeros finite (log2(0 + 1) = 0). Run it and compare with the TPM heatmap above.
+The aim is to make a matrix that spans several orders of magnitude actually *readable*. Taking **log2(TPM + 1)** compresses the range — every doubling becomes one even step — so moderate and low-expressed genes stop being invisible next to the high ones; the `+ 1` keeps zeros finite (log2(0 + 1) = 0). **Fill the blank with `tpm`** (the matrix from Step 1.3), then Run and compare with the TPM heatmap above.
 
 ```{webr}
-log_tpm <- log2(tpm + 1)                 # +1 so a zero stays finite: log2(0 + 1) = 0
+log_tpm <- log2(______ + 1)              # <- blank: tpm   (+1 so a zero stays finite: log2(0+1)=0)
 draw_heatmap(log_tpm, "log2(TPM + 1)")
 
 say(exists("log_tpm") && all(is.finite(log_tpm)),
     "log scale: the dynamic range is tamed, so the root / leaf / pollen patterns start to show.",
-    "compute tpm in Step 1.3 first, then re-run.")
+    "fill the blank with tpm (the matrix from Step 1.3), then re-run.")
 ```
 
 ### Step 1.5 — Z-score (compare each gene's pattern)
@@ -256,8 +253,11 @@ say(exists("log_tpm") && all(is.finite(log_tpm)),
 The aim is to compare each gene's *pattern* across samples, not its absolute level. A **z-score per gene** — subtract that gene's mean and divide by its standard deviation across samples — recentres every gene on 0, so the heatmap shows where each gene is relatively high (red) or low (blue) regardless of how strongly it is expressed. This is the standard transform behind clustering heatmaps, and here it makes the tissue specificity jump out.
 
 ```{webr}
-# scale() z-scores each COLUMN, so transpose: genes become columns, z-score, then transpose back
-z <- t(scale(t(log_tpm)))
+# z-score each GENE (row): subtract that gene's own mean, divide by its own SD across samples.
+# Subtracting a length-12 vector from the matrix recycles DOWN the rows, so each gene gets its own mean.
+row_mean <- rowMeans(log_tpm)            # each gene's mean across the 7 samples
+row_sd   <- apply(log_tpm, 1, sd)        # each gene's standard deviation
+z <- (log_tpm - row_mean) / row_sd       # the per-gene z-score (no transpose needed)
 z[!is.finite(z)] <- 0                    # a gene with no variation would divide by 0 -> set to 0
 draw_heatmap(z, "Per-gene z-score of log2(TPM)", diverging = TRUE)
 
@@ -275,11 +275,13 @@ say(exists("z") && abs(mean(z)) < 1e-6,
 Now that the matrix is normalized, the aim is to step back and ask whether the **samples** group the way biology predicts. But first a clean-up: **Step 1.1 flagged `Gene8` as a technical artefact**, and Step 1.3 showed that TPM can't undo it (one runaway gene even crushes everything else in its sample to near-zero). So before exploring structure we **drop `Gene8` and re-normalize** the clean matrix — the standard "detect → remove → re-normalize" workflow. *(Run Stage 1 first so `counts` exists.)*
 
 ```{webr}
-# Gene8 was the artefact (Step 1.1). Drop it, then re-run the SAME normalization on the clean matrix.
+# Gene8 was the artefact (Step 1.1). Drop it, then re-run the SAME pipeline — this is the compact,
+# "pro" way an analyst writes the whole TPM -> log -> z-score in a few lines:
 keep <- rownames(counts) != "Gene8"
-crpk <- counts[keep, ] / (gene_len[keep] / 1000)       # TPM step 1: divide out gene length
-ctpm <- sweep(crpk, 2, colSums(crpk), "/") * 1e6       # TPM step 2: divide out depth
-cz   <- t(scale(t(log2(ctpm + 1))))                    # log2, then per-gene z-score
+crpk <- counts[keep, ] / (gene_len[keep] / 1000)          # TPM step 1: divide out gene length
+ctpm <- sweep(crpk, 2, colSums(crpk), "/") * 1e6          # TPM step 2: divide out depth
+clog <- log2(ctpm + 1)                                    # log
+cz   <- (clog - rowMeans(clog)) / apply(clog, 1, sd)      # per-gene z-score (same row trick as Step 1.5)
 cz[!is.finite(cz)] <- 0
 tissue <- c("Root","Root","Root","Leaf","Leaf","Leaf","Pollen")   # label each sample
 cat("Clean, re-normalized matrix:", nrow(cz), "genes ×", ncol(cz), "samples\n")
@@ -287,6 +289,8 @@ draw_heatmap(cz, "Per-gene z-score of log2(TPM) — Gene8 removed", diverging = 
 ```
 
 > With the artefact gone, the z-score heatmap already shows clean tissue blocks — root genes high (red) in the root samples, leaf genes high in the leaves, and so on. PCA and clustering below just quantify that structure.
+>
+> **🔬 Task:** change the first line to **keep** Gene8 — e.g. `keep <- rownames(counts) != "none"` — and re-run this cell *and* the clustering further down. Watch `Root2` turn into an outlier and the three tissue groups fall apart. Then change it back. That's *why* you remove artefacts before analysis.
 
 ### PCA — do samples separate by tissue?
 
@@ -295,38 +299,51 @@ PCA squeezes the genes into a few **principal components** that capture the most
 ```{webr}
 # prcomp(t(cz)): PCA with SAMPLES as rows (t() transposes). cz is already z-scored per gene.
 pca <- prcomp(t(cz))
+op <- par(mar = c(4, 4, 3, 7))                                 # extra right margin for the legend
 # pca$x = sample coordinates; [,1]/[,2] are PC1/PC2.  factor(tissue): turn labels into colour groups
 plot(pca$x[,1], pca$x[,2], col = factor(tissue), pch = 19, cex = 1.6,
      xlab = "PC1", ylab = "PC2", main = "PCA of samples (clean, z-scored)")
 text(pca$x[,1], pca$x[,2], colnames(cz), pos = 3, cex = 0.7)   # text(): label each point
-legend("topright", legend = levels(factor(tissue)), col = 1:3, pch = 19)
+legend(par("usr")[2] * 1.02, par("usr")[4], xpd = TRUE, bty = "n",   # just OUTSIDE the plot, top-right
+       legend = levels(factor(tissue)), col = 1:3, pch = 19)
+par(op)
 ```
 
-How much variation does each component capture? (a **scree** plot)
+How much of the variation does each component capture? The **scree plot** answers that — and tells you whether the 2-D PCA picture can be trusted.
 
 ```{webr}
 # pca$sdev = standard deviation of each PC; squared = variance. Divide by the total for a proportion.
 var_explained <- pca$sdev^2 / sum(pca$sdev^2)
 barplot(100 * var_explained, names.arg = paste0("PC", seq_along(var_explained)),
         ylab = "% variance explained", main = "Scree plot")
+cat(sprintf("PC1 captures %.0f%% of the variance, PC2 %.0f%% — together %.0f%%.\n",
+            100*var_explained[1], 100*var_explained[2], 100*sum(var_explained[1:2])))
 ```
+
+> **What it means:** each bar is the share of total variation that component captures. Here a couple of tall bars (PC1–PC2) hold most of it, so the data is essentially **low-dimensional** and the 2-D PCA plot above is a *faithful* summary of the samples. If instead the bars were all roughly equal height, no 2-D plot could represent the data and you should distrust any clustering you read off it.
 
 ### Hierarchical clustering — which samples are most alike?
 
-Clustering repeatedly joins the two most similar samples into a tree (a **dendrogram**); samples from the same tissue should join first. We measure similarity as the distance between samples in z-score space.
+Clustering repeatedly joins the two most similar samples into a tree (a **dendrogram**); samples from the same tissue should join first. We measure similarity as the distance between samples in z-score space. The **linkage** is the rule for *how* clusters merge — and it changes the tree.
 
 ```{webr}
-# dist(): pairwise distances between samples (the rows of t(cz)). hclust(): build the tree (ward.D2 linkage).
-d  <- dist(t(cz))
-hc <- hclust(d, method = "ward.D2")
-plot(hc, labels = colnames(cz), main = "Clustering of samples", xlab = "", sub = "")
+LINK <- "ward.D2"            # <- try also: "complete", "average", "single" — then re-run
+d  <- dist(t(cz))            # dist(): pairwise distances between samples (rows of t(cz))
+hc <- hclust(d, method = LINK)
+plot(hc, labels = colnames(cz), main = paste("Clustering of samples —", LINK, "linkage"), xlab = "", sub = "")
 ```
+
+> **🔬 Explore the linkage.** Re-run with `LINK <- "single"`, then `"complete"`, then `"average"`. **Single** linkage often *chains* samples into one straggly cluster (it joins on the single closest pair); **complete** and **ward.D2** give compact, balanced clusters — which is why ward.D2 is a common default. Note under each method whether the three tissues still separate, and whether `Root2` joins the roots or hangs off on its own.
 
 **🔮 Your turn:** there are **three** tissues here, so cut the tree into three groups and check they match. **Fill the blank** with `3`, then **Run**.
 
 ```{webr}
 # cutree(hc, k): cut the dendrogram into k groups (k = number of tissues here)
 groups <- cutree(hc, k = ______)        # <- blank: 3   (root, leaf, pollen)
+
+# redraw the tree and box the clusters in colour so you can see the cut
+plot(hc, labels = colnames(cz), main = "Samples cut into clusters", xlab = "", sub = "")
+rect.hclust(hc, k = length(unique(groups)), border = c("forestgreen","firebrick","steelblue","orange"))
 print(data.frame(sample = colnames(cz), tissue = tissue, cluster = groups))
 
 say(exists("groups") && length(unique(groups)) == 3,
@@ -528,6 +545,19 @@ The atlas you analysed is one resource among many. These four short **web** exer
 ## The MYB46 gene-regulatory network  *(R + Cytoscape)*
 
 The rebuilt network exercise. You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature table — *not* an LLM), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — a master transcription factor binds its targets' DNA, so only a *regulatory* layer can connect it.
+
+### N0 — (Re)claim your gene
+
+webR forgets everything when the page reloads, so **set your gene here** before the network steps — whether you're continuing from Week 1 or starting a fresh session. Same pool as Stage 3: `CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `SND1 AT1G32770` · `COBL4 AT5G15630`.
+
+```{webr}
+MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
+MY_NAME <- "______"   # <- a short name,       e.g. "CESA7"
+
+say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
+    paste("adopted", MY_NAME, "(", MY_GENE, ") — ready for the network."),
+    "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\", MY_NAME <- \"CESA7\") and re-run.")
+```
 
 ### N1 — Your gene's co-expression neighbourhood
 
