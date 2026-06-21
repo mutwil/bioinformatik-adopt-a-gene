@@ -108,7 +108,7 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 | Session | Lecture | Hands-on (this page) | Dossier grows by |
 |---|---|---|---|
 | **1 · Tue** | F2 normalization + F3 EDA *(F1 background = pre-reading)* | **Stage 1** Normalization + **Stage 2** PCA & clustering | clean log/z matrix + tissue clusters |
-| **2 · Thu** | F4 analyses (DE, co-expression as guilt-by-association) | **Stage 3** Claim your gene + **Database D1–D2** *(optional: GO over-representation appendix)* | adopted gene + predicted function + DB cross-check |
+| **2 · Thu** | F4 analyses (DE, co-expression as guilt-by-association) | **Stage 3** Claim your gene + **Stage 4** co-expression neighbourhood + **Database D1–D2** *(optional: GO appendix)* | adopted gene + co-expression module + predicted function + DB cross-check |
 
 **Week 2 — uge 44 · gene-regulatory networks**
 
@@ -117,9 +117,9 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 | **3 · Tue** | **F5 networks & the MYB46-GRN concept** + Cytoscape walkthrough | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
 | **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** Cytoscape figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
 
-**Exercises on this page:** Stages 1–3 (R) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
+**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R + Cytoscape) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
 
-> **Scope:** the live in-browser R lesson is **Stages 1–3**; the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
+> **Scope:** the live in-browser R lesson is **Stages 1–4** (normalization → PCA/clustering → claim a gene → co-expression neighbourhood); the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
 
 ---
 
@@ -418,6 +418,35 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
+## Stage 4 — Co-expression: find your gene's neighbours
+
+Before you reach for a database or build a network, do the simplest, most powerful trick in transcriptomics yourself: **guilt by association**. Genes that rise and fall *together* across many samples are often part of the same process — so the genes whose expression profile most resembles your gene's are your first, data-driven guess at what it does.
+
+We measure "resembles" with the **Pearson correlation** of each gene's profile against your gene's, then sort: the top of the list is your gene's **co-expression neighbourhood**. *(Run Stage 3 first so `MY_GENE` is set.)*
+
+```{webr}
+HUB    <- MY_GENE                                  # your adopted gene (from Stage 3)
+target <- EXPR[HUB, ]                              # its expression across every organ
+# cor(r, target): Pearson correlation of each gene's profile with your gene's profile
+pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))   # <- blank: target
+nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
+                   description = desc[rownames(EXPR)], PCC = round(pcc, 3))
+nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
+print(head(nbhd, 12))
+
+say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
+    paste("row 1 is", MY_NAME, "at PCC = 1.000 — neighbour list ready."),
+    "row 1 should be your own gene at PCC = 1.000 — fill the blank with 'target' and re-run.")
+```
+
+> **Read your neighbourhood.** Your gene always tops its own list (a gene correlates perfectly with itself, PCC = 1.000). Look at rows 2–12: how many are secondary-cell-wall genes you recognise (other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`)? That cluster *is* your gene's functional module, read straight off the data.
+>
+> **⚠ Correlation is not causation.** A high PCC means two genes share a *pattern* — it is *consistent with* them working together, but it is **not** proof of a physical interaction or of one regulating the other. In **Week 2** you'll turn this ranked list into a real **network** (set a correlation cutoff, then add physical and regulatory layers) and see exactly where co-expression does and doesn't line up with mechanism.
+>
+> **✍️ Dossier:** record your **top 5 co-expressed genes** (symbol + PCC) and, in one line, the process they suggest your gene acts in.
+
+---
+
 ## Database exercises (D1–D4)
 
 The atlas you analysed is one resource among many. These four short **web** exercises cross-check your gene in the major plant transcriptomics databases — no coding, just clicking. All four are **assessed** (your TA checks them against an answer key). *URLs verified working 2026-06-19.*
@@ -492,21 +521,22 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\", MY_NAME <- \"CESA7\") and re-run.")
 ```
 
-### N1 — Your gene's co-expression neighbourhood
+### N1 — Reload your co-expression neighbourhood
+
+You built this in **Week 1 (Stage 4 — Co-expression)**. webR forgets everything on reload, so re-run it here to put your neighbourhood (`nbhd`) back in memory for the network steps below. *(Run N0 first so `MY_GENE` is set.)*
 
 ```{webr}
-HUB    <- MY_GENE                                  # your adopted gene (from "Claim your gene")
+HUB    <- MY_GENE                                  # your adopted gene (from N0)
 target <- EXPR[HUB, ]                              # its expression across every organ
-# cor(r, target): Pearson correlation of each gene's profile with your gene's profile
-pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))   # <- blank: target
+pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))   # (you filled this blank in Week 1)
 nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
                    description = desc[rownames(EXPR)], PCC = round(pcc, 3))
 nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
 print(head(nbhd, 12))
 
-say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
-    paste("row 1 is", MY_NAME, "at PCC = 1.000 — neighbour list ready."),
-    "row 1 should be your own gene at PCC = 1.000 — fill the blank with 'target' and re-run.")
+say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB,
+    paste("neighbourhood reloaded for", MY_NAME, "— ready to build the network."),
+    "run N0 first to set MY_GENE, then re-run.")
 ```
 
 ### N2 — Add the physical layer (BioGRID PPI)
