@@ -10,6 +10,7 @@ format:
       - save-work.html
       - external-links.html
       - cynet.html
+      - dossier.html
     resources:
       - data
       - cytoscape.min.js
@@ -31,6 +32,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. Fir
 - Most code cells are **commented line-by-line**, so you can follow the R even if a function is new. A few Week-2 cells use pre-written **"black-box" helper functions** (e.g. betweenness, shortest paths) that you only need to *call*, not read — those are labelled as such.
 - When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
+- A floating **📋 Dossier** panel (bottom-left) collects your findings as you go — it **autosaves**, you can **download** it, and **"Check with AI"** gives formative feedback (no answers — it coaches). The dossier is your **assessed deliverable** for the conference.
 
 > The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). The differential-expression table is a small **illustrative example** (the real one comes from the server pipeline — see the teacher guide).
 
@@ -367,13 +369,13 @@ The aim is to compare each gene's *pattern* across samples, not its absolute lev
 # Subtracting a length-12 vector from the matrix recycles DOWN the rows, so each gene gets its own mean.
 row_mean <- rowMeans(log_tpm)            # each gene's mean across the 7 samples
 row_sd   <- apply(log_tpm, 1, sd)        # each gene's standard deviation
-z <- (log_tpm - row_mean) / row_sd       # the per-gene z-score (no transpose needed)
+z <- (______ - row_mean) / row_sd        # <- blank: log_tpm   (subtract each gene's mean, divide by its SD)
 z[!is.finite(z)] <- 0                    # a gene with no variation would divide by 0 -> set to 0
 draw_heatmap(z, "Per-gene z-score of log2(TPM)", diverging = TRUE)
 
 say(exists("z") && abs(mean(z)) < 1e-6,
     "z-scored: each gene now centres on 0 — Gene1–2 root-high, Gene3–4 leaf-high, Gene5 pollen-specific stand out clearly. But Root2 still looks off (see below).",
-    "run Step 1.4 (log_tpm) first, then re-run.")
+    "the blank is log_tpm:  z <- (log_tpm - row_mean) / row_sd.")
 ```
 
 > **But look at `Root2`.** Even after z-scoring, `Root2` still doesn't line up with `Root1`/`Root3` — its whole column looks scrambled. That's `Gene8` *still* making trouble: because TPM forces every sample to sum to a million, the `Gene8` spike ate most of `Root2`'s budget and deflated every *other* gene in that sample (Step 1.3). A per-gene z-score recentres each gene on its own mean, but it **cannot** undo a distortion that lives in one entire *column* — so z-scoring did **not** rescue `Root2`. The only fix is to remove `Gene8` and re-normalize, which is exactly what Stage 2 does next.
@@ -523,7 +525,7 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes: `"AT5G17420"`.
 </details>
 
-**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.*
+**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.* *(Open the **📋 Dossier** panel, bottom-left, and fill the "Hypothesis" field — it autosaves and an AI tutor can check it.)*
 
 ---
 
@@ -548,11 +550,17 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
     "row 1 should be your own gene at PCC = 1.000 — fill the blank with 'target' and re-run.")
 ```
 
-> **Read your neighbourhood.** Your gene always tops its own list (a gene correlates perfectly with itself, PCC = 1.000). Look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes (the exact names vary by gene, and not recognising every one is fine). **If you adopted a decoy** (e.g. a photosynthesis gene), you'll instead see a *completely different* module — and that mismatch is itself the answer to "is my gene really a cell-wall gene?"
->
-> **⚠ Correlation is not causation.** A high PCC means two genes share a *pattern* — it is *consistent with* them working together, but it is **not** proof of a physical interaction or of one regulating the other. In **Week 2** you'll turn this ranked list into a real **network** (set a correlation cutoff, then add physical and regulatory layers) and see exactly where co-expression does and doesn't line up with mechanism.
->
-> **✍️ Dossier:** record your **top 5 co-expressed genes** (symbol + PCC) and, in one line, the process they suggest your gene acts in.
+**🤔 Read your neighbourhood — why does *your own gene* sit at the very top of its list, at PCC = 1.000?**
+
+<details><summary>💡 Hint</summary>A gene's expression profile is identical to itself, and the Pearson correlation of any profile with itself is exactly 1.0 — so every gene is its own perfect "neighbour". (It's also a quick sanity check that the correlation ran correctly.)</details>
+
+> Now look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes (the exact names vary, and not recognising every one is fine). **If you adopted a decoy** (e.g. a photosynthesis gene), you'll instead see a *completely different* module — and that mismatch is itself the answer to "is my gene really a cell-wall gene?"
+
+**🤔 Your top neighbour correlates at PCC ≈ 0.95 with your gene. Does that *prove* the two proteins interact, or that one regulates the other?**
+
+<details><summary>💡 Hint</summary>No — a high correlation only means the two genes share an expression <i>pattern</i>. That is <i>consistent with</i> a functional link, but it could equally come from both being switched on by the same upstream regulator, or both being specific to the same tissue. Proof needs <b>physical</b> (PPI) or <b>directed</b> (regulatory) evidence — which you add in <b>Week 2</b>, where you turn this ranked list into a real network and see where co-expression does and doesn't line up with mechanism.</details>
+
+> **✍️ Dossier:** record your **top 5 co-expressed genes** (symbol + PCC) and, in one line, the process they suggest your gene acts in. *(Open the **📋 Dossier** panel, bottom-left, and fill the "Co-expression" field.)*
 
 ---
 
@@ -1048,7 +1056,7 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 4. **The brake:** explain the one red T-bar (KNAT7 ⊣ CESA8) and what it says about the limits of "guilt by association".
 5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name **≥3** pieces of evidence — any three of: a co-expression neighbour, a PPI, a curated GRN edge, a database hit, and (*only if you ran the Appendix*) your enriched GO process. Three non-appendix items earn full credit.
 
-**📄 Assemble your 1-page dossier (the conference hand-in).** Transfer these onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
+**📄 Assemble your 1-page dossier (the conference hand-in).** Fill these in the **📋 Dossier** panel (bottom-left) as you go — it autosaves, you can **Download** it, and **Check with AI** gives formative feedback. Transfer them onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
 
 1. **Hypothesis** (Stage 3) — your adopted gene + your one-line guess at its function.
 2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.

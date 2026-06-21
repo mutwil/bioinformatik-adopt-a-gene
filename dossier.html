@@ -1,0 +1,140 @@
+<!-- Interactive Gene Dossier: fillable fields (autosaved to localStorage), download/upload,
+     and an "Check with AI" button that sends the dossier to the course tutor Worker for
+     formative, rubric-aware feedback (no answers). Reuses the same Cloudflare Worker as tutor.html. -->
+<style>
+  #dsr-fab{position:fixed;left:18px;bottom:18px;z-index:9998;background:#2e7d32;color:#fff;border:none;
+    border-radius:22px;padding:10px 16px;font:600 14px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+  #dsr-fab:hover{background:#256528}
+  #dsr-panel{position:fixed;left:18px;bottom:70px;z-index:9998;width:390px;max-width:calc(100vw - 36px);
+    max-height:78vh;display:flex;flex-direction:column;background:#fff;border:1px solid #cbd5e0;border-radius:12px;
+    box-shadow:0 8px 30px rgba(0,0,0,.28);font:13px system-ui,sans-serif;color:#1a202c}
+  #dsr-panel header{padding:10px 12px;background:#2e7d32;color:#fff;border-radius:12px 12px 0 0;font-weight:700;
+    display:flex;justify-content:space-between;align-items:center}
+  #dsr-panel header button{background:transparent;border:none;color:#fff;font-size:18px;cursor:pointer;line-height:1}
+  #dsr-body{padding:10px 12px;overflow-y:auto}
+  #dsr-body label{display:block;font-weight:600;margin:8px 0 2px}
+  #dsr-body textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e0;border-radius:6px;padding:6px 8px;
+    font:13px/1.4 system-ui,sans-serif;resize:vertical;min-height:42px}
+  #dsr-body input[type=text]{width:100%;box-sizing:border-box;border:1px solid #cbd5e0;border-radius:6px;padding:6px 8px;font:13px system-ui}
+  .dsr-bar{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid #e2e8f0;background:#f7fafc;border-radius:0 0 12px 12px}
+  .dsr-bar button{flex:1;min-width:84px;border:1px solid #cbd5e0;background:#fff;border-radius:6px;padding:7px 8px;
+    font:600 12px system-ui;cursor:pointer}
+  .dsr-bar button#dsr-ai{background:#2e7d32;color:#fff;border-color:#2e7d32}
+  .dsr-bar button:hover{filter:brightness(.97)}
+  #dsr-status{font-size:11px;color:#718096;padding:0 12px 6px}
+  #dsr-fb{margin:0 12px 10px;padding:8px 10px;background:#f0f7f0;border:1px solid #cde3cd;border-radius:8px;
+    font-size:12.5px;line-height:1.45;display:none;white-space:normal}
+  #dsr-fb h4{margin:0 0 4px;font-size:12px;color:#2e7d32}
+  #dsr-note{font-size:11px;color:#a0563b;padding:2px 12px 8px}
+</style>
+
+<button id="dsr-fab" title="Your gene dossier">📋 Dossier</button>
+<div id="dsr-panel" hidden>
+  <header><span>📋 My Gene Dossier</span><button id="dsr-x" title="Close">×</button></header>
+  <div id="dsr-body"></div>
+  <div id="dsr-status">Autosaves to this browser.</div>
+  <div id="dsr-note">⚠ "Check with AI" sends your dossier text to the course AI tutor (Anthropic) — don't include anything private.</div>
+  <div id="dsr-fb"></div>
+  <div class="dsr-bar">
+    <button id="dsr-ai">🤖 Check with AI</button>
+    <button id="dsr-dl">💾 Download</button>
+    <button id="dsr-load">📂 Load</button>
+  </div>
+  <input id="dsr-file" type="file" accept="application/json" hidden>
+</div>
+
+<script>
+(function(){
+  const API = "https://bioinf-tutor.mutwil.workers.dev/";
+  const KEY = "bioinf-m4-dossier-v1";
+  const FIELDS = [
+    {id:"gene",        label:"Adopted gene (name + AGI)", t:"text", ph:"e.g. CESA7 (AT5G17420)"},
+    {id:"hypothesis",  label:"Hypothesis (Stage 3)",      ph:"Genes co-expressed with my gene are enriched for ___, so my gene acts in ___"},
+    {id:"dataquality", label:"Data quality (Stage 2)",    ph:"The artefact I removed (Gene8) and why TPM normalization can't fix it"},
+    {id:"coexpr",      label:"Co-expression (Stage 4)",   ph:"My top-5 neighbours (symbol + PCC) and the module they name"},
+    {id:"database",    label:"Database cross-check (D1–D4)", ph:"domain · top organ · root cell type (xylem?) · PPI partners · regulator above me · agree across DBs?"},
+    {id:"network",     label:"Network (N1–N5)",           ph:"my correlation cutoff + why · is MYB46 the hub (degree/betweenness)? · where my gene sits"},
+    {id:"verdict",     label:"Verdict (N5)",              ph:"confirm or revise — naming ≥3 independent evidence types"}
+  ];
+
+  const panel = document.getElementById("dsr-panel");
+  const body  = document.getElementById("dsr-body");
+  const fb     = document.getElementById("dsr-fb");
+  const status = document.getElementById("dsr-status");
+
+  // build fields
+  FIELDS.forEach(f => {
+    const lab = document.createElement("label"); lab.textContent = f.label; lab.htmlFor = "dsr-"+f.id;
+    body.appendChild(lab);
+    const el = f.t === "text" ? document.createElement("input") : document.createElement("textarea");
+    if (f.t === "text") el.type = "text";
+    el.id = "dsr-"+f.id; el.placeholder = f.ph || "";
+    if (f.t !== "text") el.rows = 2;
+    el.addEventListener("input", save);
+    body.appendChild(el);
+  });
+
+  function getData(){ const d={}; FIELDS.forEach(f=> d[f.id] = (document.getElementById("dsr-"+f.id).value||"")); return d; }
+  function setData(d){ FIELDS.forEach(f=>{ if (d && d[f.id]!=null) document.getElementById("dsr-"+f.id).value = d[f.id]; }); }
+  function save(){ try{ localStorage.setItem(KEY, JSON.stringify(getData())); status.textContent = "Saved ✓ ("+new Date().toLocaleTimeString()+")"; }catch(e){} }
+  try{ const s = localStorage.getItem(KEY); if (s) setData(JSON.parse(s)); }catch(e){}
+
+  // toggle
+  document.getElementById("dsr-fab").onclick = ()=>{ panel.hidden = !panel.hidden; };
+  document.getElementById("dsr-x").onclick   = ()=>{ panel.hidden = true; };
+
+  // download / load
+  document.getElementById("dsr-dl").onclick = ()=>{
+    const blob = new Blob([JSON.stringify(getData(),null,2)], {type:"application/json"});
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+    a.download = "gene-dossier.json"; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const fileIn = document.getElementById("dsr-file");
+  document.getElementById("dsr-load").onclick = ()=> fileIn.click();
+  fileIn.onchange = ()=>{ const f = fileIn.files[0]; if(!f) return;
+    const r = new FileReader(); r.onload = ()=>{ try{ setData(JSON.parse(r.result)); save(); }catch(e){ alert("Could not read that file."); } }; r.readAsText(f); };
+
+  // minimal, safe markdown -> html (escape first, then bold/code/bullets/breaks)
+  function md(s){
+    s = s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    s = s.replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/`([^`]+)`/g,"<code>$1</code>");
+    s = s.replace(/^[\-\*] (.+)$/gm,"• $1");
+    return s.replace(/\n/g,"<br>");
+  }
+
+  // AI check — send the dossier in the Worker's `code` slot (4000-char cap) + a review instruction in `question`
+  document.getElementById("dsr-ai").onclick = async ()=>{
+    const d = getData();
+    const filled = FIELDS.filter(f => (d[f.id]||"").trim()).length;
+    if (!filled){ fb.style.display="block"; fb.innerHTML = "<h4>AI tutor</h4>Fill in at least one field first, then I can give feedback."; return; }
+    const dossierText = FIELDS.map(f => `## ${f.label}\n${(d[f.id]||"(empty)").trim()}`).join("\n\n").slice(0,3800);
+    const question = "The text in the code block above is my DRAFT GENE DOSSIER for Module 4 (it is NOT R code). "
+      + "Give me brief formative feedback section by section against the rubric (data quality; network & correlation-vs-regulation; "
+      + "database cross-check; hypothesis with named evidence). Point out what's missing, vague, or scientifically off, and ask me one "
+      + "guiding question. Do NOT rewrite the dossier for me or give the answers — coach me.";
+    fb.style.display="block"; fb.innerHTML = "<h4>AI tutor</h4>…thinking…";
+    try{
+      const resp = await fetch(API, { method:"POST", headers:{"content-type":"application/json"},
+        body: JSON.stringify({ question, code: dossierText, page:"Gene dossier", mode:"deep", history:[] }) });
+      if (!resp.ok){
+        let m = "The AI tutor is unavailable right now.";
+        if (resp.status===429) m = "Slow down a moment — try again shortly.";
+        fb.innerHTML = "<h4>AI tutor</h4>"+m; return;
+      }
+      const reader = resp.body.getReader(); const dec = new TextDecoder(); let buf="", raw="", first=true;
+      while(true){ const {done,value} = await reader.read(); if (done) break;
+        buf += dec.decode(value,{stream:true}); let i;
+        while((i = buf.indexOf("\n"))>=0){ const line=buf.slice(0,i); buf=buf.slice(i+1);
+          if(!line.startsWith("data:")) continue; const data=line.slice(5).trim(); if(!data) continue;
+          try{ const ev=JSON.parse(data);
+            if(ev.type==="content_block_delta" && ev.delta && ev.delta.type==="text_delta"){
+              if(first){ raw=""; first=false; } raw+=ev.delta.text; fb.innerHTML = "<h4>AI tutor</h4>"+md(raw);
+            }
+          }catch(e){}
+        }
+      }
+      if (first) fb.innerHTML = "<h4>AI tutor</h4>(no response)";
+    }catch(e){ fb.innerHTML = "<h4>AI tutor</h4>Network error — try again."; }
+  };
+})();
+</script>
