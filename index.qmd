@@ -12,6 +12,7 @@ format:
       - cynet.html
     resources:
       - data
+      - cytoscape.min.js
 engine: knitr
 live:
   show-hints: true
@@ -27,7 +28,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. Fir
 **How it works**
 
 - Edit the code where you see `______`, then press **Run** (▶). Cells share state, so run them **top to bottom**.
-- Every code cell is **commented** — each line explains what it does and `# what each function does`, so you can follow the R even if a function is new to you.
+- Most code cells are **commented line-by-line**, so you can follow the R even if a function is new. A few Week-2 cells use pre-written **"black-box" helper functions** (e.g. betweenness, shortest paths) that you only need to *call*, not read — those are labelled as such.
 - When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
 
@@ -55,6 +56,11 @@ EXPR <- as.matrix(m[, organ_cols])                  # numeric matrix (needed for
 rownames(EXPR) <- m$gene_id
 desc <- setNames(info$description, info$gene_id)     # quick lookup: gene_id -> description
 sym  <- setNames(info$symbol,      info$gene_id)
+# Seed any GRN-only genes (not in gene_info) with their curated symbol, so the network graphs show
+# names (MYB58, VND6, ...) instead of raw AGI codes. gene_info stays authoritative — fill only the gaps.
+grn_syms <- c(setNames(grn$source_symbol, grn$source_AGI), setNames(grn$target_symbol, grn$target_AGI))
+grn_syms <- grn_syms[!duplicated(names(grn_syms))]
+miss <- setdiff(names(grn_syms), names(sym)); sym[miss] <- grn_syms[miss]
 say  <- function(cond, good, bad)                   # tiny ✅/❌ feedback helper
   cat(if (isTRUE(cond)) paste("✅", good) else paste("❌", bad), "\n")
 
@@ -303,24 +309,34 @@ print(data.frame(gene = names(gene_len), length_bp = gene_len, row.names = NULL)
 
 ### Step 1.3 — Compute TPM (length, then depth)
 
-The aim is to remove the two confounds from Step 1.2 and end with **TPM**, the metric the atlas uses. TPM is two normalizations in order: **(1)** divide each count by the gene's length in **kilobases** (reads per kilobase, RPK) → removes length; **(2)** scale each sample so its values sum to **1,000,000** → removes depth. Fill **both** blanks, then **Run** — a heatmap after each step shows the values on the **raw scale** (no log yet), so the true dynamic range is honest.
+The aim is to remove the two confounds from Step 1.2 and end with **TPM**, the metric the atlas uses. TPM is two normalizations done **in order** — do them one at a time, each with its own check.
+
+**Step 1.3a — divide out gene length (→ RPK).** Divide each count by the gene's length in **kilobases**. Fill the blank, then **Run**.
 
 ```{webr}
-# step 1 — divide out gene length. gene_len is in bp, so /1000 converts it to kilobases.
-# gene_len has one value per gene (per row), so it lines up with the matrix rows automatically.
+# gene_len is in bp, so /1000 converts it to kilobases. gene_len has one value per gene (per row),
+# so it lines up with the matrix rows automatically.
 rpk <- counts / (gene_len / ______)            # <- blank: 1000   (bp -> kb)
 
-# step 2 — divide out depth. sweep(x, 2, v, "/") divides each COLUMN by v; * 1e6 scales to per-million.
-tpm <- sweep(rpk, 2, ______, "/") * 1e6        # <- blank: colSums(rpk)
-
-# a heatmap after each step — raw scale, values shown as-is
 draw_heatmap(counts, "Raw counts — length & depth still in")
 draw_heatmap(rpk,    "After step 1 (RPK) — gene length removed")
-draw_heatmap(tpm,    "After step 2 (TPM) — depth removed too")
+
+say(exists("rpk") && all(is.finite(rpk)),
+    "RPK done — values are now per-kilobase, so a long gene and a short gene at the same true expression read alike.",
+    "the blank is 1000 (bp -> kb): rpk <- counts / (gene_len / 1000).")
+```
+
+**Step 1.3b — divide out sequencing depth (→ TPM).** Now scale each *sample* so its values sum to **1,000,000**. Each sample's own total is `colSums(rpk)`. Fill the blank, then **Run**.
+
+```{webr}
+# sweep(x, 2, v, "/") divides each COLUMN by the matching value in v; * 1e6 scales to per-million.
+tpm <- sweep(rpk, 2, ______, "/") * 1e6        # <- blank: colSums(rpk)
+
+draw_heatmap(tpm, "After step 2 (TPM) — depth removed too (raw scale)")
 
 say(exists("tpm") && all(abs(colSums(tpm) - 1e6) < 1),
     "that's TPM — every sample sums to 1,000,000 and gene length is divided out. This is exactly the form the atlas is in.",
-    "step 1 blank is 1000 (bp→kb); step 2 blank is colSums(rpk), so each sample sums to 1e6.")
+    "the blank is colSums(rpk): each sample is divided by its own RPK total, then x 1e6.")
 ```
 
 <details><summary>💡 Hint</summary>
@@ -488,7 +504,7 @@ say(exists("groups") && length(unique(groups)) == 3,
 
 You've got the skills — now make it personal. Pick **one** gene from the pool (your TA prevents duplicates):
 
-`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `SND1 AT1G32770` · `COBL4 AT5G15630` · decoys `AT1G19300`, `AT3G16920`
+`CESA4 AT5G44030` · `CESA7 AT5G17420` · `CESA8 AT4G18780` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870` · `SND1 AT1G32770` · `COBL4 AT5G15630` · **decoys (NOT cell-wall — for you to expose):** `CAB1 AT1G29930`, `RBCS1A AT1G67090`
 
 **Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
@@ -532,7 +548,7 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
     "row 1 should be your own gene at PCC = 1.000 — fill the blank with 'target' and re-run.")
 ```
 
-> **Read your neighbourhood.** Your gene always tops its own list (a gene correlates perfectly with itself, PCC = 1.000). Look at rows 2–12: how many are secondary-cell-wall genes you recognise (other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`)? That cluster *is* your gene's functional module, read straight off the data.
+> **Read your neighbourhood.** Your gene always tops its own list (a gene correlates perfectly with itself, PCC = 1.000). Look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes (the exact names vary by gene, and not recognising every one is fine). **If you adopted a decoy** (e.g. a photosynthesis gene), you'll instead see a *completely different* module — and that mismatch is itself the answer to "is my gene really a cell-wall gene?"
 >
 > **⚠ Correlation is not causation.** A high PCC means two genes share a *pattern* — it is *consistent with* them working together, but it is **not** proof of a physical interaction or of one regulating the other. In **Week 2** you'll turn this ranked list into a real **network** (set a correlation cutoff, then add physical and regulatory layers) and see exactly where co-expression does and doesn't line up with mechanism.
 >
@@ -565,7 +581,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 2. Switch to **Tissue-Specific Root eFP** → record **which root cell type** it switches on in (secondary-cell-wall genes → the **xylem**, where thick lignified walls are built).
 3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (PFAM/InterPro) + **MapMan biological function** — the annotation skills from the database & sequence modules.
 
-> ✅ *Expected:* SCW genes peak in **inflorescence/mature stem** and localise to root **xylem**; PEO's top-co-expressed list is full of SCW genes; the domain matches the family (cellulose-synthase domain for a CESA, MYB DNA-binding domain for MYB46, laccase for LAC4).
+> ✅ *Expected:* SCW genes peak in **inflorescence/mature stem** and localise to root **xylem**; PEO's top-co-expressed list is full of SCW genes; the domain matches the family (cellulose-synthase domain for a CESA, MYB DNA-binding domain for MYB46, laccase for LAC4). **A decoy (CAB1 / RBCS1A) breaks every expectation** — it peaks in *leaves*, its co-expressed list is *photosynthesis* genes, its domain is unrelated to walls; spotting that mismatch *is* the exercise.
 > **→ Dossier:** domain · MapMan function · highest organ · root cell type · top 3 co-expressed.
 
 ### D2 — Who does my gene work with — and does it replicate?  *(CoNekT + ATTED-II)*
@@ -582,7 +598,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 1. **STRING** ([string-db.org](https://string-db.org/)) → your gene, organism *Arabidopsis thaliana*, required score **medium (0.400)** → which neighbours appear, and by **which evidence channel** (experiments / co-expression / text-mining)? Record the **physical (experiment-backed) partners**.
 2. **CoNekT** → look up the regulators **MYB46** `AT5G12870`, **MYB83** `AT3G08500`, **SND1/NST3** `AT1G32770`, **KNAT7** `AT1G62990`. Which one sits **directly above your gene** in the secondary-wall hierarchy? Record it.
 
-> ✅ *Expected:* the CESA4/7/8 triangle is recovered by **experiments**, but **MYB46→CESA links appear only via co-expression / text-mining — never physical experiments**, because a TF binds its target's **DNA**, not its protein. That gap is exactly why Week 2 adds a curated **regulatory** layer.
+> ✅ *Expected:* the CESA4/7/8 triangle is recovered by **experiments**, but **MYB46→CESA links appear only via co-expression / text-mining — never physical experiments**, because a TF binds its target's **DNA**, not its protein. That gap is exactly why Week 2 adds a curated **regulatory** layer. *(The DNA motif MYB46 binds in those promoters is the **SMRE / M46RE** element — it reappears in the Week-2 exam.)*
 > **→ Dossier:** PPI partners · the regulator directly above your gene.
 
 ### D4 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
@@ -617,9 +633,9 @@ Answer in 2–4 sentences. The model answers — and their points — match how 
 
 <details><summary>✅ Model answer (3 p)</summary>(a) The <b>top-organ agreement</b> carries the biological conclusion (where the gene acts); the low-expression rank order sits near the detection floor and is noisy, so reshuffling there is expected and harmless (2 p). (b) Different sample sets / conditions (and sequencing depth / normalization) between atlases (1 p).</details>
 
-**Q5 (4 p) — Synthesis.** In one sentence, state your gene's function, and name the **three independent evidence types** from your dossier that support it.
+**Q5 (4 p) — Synthesis.** (a) In one sentence, state your gene's function and name the **three independent evidence types** from your dossier that support it. (b) Which of those evidence types is the **weakest** for *proving* the function, and why?
 
-<details><summary>✅ Model answer (4 p)</summary>One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: (1) <b>expression</b> — stem/xylem peak agreeing across ePlant + PEO + EBI; (2) <b>co-expression</b> — the CESA4/8 module reproduced in your atlas + PEO + CoNekT; (3) <b>physical/regulatory</b> — the CESA triangle by STRING experiments and a MYB46→CESA regulatory edge. Scoring: 1 p for the claim + 1 p per correctly-typed evidence (max 4 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + PEO + CoNekT), <b>physical/regulatory</b> (CESA triangle by STRING experiments + a MYB46→CESA regulatory edge) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof of a functional link; a physical (experiment-backed PPI) or a ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
 
 > **✍️ Dossier:** your completed table **and** the five answers are the **database cross-check** graded at the conference (rubric criterion 3).
 
@@ -641,11 +657,15 @@ Close the week the way the exam tests it. Answer in 2–4 sentences; the model a
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Per-gene z-scoring compares each gene's <b>pattern</b>, not its magnitude, so highly expressed genes don't dominate the distance and weakly expressed but informative genes still count (2 p). (b) That is a <b>batch effect</b> — technical variation outweighs biology; correct for batch (a batch term in DESeq2, or ComBat) before interpreting (2 p).</details>
 
-**W1·Q4 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97 — give one mechanism that produces this *without* the two genes interacting.
+**W1·Q4 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
 
-<details><summary>✅ Model answer (4 p)</summary>(a) A shared expression pattern is a <b>hypothesis</b> that the genes share a process or regulator (1 p); it is <b>not</b> proof of physical interaction or direct regulation — correlation ≠ causation (1 p). (b) Both are independently switched on by the same cue or master regulator (e.g. both stem/xylem-specific, or both stress-induced), with no direct link between them (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) A shared expression pattern is a <b>hypothesis</b> that the genes share a process or regulator (1 p); it is <b>not</b> proof of physical interaction or direct regulation — correlation ≠ causation (1 p). (b) Two of: a shared upstream regulator switches both on; both are specific to the same tissue; both respond independently to the same condition (e.g. stress). Correlation is <b>symmetric and unsigned</b>, so it cannot distinguish "A→B", "B→A" or "C→both" — that needs directed / perturbation evidence (2 p).</details>
 
-> **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, correlation vs causation) is exactly what the conference Q&A probes.
+**W1·Q5 (4 p) — PCA & the scree plot.** Your scree plot shows PC1 = 62 %, PC2 = 21 %. (a) What does each bar mean, and can you trust the 2-D PCA picture here? (b) What would it mean if all the bars were roughly equal height? (c) *Before* you removed Gene8, why did Root2 sit apart on PC1?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Each bar = the share of total variance that component captures; PC1 + PC2 = 83 %, so the 2-D plot is a <b>faithful</b> summary — most structure lives in two dimensions (2 p). (b) Variance spread evenly across many PCs → the data is genuinely high-dimensional, no 2-D plot represents it, and you should distrust any clustering read off it (1 p). (c) The Gene8 spike — and TPM's deflation of every other gene in Root2 — made Root2's whole profile an outlier, so PC1 captured that artefact rather than tissue (1 p).</details>
+
+> **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, PCA trust, correlation vs causation) is exactly what the conference Q&A probes.
 
 ---
 
@@ -653,7 +673,7 @@ Close the week the way the exam tests it. Answer in 2–4 sentences; the model a
 
 ## The MYB46 gene-regulatory network  *(R + Cytoscape)*
 
-The rebuilt network exercise. You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature table — *not* an LLM), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — a master transcription factor binds its targets' DNA, so only a *regulatory* layer can connect it.
+You take **your adopted gene's** co-expression neighbourhood, overlay **physical** interactions (BioGRID) and **curated regulatory** edges (a literature-curated table — every edge carries a reference), and assemble the secondary-cell-wall regulatory cascade around **MYB46** in Cytoscape. The lesson you'll see for yourself: **MYB46 has no physical-interaction edges at all** — only a *regulatory* layer can connect a master TF to its targets (**N4e** explains why).
 
 Each build step (**N1 → N2 → N3**) now **draws the network right in the page**, so you watch it grow layer by layer — co-expression, then physical (PPI), then regulatory (GRN) — before you export the polished figure to Cytoscape.
 
@@ -687,6 +707,8 @@ nb <- nbhd$gene                                    # the neighbour ids
 # turn the neighbourhood into a NETWORK: keep every gene-PAIR correlated above a cutoff
 C  <- cor(t(EXPR[nb, ]))                            # gene × gene correlation AMONG the neighbours
 ut <- upper.tri(C)                                 # each pair once (not the diagonal)
+hist(C[ut], breaks = 20, col = "grey85", xlab = "Pearson r between neighbour pairs",
+     main = "Where do the strong edges start?")    # look for where the right-hand cluster begins
 MY_CUTOFF <- ______                                # <- a correlation cutoff you justify, e.g. 0.85
 keep  <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
@@ -701,7 +723,7 @@ say(nrow(edges) > 0,
     "no edges yet — fill MY_CUTOFF (e.g. 0.85), and if still empty lower it to 0.8 and re-run.")
 ```
 
-> **🔬 The cutoff is a knob.** Re-run with `MY_CUTOFF <- 0.95` (fewer, tighter edges) and `0.75` (a denser hairball). A tight module like the secondary-wall genes stays connected even at a high cutoff — that density *is* the biological signal.
+> **🔬 The cutoff is a knob.** The histogram above usually shows a bulk of weak pair-correlations and a separate cluster of strong ones on the right — a defensible cutoff sits **in the valley between them** (often ~0.85). Re-run with `MY_CUTOFF <- 0.95` (fewer, tighter edges) and `0.75` (a denser hairball). A tight module like the secondary-wall genes stays connected even at a high cutoff — that density *is* the biological signal.
 
 ### N2 — Add the physical layer (BioGRID PPI)
 
@@ -761,9 +783,12 @@ say(names(out_deg)[1] == "AT5G12870",
     "MYB46 (AT5G12870) should top the regulator list — run N3 first.")
 ```
 
+> **🔑 Network vocabulary** (you'll use these in the cells and the exam):
+> **degree** = number of edges at a node · **hub** = unusually high-degree node · **betweenness** = how many shortest paths run *through* a node (a high-betweenness node is a *bottleneck*) · **clustering coefficient** = do my neighbours link to *each other*? (≈1 = a tight clique/triangle; ≈0 = a *star*) · **component** = a connected piece of the graph · **articulation point (cut vertex)** = a node whose removal splits the graph · **scale-free** = a few hubs + many low-degree nodes (robust to random loss, fragile to losing a hub) · **feed-forward vs feedback** = an arrow path that goes only *downstream* (forward) vs one that loops *back* to an upstream node (feedback).
+
 ### N4b — Network metrics: don't just look, measure
 
-Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it. The plot at the end renders all three metrics **on the network at once** — node **size** = degree, **fill** = betweenness, **border** = clustering — so MYB46 shows up big, red and thin-bordered (hub-bottleneck-star), while KNAT7 is small but thick-bordered (buried in a triangle).
+Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The functions below (`betweenness_base`, `bfs_dist`, `components_base`) are **black-box helpers** — you only need to *call* them and read the results, not follow every line. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it. The plot at the end renders all three metrics **on the network at once** — node **size** = degree, **fill** = betweenness, **border** = clustering — so MYB46 shows up big, red and thin-bordered (hub-bottleneck-star), while KNAT7 is small but thick-bordered (buried in a triangle).
 
 ```{webr}
 ## base-R network metrics (no igraph). grn_edges (source, target) exists from N3.
@@ -879,9 +904,19 @@ targets_of("AT5G12870")               # MYB46's direct targets
 predict_perturb("AT1G62990", "KO")    # knat7 KO -> CESA8 UP (lose the repressor)
 predict_perturb("AT5G12870", "KO")    # myb46 KO -> CESA4/CESA7 DOWN; CESA8 AMBIGUOUS (the feed-forward loop!)
 predict_perturb("AT5G17420", "KO")    # cesa7 KO -> nothing downstream (it's a terminal effector)
+
+# YOUR TURN — predict a knockout yourself. A regulator (e.g. MYB46 "AT5G12870", SND1 "AT1G32770")
+# changes things downstream; a biosynthesis gene (a CESA) is a terminal effector and changes nothing.
+my_ko <- "______"                     # <- e.g. "AT5G12870"
+cat("Predicted effect of knocking out", nmof(my_ko), ":\n"); print(predict_perturb(my_ko, "KO"))
+say(grepl("^AT[1-5CM]G[0-9]{5}$", my_ko),
+    paste("KO prediction for", nmof(my_ko), "computed — explain each UP / DOWN / AMBIGUOUS using the sign rule."),
+    "put a valid AGI locus in my_ko (e.g. \"AT5G12870\" for MYB46) and re-run.")
 ```
 
-> **Why CESA8 is "ambiguous":** MYB46 **activates** CESA8 directly **and** activates KNAT7, which **represses** CESA8 — an **incoherent feed-forward loop** (a pulse generator that limits overshoot, *not* negative feedback: nothing loops back to MYB46). That's why *myb46* and *knat7* mutants move CESA8 in opposite directions. *(knat7 KO → CESA8 up: Li 2012. The snd1 single mutant is near wild-type — NAC redundancy; the strong loss needs the snd1 nst1 double, which spares vessels.)*
+> **Why CESA8 is "ambiguous":** MYB46 **activates** CESA8 directly **and** activates KNAT7, which **represses** CESA8 — an **incoherent feed-forward loop** (a pulse generator that limits overshoot, *not* negative feedback: nothing loops back to MYB46). That's why *myb46* and *knat7* mutants move CESA8 in opposite directions. *(KNAT7 is a genetic negative regulator — knat7 mutants make thicker fibre walls but thinner, irregular vessel walls — so we model its net effect on CESA8 as repression: knat7 KO → CESA8 up, Li 2012. The snd1 single mutant is near wild-type — NAC redundancy; the strong loss needs the snd1 nst1 double, which spares vessels.)*
+>
+> **If your adopted gene is IRX9 or COBL4** (downstream biosynthesis genes not in the curated GRN table), you can't trace "what regulates *me*" directly — instead trace the **CESA module** it sits in (MYB46 → CESA4/7/8) and note your gene as a co-regulated member. Don't invent an edge: a missing edge is honest data, not a gap to fill.
 
 ### N4d — Topology & robustness
 
@@ -903,7 +938,8 @@ frag <- sapply(rownames(A), function(g) length(unique(components_base(remove_nod
 cat(sprintf("Intact: %d component. Remove MYB46 -> %d components. Remove any other -> 1.\n",
             length(unique(components_base(A))), frag["AT5G12870"]))
 
-## how the co-expression network fragments as the cutoff rises (C is from N2)
+## how the co-expression network fragments as the cutoff rises (C is the neighbour-correlation matrix from N1)
+if (!exists("C")) stop("Run N1 first so C (the neighbour-correlation matrix) exists.")
 sweep_cut <- function(C, cutoffs = c(0.70, 0.80, 0.85, 0.90, 0.95, 0.99)) {
   do.call(rbind, lapply(cutoffs, function(cut) {
     Ac <- (C > cut) * 1L; diag(Ac) <- 0L
@@ -945,11 +981,19 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
   <span style="color:#55a868">●</span> biosynthesis &nbsp;|&nbsp;
   <span style="color:#7faf7f">→</span> activates &nbsp; <span style="color:#c0392b">⊣</span> represses
 </div>
-<script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
+<script src="cytoscape.min.js"></script>
 <script>
 (function(){
+  var drawTries = 0;
   function draw(){
-    if (typeof cytoscape === "undefined") { setTimeout(draw, 150); return; }
+    if (typeof cytoscape === "undefined") {
+      if (++drawTries > 40) {            // ~6 s: cytoscape.js never loaded
+        var b = document.getElementById("grn-cy");
+        if (b) b.innerHTML = '<div style="padding:16px;color:#a00;font:13px system-ui">⚠ Could not load the network viewer (cytoscape.js). Try a page reload, or view the same GRN interactively in N1–N3.</div>';
+        return;
+      }
+      setTimeout(draw, 150); return;
+    }
     var el = document.getElementById("grn-cy"); if (!el || el.dataset.done) return; el.dataset.done = "1";
     var tier = { SND1:0,NST1:0,NST2:0,VND6:0,VND7:0, MYB46:1,MYB83:1,
       MYB58:2,MYB63:2,MYB85:2,MYB52:2,MYB54:2,MYB103:2,C3H14:2,KNAT7:2,
@@ -1002,21 +1046,30 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 2. **Hub:** is MYB46 the top out-degree *and* the highest-betweenness node? What does that mean biologically?
 3. **Three layers:** does a MYB46→CESA edge appear in the co-expression, the PPI, and the GRN layer — or only some? Why?
 4. **The brake:** explain the one red T-bar (KNAT7 ⊣ CESA8) and what it says about the limits of "guilt by association".
-5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name ≥3 pieces of evidence (a co-expression neighbour, a PPI, a curated GRN edge, your enriched GO process, a database hit).
+5. **Verdict:** does the combined evidence **confirm or revise** your Stage-3 hypothesis? Name **≥3** pieces of evidence — any three of: a co-expression neighbour, a PPI, a curated GRN edge, a database hit, and (*only if you ran the Appendix*) your enriched GO process. Three non-appendix items earn full credit.
+
+**📄 Assemble your 1-page dossier (the conference hand-in).** Transfer these onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
+
+1. **Hypothesis** (Stage 3) — your adopted gene + your one-line guess at its function.
+2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.
+3. **Co-expression** (Stage 4) — your top-5 neighbours + the module they name.
+4. **Database cross-check** (D1–D4) — your filled results table.
+5. **Network** (N1–N5) — your Cytoscape figure, MYB46 as the hub (degree + betweenness), and the KNAT7 ⊣ CESA8 brake.
+6. **Verdict** — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
 
 ## 📝 Week 2 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these five are the core.)*
+The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these six are the core.)*
 
 **W2·Q1 (4 p) — Read the hub.** In the MYB46 GRN, MYB46 has the highest **out-degree**, the highest **betweenness**, and a **near-zero clustering coefficient**. Interpret each metric biologically, then say what network position they describe together.
 
 <details><summary>✅ Model answer (4 p)</summary>High out-degree = it directly regulates many targets (master switch); high betweenness = most shortest paths run through it (a bottleneck — NAC signals reach the biosynthesis genes only via MYB46); near-zero clustering = its targets don't connect to each other (a <b>star</b>, not a clique) (3 p, 1 each). Together: a central <b>hub / bottleneck</b> the whole cascade is funnelled through (1 p).</details>
 
-**W2·Q2 (4 p) — Why a TF has no PPI edge.** MYB46 has many co-expression and regulatory edges but **zero** BioGRID PPI edges, whereas CESA4/7/8 form a PPI triangle. (a) Explain both mechanistically. (b) Which database type can draw the MYB46→CESA edge, and what experiment supports it?
+**W2·Q2 (4 p) — Same degree, different role.** SND1, CESA8 and KNAT7 all have **degree 3**, yet their betweenness is 8.0 / 8.0 / 0.3 and their clustering coefficient 0.33 / 0.33 / 0.67. (a) How can three nodes of *equal degree* differ so much in betweenness and clustering? (b) What do KNAT7's high clustering + near-zero betweenness tell you about its position, and would removing it fragment the network?
 
-<details><summary>✅ Model answer (4 p)</summary>(a) MYB46 is a transcription factor — it binds its targets' <b>promoter DNA</b>, not their proteins, so protein-interaction assays detect nothing; CESA4/7/8 physically assemble into the cellulose-synthase complex, giving a real PPI triangle (2 p). (b) A curated <b>GRN</b> edge, supported by ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters (+ transactivation) (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) Degree counts only a node's immediate links; <b>betweenness</b> depends on whether it lies on shortest paths *between other* nodes (a bridge), and <b>clustering</b> on whether its own neighbours interlink — both are about global position, not local count (2 p). (b) KNAT7 sits inside a triangle (its neighbours connect to each other → high clustering) and on no unique shortest path (→ ~0 betweenness): it is <b>embedded/peripheral</b>, not a bottleneck, so removing it leaves the network connected (1 component) (2 p).</details>
 
 **W2·Q3 (4 p) — Predict a perturbation.** (a) `KNAT7 ⊣ CESA8` is repression — predict CESA8 in a *knat7* knockout, and explain. (b) The *snd1* single mutant looks almost wild-type — why, and which double mutant exposes the phenotype?
 
@@ -1030,11 +1083,15 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 <details><summary>✅ Model answer (4 p)</summary>(a) MYB46 holds the cascade together — losing it <b>fragments</b> the network (high lethality-centrality; the architecture is fragile to losing this one hub), whereas a peripheral CESA loses only its own few edges, leaving the rest connected (robust) (3 p). (b) An <b>articulation point</b> (cut vertex) (1 p).</details>
 
-> **✍️ Dossier:** these five are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
+**W2·Q6 (4 p) — A repressor that co-expresses *positively*.** KNAT7 **represses** CESA8, yet across the atlas KNAT7 and CESA8 are *positively* co-expressed (both rise in secondary-wall tissue). (a) How can a repressor positively correlate with its own target? (b) What does this prove about inferring a regulatory *sign* from co-expression?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the feed-forward structure from N4c) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
+
+> **✍️ Dossier:** these six are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
 
 ---
 
-*Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, McCarthy 2009, Kim 2013, Zhong & Ye 2012, Zhou 2009, Li 2012) — not generated by an LLM.*
+*Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, 2010; McCarthy 2009; Ohashi-Ito 2010; Yamaguchi 2011; Zhong & Ye 2012; Kim 2013; Zhou 2009; Li 2012), each cited per edge in `scw_grn_edges.csv`.*
 
 
 ---

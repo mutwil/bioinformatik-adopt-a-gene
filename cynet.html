@@ -1,7 +1,7 @@
 <!-- interactive network bridge: webR R cells emit a @@CYNET@@{json}@@END@@ marker via cat();
      this script catches it in the DOM, strips the raw marker, and renders an interactive
      cytoscape.js graph (drag / zoom / pan) right below the cell output. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.30.2/cytoscape.min.js"></script>
+<script src="cytoscape.min.js"></script>
 <script>
 (function () {
   var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
@@ -85,8 +85,14 @@
     box.parentNode.insertBefore(cap, box.nextSibling);
     box.parentNode.insertBefore(div, cap.nextSibling);
 
-    if (window.cytoscape) render(div, data);
-    else { var iv = setInterval(function () { if (window.cytoscape) { clearInterval(iv); render(div, data); } }, 150); }
+    if (window.cytoscape) { render(div, data); return; }
+    var tries = 0, iv = setInterval(function () {
+      if (window.cytoscape) { clearInterval(iv); render(div, data); }
+      else if (++tries > 40) {            // ~6 s: cytoscape.js never loaded (CDN/proxy blocked, offline)
+        clearInterval(iv);
+        div.innerHTML = '<div style="padding:16px;color:#a00;font:13px system-ui">⚠ Could not load the network viewer (cytoscape.js). The R analysis above still ran — its results are in the text output. Try a page reload, or a network without a proxy/firewall.</div>';
+      }
+    }, 150);
   }
 
   function scanAll() { document.querySelectorAll("pre, .cell-output, .cell-output-display").forEach(handle); }
