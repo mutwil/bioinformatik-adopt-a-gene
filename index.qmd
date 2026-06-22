@@ -622,59 +622,59 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 > **Demo only (not assessed):** the **EBI Single-Cell Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows SCW genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration → projector-only.
 
-### Exam-style questions — the database block  *(assessed; 2025-exam style, point-scored)*
-
-Answer in 2–4 sentences. The model answers — and their points — match how the exam is graded.
-
-**Q1 (4 p) — Specificity of evidence.** Your gene and a transcription factor both peak in the mature stem **and** both localise to the xylem in the root eFP. (a) Why is shared tissue *and* shared cell type stronger evidence of a functional link than shared tissue alone? (b) Give one way two genes could share a tissue yet **not** be functionally related.
-
-<details><summary>✅ Model answer (4 p)</summary>(a) The more <i>specific</i> the shared context, the lower the chance of coincidence — co-localising at cell-type resolution rules out the trivial "both are just stem-abundant" explanation, so the guilt-by-association is stronger (2 p). (b) Housekeeping / broadly high genes are abundant everywhere; or both genes respond independently to the same cue (e.g. both stress-induced) without working together (2 p).</details>
-
-**Q2 (4 p) — Reproducibility across atlases.** Three of your Stage-4 top co-expressed genes reappear in CoNekT/ATTED-II; one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
-
-<details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
-
-**Q3 (5 p) — PPI vs co-expression vs regulation (core concept).** In STRING the CESA4/7/8 are joined by *experiments*, but MYB46 links to its targets only by *co-expression / text-mining*. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) Which database type *can* draw the MYB46→CESA edge, and what experiment supports it? (c) What general rule about reading a single database follows?
-
-<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Each database reports only <b>one kind</b> of evidence; absence in one (e.g. PPI) is not absence of a relationship — you must combine layers (1 p).</details>
-
-**Q4 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
-
-<details><summary>✅ Model answer (3 p)</summary>(a) The <b>top-organ agreement</b> carries the biological conclusion (where the gene acts); the low-expression rank order sits near the detection floor and is noisy, so reshuffling there is expected and harmless (2 p). (b) Different sample sets / conditions (and sequencing depth / normalization) between atlases (1 p).</details>
-
-**Q5 (4 p) — Synthesis.** (a) In one sentence, state your gene's function and name the **three independent evidence types** from your dossier that support it. (b) Which of those evidence types is the **weakest** for *proving* the function, and why?
-
-<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + PEO + CoNekT), <b>physical/regulatory</b> (CESA triangle by STRING experiments + a MYB46→CESA regulatory edge) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof of a functional link; a physical (experiment-backed PPI) or a ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
-
-> **✍️ Dossier:** your completed table **and** the five answers are the **database cross-check** graded at the conference (rubric criterion 3).
+> **✍️ Dossier:** your completed results table is the **database cross-check** graded at the conference (rubric criterion 3). *(The database exam questions are in the **Week-1 exam-style questions** block at the end of the week.)*
 
 ---
 
 ## 📝 Week 1 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-Close the week the way the exam tests it. Answer in 2–4 sentences; the model answers and their points match the grading. *(These cover Stages 1–4; the **database block** above carries its own five questions — together they are the Week-1 exam set.)*
+Close the week the way the exam tests it — these cover **all of Week 1**: Stages 1–4 **and** the database exercises. Answer in 2–4 sentences; the model answers and their points match the grading. **(10 questions · 40 p.)**
 
-**W1·Q1 (4 p) — Why normalize.** Raw counts can't be compared (a) between two *genes* in one sample, nor (b) for one *gene* between two samples. Give the confound in each case and the TPM step that removes it.
+### Data, normalization & exploration (Stages 1–2)
+
+**Q1 (4 p) — Why normalize.** Raw counts can't be compared (a) between two *genes* in one sample, nor (b) for one *gene* between two samples. Give the confound in each case and the TPM step that removes it.
 
 <details><summary>✅ Model answer (4 p)</summary>(a) <b>Gene length</b> — a longer gene collects more reads at equal expression; divide each count by gene length in kb (the RPK step) (2 p). (b) <b>Sequencing depth</b> — samples differ in total reads; scale each sample so its values sum to 1,000,000 (the per-million step) (2 p).</details>
 
-**W1·Q2 (4 p) — The artefact normalization can't fix.** One gene (`Gene8`) had a huge count in `Root2`. (a) Why did TPM fail to remove the distortion — and even push the *other* genes in `Root2` down? (b) How did PCA reveal it, and why did removing the gene + re-normalizing repair the clustering?
+**Q2 (4 p) — The artefact normalization can't fix.** One gene (`Gene8`) had a huge count in `Root2`. (a) Why did TPM fail to remove the distortion — and even push the *other* genes in `Root2` down? (b) How did PCA reveal it, and why did removing the gene + re-normalizing repair the clustering?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) TPM forces every sample to sum to 1e6, so one runaway gene eats most of `Root2`'s budget and <b>deflates every other gene</b> in that column — a composition effect scaling cannot undo (2 p). (b) In PCA `Root2` separated from the other roots; dropping `Gene8` and re-normalizing restored each sample's true composition, so samples clustered by tissue (2 p).</details>
 
-**W1·Q3 (4 p) — z-score & clustering.** (a) Why z-score each gene before clustering samples? (b) Your three clusters match root/leaf/pollen — what would it mean if samples instead clustered by *sequencing run*, and what would you do?
+**Q3 (4 p) — z-score & clustering.** (a) Why z-score each gene before clustering samples? (b) Your three clusters match root/leaf/pollen — what would it mean if samples instead clustered by *sequencing run*, and what would you do?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Per-gene z-scoring compares each gene's <b>pattern</b>, not its magnitude, so highly expressed genes don't dominate the distance and weakly expressed but informative genes still count (2 p). (b) That is a <b>batch effect</b> — technical variation outweighs biology; correct for batch (a batch term in DESeq2, or ComBat) before interpreting (2 p).</details>
 
-**W1·Q4 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
-
-<details><summary>✅ Model answer (4 p)</summary>(a) A shared expression pattern is a <b>hypothesis</b> that the genes share a process or regulator (1 p); it is <b>not</b> proof of physical interaction or direct regulation — correlation ≠ causation (1 p). (b) Two of: a shared upstream regulator switches both on; both are specific to the same tissue; both respond independently to the same condition (e.g. stress). Correlation is <b>symmetric and unsigned</b>, so it cannot distinguish "A→B", "B→A" or "C→both" — that needs directed / perturbation evidence (2 p).</details>
-
-**W1·Q5 (4 p) — PCA & the scree plot.** Your scree plot shows PC1 = 62 %, PC2 = 21 %. (a) What does each bar mean, and can you trust the 2-D PCA picture here? (b) What would it mean if all the bars were roughly equal height? (c) *Before* you removed Gene8, why did Root2 sit apart on PC1?
+**Q4 (4 p) — PCA & the scree plot.** Your scree plot shows PC1 = 62 %, PC2 = 21 %. (a) What does each bar mean, and can you trust the 2-D PCA picture here? (b) What would it mean if all the bars were roughly equal height? (c) *Before* you removed Gene8, why did Root2 sit apart on PC1?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Each bar = the share of total variance that component captures; PC1 + PC2 = 83 %, so the 2-D plot is a <b>faithful</b> summary — most structure lives in two dimensions (2 p). (b) Variance spread evenly across many PCs → the data is genuinely high-dimensional, no 2-D plot represents it, and you should distrust any clustering read off it (1 p). (c) The Gene8 spike — and TPM's deflation of every other gene in Root2 — made Root2's whole profile an outlier, so PC1 captured that artefact rather than tissue (1 p).</details>
 
-> **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, PCA trust, correlation vs causation) is exactly what the conference Q&A probes.
+### Gene function: co-expression & databases (Stage 4 + D1–D4)
+
+**Q5 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
+
+<details><summary>✅ Model answer (4 p)</summary>(a) A shared expression pattern is a <b>hypothesis</b> that the genes share a process or regulator (1 p); it is <b>not</b> proof of physical interaction or direct regulation — correlation ≠ causation (1 p). (b) Two of: a shared upstream regulator switches both on; both are specific to the same tissue; both respond independently to the same condition (e.g. stress). Correlation is <b>symmetric and unsigned</b>, so it cannot distinguish "A→B", "B→A" or "C→both" — that needs directed / perturbation evidence (2 p).</details>
+
+**Q6 (4 p) — Specificity of evidence.** Your gene and a transcription factor both peak in the mature stem **and** both localise to the xylem in the root eFP. (a) Why is shared tissue *and* shared cell type stronger evidence of a functional link than shared tissue alone? (b) Give one way two genes could share a tissue yet **not** be functionally related.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) The more <i>specific</i> the shared context, the lower the chance of coincidence — co-localising at cell-type resolution rules out the trivial "both are just stem-abundant" explanation, so the guilt-by-association is stronger (2 p). (b) Housekeeping / broadly high genes are abundant everywhere; or both genes respond independently to the same cue (e.g. both stress-induced) without working together (2 p).</details>
+
+**Q7 (4 p) — Reproducibility across atlases.** Three of your Stage-4 top co-expressed genes reappear in CoNekT/ATTED-II; one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
+
+<details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
+
+**Q8 (5 p) — PPI vs co-expression vs regulation (core concept).** In STRING the CESA4/7/8 are joined by *experiments*, but MYB46 links to its targets only by *co-expression / text-mining*. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) Which database type *can* draw the MYB46→CESA edge, and what experiment supports it? (c) What general rule about reading a single database follows?
+
+<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Each database reports only <b>one kind</b> of evidence; absence in one (e.g. PPI) is not absence of a relationship — you must combine layers (1 p).</details>
+
+**Q9 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
+
+<details><summary>✅ Model answer (3 p)</summary>(a) The <b>top-organ agreement</b> carries the biological conclusion (where the gene acts); the low-expression rank order sits near the detection floor and is noisy, so reshuffling there is expected and harmless (2 p). (b) Different sample sets / conditions (and sequencing depth / normalization) between atlases (1 p).</details>
+
+**Q10 (4 p) — Synthesis.** (a) In one sentence, state your gene's function and name the **three independent evidence types** from your dossier that support it. (b) Which of those evidence types is the **weakest** for *proving* the function, and why?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + PEO + CoNekT), <b>physical/regulatory</b> (CESA triangle by STRING experiments + a MYB46→CESA regulatory edge) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof of a functional link; a physical (experiment-backed PPI) or a ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
+
+> **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, PCA trust, correlation vs causation, evidence types) is exactly what the conference Q&A and the rubric (criteria 1 & 3) probe.
 
 ---
 
