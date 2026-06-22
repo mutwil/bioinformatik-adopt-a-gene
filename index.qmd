@@ -171,7 +171,7 @@ draw_network <- function(edges, hub = NULL, main = "", max_nodes = 44,
 }
 
 # cynet(): emit a network as a text marker that cynet.html turns into an INTERACTIVE cytoscape.js
-# graph (drag / zoom / pan) — the same viewer as N4f, but showing the network you just built.
+# graph (drag / zoom / pan) showing the network you just built.
 cynet <- function(edges, hub = NULL, id = "cy", title = "",
                   node_fill = NULL, node_size = NULL, node_border = NULL, node_lwd = NULL){
   edges <- edges[as.character(edges$source) != as.character(edges$target), , drop = FALSE]
@@ -217,9 +217,9 @@ Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions*
 | Session | Lecture | Hands-on (this page) | Dossier grows by |
 |---|---|---|---|
 | **3 · Tue** | **F5 networks & the MYB46-GRN concept** | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) + **Database D3–D4** | 3-layer network + hub/hierarchy + GRN verdict |
-| **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **N5** network figure → **student conference** | finished figure + 1-page dossier + ~10-min talk |
+| **4 · Thu** | short **F6** multi-omic briefing (knowledge-graphs removed) | **close the dossier** → **student conference** | finished figure + 1-page dossier + ~10-min talk |
 
-**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N5** (R, interactive in the browser) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
+**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N4** (R, interactive in the browser) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
 
 > **Scope:** the live in-browser R lesson is **Stages 1–4** (normalization → PCA/clustering → claim a gene → co-expression neighbourhood); the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
 
@@ -1014,77 +1014,9 @@ An edge isn't just a line — its meaning is fixed by **what it represents, whet
 
 Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN proves control.* Two paradoxes from your own data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** — a TF binds its target's DNA, not its protein, so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
 
-### N4f — Interactive network viewer
-
-**Drag the nodes, scroll to zoom.** This is the curated **MYB46 secondary-cell-wall GRN** (the same directed edges you loaded in N3), laid out as a cascade: **NAC master switches** at the top → **MYB46 / MYB83** (the hubs, drawn larger) → downstream **MYB/KNAT/C3H14** TFs → **biosynthesis genes** (CESA, LAC4) at the bottom. Green arrows = activation; the **red ⊣ edge** is the one repression (**KNAT7 ⊣ CESA8**); the dashed edge is MYB46→MYB85 (induced). *Find your adopted gene and trace what regulates it and what it regulates.*
-
-```{=html}
-<div id="grn-cy" style="width:100%;height:520px;border:1px solid #cbd5e0;border-radius:8px;background:#fff;margin:6px 0"></div>
-<div style="font:12px system-ui,sans-serif;color:#4a5568;margin-bottom:10px">
-  <span style="color:#dd8452">●</span> NAC master &nbsp;
-  <span style="color:#c44e52">●</span> MYB46/83 hub &nbsp;
-  <span style="color:#f2c08a">●</span> downstream TF &nbsp;
-  <span style="color:#55a868">●</span> biosynthesis &nbsp;|&nbsp;
-  <span style="color:#7faf7f">→</span> activates &nbsp; <span style="color:#c0392b">⊣</span> represses
-</div>
-<script src="cytoscape.min.js"></script>
-<script>
-(function(){
-  var drawTries = 0;
-  function draw(){
-    if (typeof cytoscape === "undefined") {
-      if (++drawTries > 40) {            // ~6 s: cytoscape.js never loaded
-        var b = document.getElementById("grn-cy");
-        if (b) b.innerHTML = '<div style="padding:16px;color:#a00;font:13px system-ui">⚠ Could not load the network viewer (cytoscape.js). Try a page reload, or view the same GRN interactively in N1–N3.</div>';
-        return;
-      }
-      setTimeout(draw, 150); return;
-    }
-    var el = document.getElementById("grn-cy"); if (!el || el.dataset.done) return; el.dataset.done = "1";
-    var tier = { SND1:0,NST1:0,NST2:0,VND6:0,VND7:0, MYB46:1,MYB83:1,
-      MYB58:2,MYB63:2,MYB85:2,MYB52:2,MYB54:2,MYB103:2,C3H14:2,KNAT7:2,
-      CESA4:3,CESA7:3,CESA8:3,LAC4:3 };
-    var col = function(n){ return tier[n]===0?"#dd8452": tier[n]===1?"#c44e52": tier[n]===2?"#f2c08a":"#55a868"; };
-    var E = [["SND1","MYB46","act"],["SND1","MYB83","act"],["NST1","MYB46","act"],["NST2","MYB46","act"],
-      ["VND6","MYB46","act"],["VND7","MYB46","act"],["MYB46","CESA4","act"],["MYB46","CESA7","act"],
-      ["MYB46","CESA8","act"],["MYB83","CESA8","act"],["MYB46","MYB58","act"],["MYB46","MYB63","act"],
-      ["MYB46","MYB85","ind"],["MYB46","MYB52","act"],["MYB46","MYB54","act"],["MYB46","MYB103","act"],
-      ["MYB46","C3H14","act"],["MYB46","KNAT7","act"],["SND1","KNAT7","act"],["MYB58","LAC4","act"],
-      ["MYB63","LAC4","act"],["KNAT7","CESA8","rep"]];
-    var nd = {}; E.forEach(function(e){ nd[e[0]]=1; nd[e[1]]=1; });
-    var els = Object.keys(nd).map(function(n){ return {data:{id:n, c:col(n)}}; })
-      .concat(E.map(function(e){ return {data:{source:e[0], target:e[1], kind:e[2]}}; }));
-    cytoscape({
-      container: el, elements: els, wheelSensitivity: 0.25,
-      style: [
-        {selector:"node", style:{ "label":"data(id)","background-color":"data(c)","width":34,"height":34,
-          "font-size":11,"text-valign":"center","color":"#111","text-outline-width":2,"text-outline-color":"#fff" }},
-        {selector:"#MYB46,#MYB83", style:{ "width":50,"height":50,"font-weight":"bold","font-size":13 }},
-        {selector:"edge", style:{ "width":2,"curve-style":"bezier","target-arrow-shape":"triangle",
-          "line-color":"#7faf7f","target-arrow-color":"#7faf7f","arrow-scale":1.1 }},
-        {selector:"edge[kind='ind']", style:{ "line-style":"dashed" }},
-        {selector:"edge[kind='rep']", style:{ "line-color":"#c0392b","target-arrow-color":"#c0392b",
-          "target-arrow-shape":"tee","width":3 }} ],
-      layout:{ name:"breadthfirst", directed:true, roots:"#SND1,#NST1,#NST2,#VND6,#VND7", spacingFactor:1.15, padding:12 }
-    });
-  }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", draw); else draw();
-})();
-</script>
-```
-
-### N5 — Save your network & interpret
+### Close the dossier
 
 *(Functional enrichment is an optional extension — see the **Appendix** at the end of this page.)*
-
-```{webr}
-nodes <- unique(c(all_edges$source, all_edges$target))
-write.csv(data.frame(id = nodes, symbol = lab(nodes)), "myb46_nodes.csv", row.names = FALSE)
-write.csv(all_edges, "myb46_edges.csv", row.names = FALSE)
-cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file panel to keep with your dossier.\n")
-```
-
-**Your network figure** comes straight from this page — no extra software. Use the **interactive viewer** (your full network in N3, or the curated GRN in N4f): drag the nodes into a clean layout, zoom until the labels read, and **screenshot it** for your dossier. A good figure shows **MYB46 as the obvious hub**, the three edge types distinguishable (grey co-expression · blue PPI · green/red directed GRN), the **NAC → MYB46 → CESA/lignin** cascade reading top-to-bottom, and the one red **KNAT7 ⊣ CESA8** brake. *(The CSVs above are your network **data** — re-loadable, or for your records.)*
 
 **✍️ Dossier (assessed) — close it out:**
 
@@ -1100,7 +1032,7 @@ cat("Wrote myb46_nodes.csv and myb46_edges.csv — download them from the file p
 2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.
 3. **Co-expression** (Stage 4) — your top-5 neighbours + the module they name.
 4. **Database cross-check** (D1–D4) — your filled results table.
-5. **Network** (N1–N5) — a screenshot of your network from the interactive viewer, MYB46 as the hub (degree + betweenness), and the KNAT7 ⊣ CESA8 brake.
+5. **Network** (N1–N4) — a screenshot of your network from the interactive viewer (N1–N3), MYB46 as the hub (degree + betweenness), and the KNAT7 ⊣ CESA8 brake.
 6. **Verdict** — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** pipeline & data-quality reasoning (20%) · network/GRN interpretation, correlation-vs-regulation (25%) · **database cross-check (15%)** · hypothesis integration with named evidence (25%) · communication & Q&A (15%). You present this at the **student conference** (≈10-min group talk).
