@@ -58,6 +58,7 @@ EXPR <- as.matrix(m[, organ_cols])                  # numeric matrix (needed for
 rownames(EXPR) <- m$gene_id
 desc <- setNames(info$description, info$gene_id)     # quick lookup: gene_id -> description
 sym  <- setNames(info$symbol,      info$gene_id)
+sym[is.na(sym) | sym == "nan"] <- ""                 # treat missing symbols as blank (so labels fall back to AGI)
 # Seed any GRN-only genes (not in gene_info) with their curated symbol, so the network graphs show
 # names (MYB58, VND6, ...) instead of raw AGI codes. gene_info stays authoritative — fill only the gaps.
 grn_syms <- c(setNames(grn$source_symbol, grn$source_AGI), setNames(grn$target_symbol, grn$target_AGI))
@@ -509,7 +510,9 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 
 **Secondary cell wall** *(the Week-2 network case study)*: `CESA7 AT5G17420` · `IRX9 AT2G37090` · `LAC4 AT2G38080` · `MYB46 AT5G12870`
 
-**Other processes** *(each a distinct co-expression module)*: `CAB1 AT1G29930` photosynthesis · `AG AT4G18960` flower · `OLE1 AT4G25140` seed oil-body · `RD29A AT5G52310` cold / abiotic stress · `PR1 AT2G14610` pathogen defence · `SAG12 AT5G45890` senescence · `HTR2 AT1G09200` histone (cell cycle / DNA replication) · `RPL4 AT1G07320` ribosomal protein (translation)
+**Other processes** *(each a different module)*: `CAB1 AT1G29930` photosynthesis · `AG AT4G18960` flower · `OLE1 AT4G25140` seed oil-body · `RD29A AT5G52310` cold / abiotic stress · `PR1 AT2G14610` pathogen defence · `SAG12 AT5G45890` senescence · `HTR2 AT1G09200` histone (cell cycle / DNA replication)
+
+**Ribosomal proteins — three compartments** *(a built-in comparison)*: `RPL19A AT1G02780` cytosolic (translation) · `RPL15 AT3G25920` plastid / chloroplast · `RPS19 AT5G47320` mitochondrial. *In this developmental atlas the **cytosolic and mitochondrial** ribosome rise together with the cell's growth / translation programme, while the **plastid** ribosome tracks **photosynthesis** (chloroplast biogenesis) — adopt different compartments to see the split.*
 
 **Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
