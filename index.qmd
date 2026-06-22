@@ -808,6 +808,8 @@ say(names(out_deg)[1] == "AT5G12870",
 > **🔑 Network vocabulary** (you'll use these in the cells and the exam):
 > **degree** = number of edges at a node · **hub** = unusually high-degree node · **betweenness** = how many shortest paths run *through* a node (a high-betweenness node is a *bottleneck*) · **clustering coefficient** = do my neighbours link to *each other*? (≈1 = a tight clique/triangle; ≈0 = a *star*) · **component** = a connected piece of the graph · **articulation point (cut vertex)** = a node whose removal splits the graph · **scale-free** = a few hubs + many low-degree nodes (robust to random loss, fragile to losing a hub) · **feed-forward vs feedback** = an arrow path that goes only *downstream* (forward) vs one that loops *back* to an upstream node (feedback).
 
+> **If your adopted gene is IRX9 or COBL4** (downstream biosynthesis genes not in the curated GRN table), you can't trace "what regulates *me*" directly — instead trace the **CESA module** it sits in (MYB46 → CESA4/7/8) and note your gene as a co-regulated member. Don't invent an edge: a missing edge is honest data, not a gap to fill.
+
 ### N4b — Network metrics: don't just look, measure
 
 Compute the network's structure (all base R, no packages): **degree** (how many connections), **betweenness** (how many shortest paths run *through* a node — the bottleneck), **clustering coefficient** (do my neighbours connect to each other?), shortest-path distance, and connected components. The functions below (`betweenness_base`, `bfs_dist`, `components_base`) are **black-box helpers** — you only need to *call* them and read the results, not follow every line. The headline: MYB46 is the **hub** (highest degree) *and* the **bottleneck** (highest betweenness) *and* a **star** (near-zero clustering) — every NAC signal reaches the biosynthesis genes only through it. The plot at the end renders all three metrics **on the network at once** — node **size** = degree, **fill** = betweenness, **border** = clustering — so MYB46 shows up big, red and thin-bordered (hub-bottleneck-star), while KNAT7 is small but thick-bordered (buried in a triangle).
@@ -891,79 +893,6 @@ say(names(which.max(btw)) == "AT5G12870",
 
 > **The trap trio:** SND1, CESA8 and KNAT7 all have **degree 3**, yet betweenness 8.0 / 8.0 / 0.3 and clustering 0.333 / 0.333 / 0.667. Same degree, completely different roles — degree alone never tells you what a node *does*.
 
-### N4c — Predict a perturbation (the directed GRN)
-
-The GRN is **directed**, so it is a *predictive* instrument. **The sign rule:** a knockout removes an input, and the target moves **opposite** to the sign of the lost edge — lose an **activator** → target **DOWN**; lose a **repressor** → target **UP**; over-expression moves it *with* the sign. Multiply signs along a path; the prediction is clean only if every path carries the same net sign.
-
-```{webr}
-## trace targets and predict KO/OE outcomes from the directed signed GRN
-sgn <- c(activates = 1L, induces = 1L, represses = -1L)
-E   <- data.frame(from = grn$source_AGI, to = grn$target_AGI, s = sgn[grn$interaction],
-                  stringsAsFactors = FALSE)
-nmof <- function(a) { s <- unname(sym[a]); ifelse(is.na(s), a, s) }   # AGI -> symbol (unnamed: no stray names)
-
-targets_of <- function(g) {                                   # direct targets + sign
-  d <- E[E$from == g, ]
-  if (!nrow(d)) return("(none — this gene is a terminal effector)")
-  data.frame(target = nmof(d$to), effect = ifelse(d$s > 0, "activates", "represses"), row.names = NULL)
-}
-predict_perturb <- function(g, mode = c("KO","OE")) {         # downstream prediction
-  mode <- match.arg(mode); acc <- list()
-  walk <- function(u, s, seen) {
-    kids <- E[E$from == u, ]
-    for (i in seq_len(nrow(kids))) { v <- kids$to[i]; sv <- s * kids$s[i]
-      acc[[v]] <<- c(acc[[v]], sv); if (!(v %in% seen)) walk(v, sv, c(seen, v)) }
-  }
-  walk(g, 1L, g)
-  if (!length(acc)) return("(terminal effector — KO/OE changes nothing downstream)")
-  do.call(rbind, lapply(names(acc), function(v) {
-    u <- unique(sign(acc[[v]])); netsign <- if (length(u) > 1) NA else u
-    eff <- if (mode == "KO") -netsign else netsign
-    data.frame(target = nmof(v),
-               prediction = ifelse(is.na(eff), "AMBIGUOUS (conflicting paths)",
-                                   ifelse(eff > 0, "UP", "DOWN")), row.names = NULL)
-  }))
-}
-targets_of("AT5G12870")               # MYB46's direct targets
-predict_perturb("AT1G62990", "KO")    # knat7 KO -> CESA8 UP (lose the repressor)
-predict_perturb("AT5G12870", "KO")    # myb46 KO -> CESA4/CESA7 DOWN; CESA8 AMBIGUOUS (the feed-forward loop!)
-predict_perturb("AT5G17420", "KO")    # cesa7 KO -> nothing downstream (it's a terminal effector)
-
-# YOUR TURN — predict a knockout yourself. A regulator (e.g. MYB46 "AT5G12870", SND1 "AT1G32770")
-# changes things downstream; a biosynthesis gene (a CESA) is a terminal effector and changes nothing.
-my_ko <- "______"                     # <- e.g. "AT5G12870"
-cat("Predicted effect of knocking out", nmof(my_ko), ":\n"); print(predict_perturb(my_ko, "KO"))
-
-# draw the knockout's downstream network — colour each gene by its predicted change
-ko_acc  <- list()
-ko_walk <- function(u, s, seen){
-  kids <- E[E$from == u, ]
-  for (i in seq_len(nrow(kids))){ v <- kids$to[i]; sv <- s * kids$s[i]
-    ko_acc[[v]] <<- c(ko_acc[[v]], sv); if (!(v %in% seen)) ko_walk(v, sv, c(seen, v)) }
-}
-ko_walk(my_ko, 1L, my_ko)
-if (length(ko_acc)){
-  net  <- sapply(ko_acc, function(s){ u <- unique(sign(s)); if (length(u) > 1) NA else u })  # net path sign
-  effv <- ifelse(is.na(net), "amb", ifelse(-net > 0, "UP", "DOWN"))    # a KO flips the sign of the path
-  pal  <- c(UP = "#2e8b2e", DOWN = "#2c7fb8", amb = "#e6973c")         # green up · blue down · orange ambiguous
-  fill <- setNames(unname(pal[effv]), names(ko_acc)); fill[my_ko] <- "#333333"   # the knocked-out gene = grey
-  inset <- c(my_ko, names(ko_acc))
-  sub   <- grn_edges[grn_edges$source %in% inset & grn_edges$target %in% inset, ]
-  cynet(sub, hub = my_ko, id = "cy_n4c", node_fill = fill,
-        title = paste0(nmof(my_ko), " knockout — UP (green) · DOWN (blue) · ambiguous (orange) · KO gene (grey)"))
-} else cat("(", nmof(my_ko), "has no downstream targets — nothing to draw.)\n")
-
-say(grepl("^AT[1-5CM]G[0-9]{5}$", my_ko),
-    paste("KO prediction for", nmof(my_ko), "computed — explain each UP / DOWN / AMBIGUOUS using the sign rule."),
-    "put a valid AGI locus in my_ko (e.g. \"AT5G12870\" for MYB46) and re-run.")
-```
-
-> **Reading the KO network.** The **grey** node is the gene you knocked out; arrows are the regulatory edges (green = activates, red ⊣ = represses). Each downstream gene is coloured by its **predicted** change — **green = UP**, **blue = DOWN**, **orange = ambiguous** (reached by paths of conflicting sign). Trace a path and check it yourself: count the repressions along it — an **odd** number flips the direction.
-
-> **Why CESA8 is "ambiguous":** MYB46 **activates** CESA8 directly **and** activates KNAT7, which **represses** CESA8 — an **incoherent feed-forward loop** (a pulse generator that limits overshoot, *not* negative feedback: nothing loops back to MYB46). That's why *myb46* and *knat7* mutants move CESA8 in opposite directions. *(KNAT7 is a genetic negative regulator — knat7 mutants make thicker fibre walls but thinner, irregular vessel walls — so we model its net effect on CESA8 as repression: knat7 KO → CESA8 up, Li 2012. The snd1 single mutant is near wild-type — NAC redundancy; the strong loss needs the snd1 nst1 double, which spares vessels.)*
->
-> **If your adopted gene is IRX9 or COBL4** (downstream biosynthesis genes not in the curated GRN table), you can't trace "what regulates *me*" directly — instead trace the **CESA module** it sits in (MYB46 → CESA4/7/8) and note your gene as a co-regulated member. Don't invent an edge: a missing edge is honest data, not a gap to fill.
-
 ### N4d — Topology & robustness
 
 The degree distribution (one hub, many leaves) is **scale-free-like**: such networks are **robust to random failure** but **fragile to targeted attack on the hub** (lethality–centrality). On **log-log axes** a true power law (scale-free) shows up as a roughly **straight line** — and the hub sits as one lonely point far to the lower-right (high degree, only one such node). And raising the co-expression cutoff `MY_CUTOFF` steadily breaks the network into more, smaller pieces.
@@ -1014,6 +943,8 @@ An edge isn't just a line — its meaning is fixed by **what it represents, whet
 
 Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN proves control.* Two paradoxes from your own data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** — a TF binds its target's DNA, not its protein, so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
 
+**The one brake — and a co-expression trap.** The GRN has a single repression: **KNAT7 ⊣ CESA8**. Yet MYB46 *activates* CESA8 **and** activates KNAT7 (which represses CESA8) — an **incoherent feed-forward loop**: MYB46 switches CESA8 on while simultaneously arming its brake. That is *self-limiting* (pulse-like) control, **not** feedback — nothing loops back to MYB46. It also sets a trap for co-expression: because both ride the same MYB46 wave, KNAT7 and CESA8 *positively* co-express, so their correlation **hides** the repression — proof again that you cannot read a regulatory *sign* off co-expression.
+
 ### Close the dossier
 
 *(Functional enrichment is an optional extension — see the **Appendix** at the end of this page.)*
@@ -1039,7 +970,7 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 
 ## 📝 Week 2 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these six are the core.)*
+The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these five are the core.)*
 
 **W2·Q1 (4 p) — Read the hub.** In the MYB46 GRN, MYB46 has the highest **out-degree**, the highest **betweenness**, and a **near-zero clustering coefficient**. Interpret each metric biologically, then say what network position they describe together.
 
@@ -1049,21 +980,17 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Degree counts only a node's immediate links; <b>betweenness</b> depends on whether it lies on shortest paths *between other* nodes (a bridge), and <b>clustering</b> on whether its own neighbours interlink — both are about global position, not local count (2 p). (b) KNAT7 sits inside a triangle (its neighbours connect to each other → high clustering) and on no unique shortest path (→ ~0 betweenness): it is <b>embedded/peripheral</b>, not a bottleneck, so removing it leaves the network connected (1 component) (2 p).</details>
 
-**W2·Q3 (4 p) — Predict a perturbation.** (a) `KNAT7 ⊣ CESA8` is repression — predict CESA8 in a *knat7* knockout, and explain. (b) The *snd1* single mutant looks almost wild-type — why, and which double mutant exposes the phenotype?
-
-<details><summary>✅ Model answer (4 p)</summary>(a) Removing a repressor <b>de-represses</b> CESA8 → CESA8 goes <b>up</b> (matches Li 2012) (2 p). (b) <b>NAC redundancy</b>: NST1/NST2 substitute for SND1, so <i>snd1</i> alone ≈ wild-type; the <i>snd1 nst1</i> double loses fibre secondary walls (vessels, driven by VND6/7, are spared) (2 p).</details>
-
-**W2·Q4 (4 p) — Name the motif.** MYB46 activates **both** CESA8 and KNAT7, and KNAT7 represses CESA8. (a) Name this motif. (b) Why is it *not* negative feedback, and what behaviour does it produce?
+**W2·Q3 (4 p) — Name the motif.** MYB46 activates **both** CESA8 and KNAT7, and KNAT7 represses CESA8. (a) Name this motif. (b) Why is it *not* negative feedback, and what behaviour does it produce?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) An <b>incoherent feed-forward loop</b> (type-1 IFFL) (2 p). (b) It is feed-<i>forward</i>, not feedback: MYB46 sits upstream of both arms and KNAT7 never acts back on MYB46. It gives a <b>self-limiting / pulse-like</b> activation of CESA8 — a built-in brake that sharpens the response rather than a sustained on/off loop (2 p).</details>
 
-**W2·Q5 (4 p) — Robustness.** Deleting MYB46 *in silico* splits the network into 13 components; deleting a single CESA barely changes it. (a) What does this say about each node's role and the network's fragility? (b) What is the one-word graph term for a node like MYB46?
+**W2·Q4 (4 p) — Robustness.** Deleting MYB46 *in silico* splits the network into 13 components; deleting a single CESA barely changes it. (a) What does this say about each node's role and the network's fragility? (b) What is the one-word graph term for a node like MYB46?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) MYB46 holds the cascade together — losing it <b>fragments</b> the network (high lethality-centrality; the architecture is fragile to losing this one hub), whereas a peripheral CESA loses only its own few edges, leaving the rest connected (robust) (3 p). (b) An <b>articulation point</b> (cut vertex) (1 p).</details>
 
-**W2·Q6 (4 p) — A repressor that co-expresses *positively*.** KNAT7 **represses** CESA8, yet across the atlas KNAT7 and CESA8 are *positively* co-expressed (both rise in secondary-wall tissue). (a) How can a repressor positively correlate with its own target? (b) What does this prove about inferring a regulatory *sign* from co-expression?
+**W2·Q5 (4 p) — A repressor that co-expresses *positively*.** KNAT7 **represses** CESA8, yet across the atlas KNAT7 and CESA8 are *positively* co-expressed (both rise in secondary-wall tissue). (a) How can a repressor positively correlate with its own target? (b) What does this prove about inferring a regulatory *sign* from co-expression?
 
-<details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the feed-forward structure from N4c) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the incoherent feed-forward structure described in N4e) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
 
 > **✍️ Dossier:** these six are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
 
