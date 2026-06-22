@@ -6,6 +6,33 @@
 (function () {
   var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
 
+  // selectable layouts — students switch when the default piles nodes up
+  var LAYOUTS = {
+    Spread:     { name:"cose", animate:false, randomize:true, padding:24, nodeOverlap:28, nodeRepulsion:20000,
+                  idealEdgeLength:95, edgeElasticity:120, componentSpacing:140, gravity:0.15, numIter:1500 },
+    Circle:     { name:"circle", padding:24 },
+    Concentric: { name:"concentric", padding:24, minNodeSpacing:16,
+                  concentric:function (n) { return n.degree(); }, levelWidth:function () { return 2; } },
+    Grid:       { name:"grid", padding:24, avoidOverlap:true },
+    Hierarchy:  { name:"breadthfirst", directed:true, padding:24, spacingFactor:1.2 }
+  };
+  function buildControls(cap, cy) {
+    cap.innerHTML = "";
+    var t = document.createElement("span");
+    t.textContent = "🕸 " + (cap.dataset.title || "network") + "  —  drag · scroll-zoom · layout:";
+    cap.appendChild(t);
+    function mk(label, fn) {
+      var b = document.createElement("button");
+      b.textContent = label;
+      b.style.cssText = "margin-left:5px;font:11px system-ui;border:1px solid #cbd5e0;border-radius:5px;background:#fff;cursor:pointer;padding:2px 7px;";
+      b.onmouseover = function () { b.style.background = "#eef2f7"; };
+      b.onmouseout  = function () { b.style.background = "#fff"; };
+      b.onclick = fn; cap.appendChild(b);
+    }
+    Object.keys(LAYOUTS).forEach(function (name) { mk(name, function () { cy.layout(LAYOUTS[name]).run(); }); });
+    mk("⤢ fit", function () { cy.fit(undefined, 20); });
+  }
+
   function render(div, data) {
     div.innerHTML = "";
     var els = [];
@@ -39,10 +66,10 @@
         { selector: 'edge[kind="GRN_represses"]', style: {
             "line-color": "#c0392b", "target-arrow-color": "#c0392b", "target-arrow-shape": "tee", "width": 3 } }
       ],
-      layout: { name: "cose", animate: false, padding: 16, nodeRepulsion: 9000,
-                idealEdgeLength: 60, gravity: 0.3, randomize: false }
+      layout: LAYOUTS.Spread
     });
     cy.fit(undefined, 20);
+    return cy;
   }
 
   // Remove the @@CYNET@@…@@END@@ marker even when webR has split it across MANY text nodes
@@ -92,14 +119,16 @@
     } else {
       cap = div.previousElementSibling;
     }
-    cap.textContent = "🕸 " + (data.title || "network") + "  —  drag nodes · scroll to zoom · drag background to pan";
+    cap.dataset.title = data.title || "network";
+    cap.textContent = "🕸 " + cap.dataset.title;     // placeholder until cytoscape mounts
     // (re)place the caption + graph just after the current cell output
     box.parentNode.insertBefore(cap, box.nextSibling);
     box.parentNode.insertBefore(div, cap.nextSibling);
 
-    if (window.cytoscape) { render(div, data); return; }
+    function mount() { var cy = render(div, data); buildControls(cap, cy); }
+    if (window.cytoscape) { mount(); return; }
     var tries = 0, iv = setInterval(function () {
-      if (window.cytoscape) { clearInterval(iv); render(div, data); }
+      if (window.cytoscape) { clearInterval(iv); mount(); }
       else if (++tries > 40) {            // ~6 s: cytoscape.js never loaded (CDN/proxy blocked, offline)
         clearInterval(iv);
         div.innerHTML = '<div style="padding:16px;color:#a00;font:13px system-ui">⚠ Could not load the network viewer (cytoscape.js). The R analysis above still ran — its results are in the text output. Try a page reload, or a network without a proxy/firewall.</div>';

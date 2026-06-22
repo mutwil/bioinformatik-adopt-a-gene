@@ -689,7 +689,7 @@ Close the week the way the exam tests it — these cover **all of Week 1**: Stag
 
 First you build **your own gene's** network: its co-expression neighbourhood (**N1**), then a **physical** layer from BioGRID (**N2**). Then you meet the curated **MYB46 secondary-cell-wall gene-regulatory network** (**N3**) as a **shared case study** of what *regulation* looks like — a literature-curated table where every edge carries a reference. If you adopted a wall gene, you'll see it sitting *inside* that cascade; if not, the GRN appears as a separate, fully worked example next to your gene's own module. Either way the lesson is the same: **MYB46 has no physical-interaction edges at all** — only a *regulatory* layer can connect a master TF to its targets (**N4e** explains why).
 
-Each build step (**N1 → N2 → N3**) **draws the network right in the page** — drag nodes, scroll to zoom — so you watch it grow layer by layer: co-expression, then physical (PPI), then regulatory (GRN).
+Each build step (**N1 → N2 → N3**) **draws the network right in the page** — drag nodes, scroll to zoom, and use the **layout buttons** (Spread / Circle / Concentric / Grid / Hierarchy) if it looks crowded — so you watch it grow layer by layer: co-expression, then physical (PPI), then regulatory (GRN).
 
 ### N0 — (Re)claim your gene
 
