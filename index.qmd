@@ -933,10 +933,32 @@ predict_perturb("AT5G17420", "KO")    # cesa7 KO -> nothing downstream (it's a t
 # changes things downstream; a biosynthesis gene (a CESA) is a terminal effector and changes nothing.
 my_ko <- "______"                     # <- e.g. "AT5G12870"
 cat("Predicted effect of knocking out", nmof(my_ko), ":\n"); print(predict_perturb(my_ko, "KO"))
+
+# draw the knockout's downstream network — colour each gene by its predicted change
+ko_acc  <- list()
+ko_walk <- function(u, s, seen){
+  kids <- E[E$from == u, ]
+  for (i in seq_len(nrow(kids))){ v <- kids$to[i]; sv <- s * kids$s[i]
+    ko_acc[[v]] <<- c(ko_acc[[v]], sv); if (!(v %in% seen)) ko_walk(v, sv, c(seen, v)) }
+}
+ko_walk(my_ko, 1L, my_ko)
+if (length(ko_acc)){
+  net  <- sapply(ko_acc, function(s){ u <- unique(sign(s)); if (length(u) > 1) NA else u })  # net path sign
+  effv <- ifelse(is.na(net), "amb", ifelse(-net > 0, "UP", "DOWN"))    # a KO flips the sign of the path
+  pal  <- c(UP = "#2e8b2e", DOWN = "#2c7fb8", amb = "#e6973c")         # green up · blue down · orange ambiguous
+  fill <- setNames(unname(pal[effv]), names(ko_acc)); fill[my_ko] <- "#333333"   # the knocked-out gene = grey
+  inset <- c(my_ko, names(ko_acc))
+  sub   <- grn_edges[grn_edges$source %in% inset & grn_edges$target %in% inset, ]
+  cynet(sub, hub = my_ko, id = "cy_n4c", node_fill = fill,
+        title = paste0(nmof(my_ko), " knockout — UP (green) · DOWN (blue) · ambiguous (orange) · KO gene (grey)"))
+} else cat("(", nmof(my_ko), "has no downstream targets — nothing to draw.)\n")
+
 say(grepl("^AT[1-5CM]G[0-9]{5}$", my_ko),
     paste("KO prediction for", nmof(my_ko), "computed — explain each UP / DOWN / AMBIGUOUS using the sign rule."),
     "put a valid AGI locus in my_ko (e.g. \"AT5G12870\" for MYB46) and re-run.")
 ```
+
+> **Reading the KO network.** The **grey** node is the gene you knocked out; arrows are the regulatory edges (green = activates, red ⊣ = represses). Each downstream gene is coloured by its **predicted** change — **green = UP**, **blue = DOWN**, **orange = ambiguous** (reached by paths of conflicting sign). Trace a path and check it yourself: count the repressions along it — an **odd** number flips the direction.
 
 > **Why CESA8 is "ambiguous":** MYB46 **activates** CESA8 directly **and** activates KNAT7, which **represses** CESA8 — an **incoherent feed-forward loop** (a pulse generator that limits overshoot, *not* negative feedback: nothing loops back to MYB46). That's why *myb46* and *knat7* mutants move CESA8 in opposite directions. *(KNAT7 is a genetic negative regulator — knat7 mutants make thicker fibre walls but thinner, irregular vessel walls — so we model its net effect on CESA8 as repression: knat7 KO → CESA8 up, Li 2012. The snd1 single mutant is near wild-type — NAC redundancy; the strong loss needs the snd1 nst1 double, which spares vessels.)*
 >
