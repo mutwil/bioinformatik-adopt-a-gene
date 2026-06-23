@@ -24,7 +24,7 @@
     function mk(label, fn) {
       var b = document.createElement("button");
       b.textContent = label;
-      b.style.cssText = "margin-left:5px;font:11px system-ui;border:1px solid #cbd5e0;border-radius:5px;background:#fff;cursor:pointer;padding:2px 7px;";
+      b.style.cssText = "margin-left:5px;font:600 11px system-ui;color:#1a202c;border:1px solid #cbd5e0;border-radius:5px;background:#fff;cursor:pointer;padding:2px 8px;";
       b.onmouseover = function () { b.style.background = "#eef2f7"; };
       b.onmouseout  = function () { b.style.background = "#fff"; };
       b.onclick = fn; cap.appendChild(b);
