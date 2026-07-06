@@ -235,28 +235,25 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 
 ### Week 2 — Biological networks & conference · Tuesday 28 Oct & Thursday 30 Oct
 
-**Tuesday, 28 Oct — Biological networks (09:00–12:00)**
+**Tuesday, 28 Oct — Networks & group work (09:00–12:00)**
 *Reading: biological networks (M4F5 slides); the MYB46-GRN concept.*
 
 - **09:00 – 09:50** — Lecture **M4F5**: Biological networks & the MYB46 gene-regulatory network
-- **09:50 – 10:05** — Break
-- **10:05 – 12:00** — Exercise **M4.W2.E1–E7**: build & measure your gene's network
+- **09:50 – 12:00** — **Group work**: build & measure your gene's network (**M4.W2.E1–E7**)
     - **N0–N1** — reclaim your gene, then build its **co-expression** network
     - **N2** — overlay the **BioGRID PPI** layer
     - **N3** — add the curated **MYB46 GRN** *(the shared case study)*
     - **N4 / N4b** — read the hierarchy and measure the metrics
     - **N4c** — measure your **own** network
 
-*Flex / homework:* **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) and the exam-style questions.
+*Flex / homework:* **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
 
-**Thursday, 30 Oct — Prepare, present, feedback (09:00–16:00)**
+**Thursday, 30 Oct — Presentations, exam Q&A, evaluation (09:00–~15:00)**
 
-- **09:00 – 09:45** — Lecture **M4F6**: Multi-omic network analysis of secondary-cell-wall biosynthesis
-- **10:00 – 12:00** — **Group preparation**: finish the dossier; build a **5-min talk** (expression + co-expression); screenshot your network (📷 PNG button); AI-check the dossier
+- **09:00 – 12:00** — **Group presentations** (student conference): 10 groups × ~5 min (+ ~2 min Q&A) — your gene, where it's expressed, its co-expression module, and (bonus) its place in / contrast to the MYB46 network
 - **12:00 – 13:00** — Lunch
-- **13:00 – 14:15** — **Student conference**: 10 groups × ~5 min (+ ~2 min Q&A) — your gene, its co-expression module, and (bonus) its place in / contrast to the MYB46 network
-- **14:15 – 14:25** — Break
-- **14:25 – 16:00** — **Feedback + open Q&A**: individual dossier feedback, exam prep, teacher synthesis (the different modules side by side)
+- **13:00 – 14:30** — **Exam Q&A** + individual dossier feedback (bring your questions; teacher synthesis of the different gene modules side by side)
+- **14:30 – 15:00** — **Course evaluation**
 
 > **On this page:** the in-browser R exercises (**M4.W1.E1–E5**, **M4.W2.E1–E9**), the web **database** worksheet, the **exam-style** self-tests at the end of each week, and an optional **GO over-representation** appendix at the very end.
 
