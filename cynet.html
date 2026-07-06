@@ -31,6 +31,12 @@
     }
     Object.keys(LAYOUTS).forEach(function (name) { mk(name, function () { cy.layout(LAYOUTS[name]).run(); }); });
     mk("⤢ fit", function () { cy.fit(undefined, 20); });
+    mk("📷 PNG", function () {                          // one-click export for the graded dossier screenshot
+      var a = document.createElement("a");
+      a.href = cy.png({ full: true, scale: 2, bg: "#fff" });
+      a.download = (cap.dataset.title || "network").replace(/[^\w-]+/g, "_") + ".png";
+      a.click();
+    });
   }
 
   function render(div, data) {
