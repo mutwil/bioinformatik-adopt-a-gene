@@ -206,25 +206,53 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-Module 4 runs over **two weeks (uge 43–44), Tuesdays + Thursdays = 4 sessions**, ending in a **student conference**. **Week 1** gets your data clean (normalization → PCA/clustering) and you *claim a gene*; **Week 2** builds and interprets the **MYB46 gene-regulatory network** in the browser for the conference. *(An optional **GO over-representation** appendix — the hypergeometric test — sits at the end of the page.)*
+**Provisional schedule** (may be adjusted during the teaching days). **Instructor:** Marek Mutwil (mutwil@plen.ku.dk).
 
-**Week 1 — uge 43 · clean data → what does my gene do?**
+Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions)** — ending in a **student conference**. Every student *adopts a gene* and carries it from normalization → EDA → co-expression → databases → network → interpretation into a **1-page dossier**; the curated **MYB46 secondary-cell-wall network** is the shared case study. The exercise codes below (**M4.W1.E1 … M4.W2.E9**) match the section headings on this page; **M4F#** = lectures.
 
-| Session | Lecture | Hands-on (this page) | Dossier grows by |
-|---|---|---|---|
-| **1 · Tue** | F2 normalization + F3 EDA *(F1 background = pre-reading)* | **Stage 1** Normalization + **Stage 2** PCA & clustering | clean log/z matrix + tissue clusters |
-| **2 · Thu** | F4 analyses (DE, co-expression as guilt-by-association) | **Stage 3** Claim your gene + **Stage 4** co-expression neighbourhood + **Database D1–D4** *(D3–D4 may spill to homework; optional: GO appendix)* | adopted gene + co-expression module + predicted function + DB cross-check |
+### Week 1 — Gene expression analysis · Tuesday 21 Oct & Thursday 23 Oct
 
-**Week 2 — uge 44 · gene-regulatory networks**
+**Tuesday, 21 Oct — Basic gene expression analysis (09:00–12:00)**
+*Reading: `transcriptomic_databases_plants.pdf`, "TPM vs RPKM explained".*
 
-| Session | Lecture | Hands-on (this page) | Dossier grows by |
-|---|---|---|---|
-| **3 · Tue** | **F5 networks & the MYB46-GRN concept** | **Network N1–N4** (co-expression → +BioGRID PPI → +curated GRN → hierarchy) | 3-layer network + hub/hierarchy + GRN verdict |
-| **4 · Thu** | short **F6** multi-omic briefing | **close the dossier** → **student conference** | finished figure + 1-page dossier + ~5-min talk |
+- **09:00 – 09:50** — Lecture **M4F1**: Transcriptomics — background and theory *(kallisto = the origin of the counts)*
+- **09:50 – 10:05** — Break
+- **10:05 – 10:20** — Lecture **M4F2**: Normalization metrics in RNA-seq *(depth, length; RPKM/FPKM → TPM)*
+- **10:20 – 12:00** — Exercise **M4.W1.E1**: *Calculating the TPM value* — raw counts → RPK → TPM → log → z-score; find the outlier
 
-**Exercises on this page:** Stages 1–4 (R, incl. co-expression) · **Database exercises D1–D4** (web) · **MYB46 gene-regulatory network N1–N4** (R, interactive in the browser) · **Close the dossier** (conference) · **Appendix:** GO over-representation (R: grid panel + real data).
+**Thursday, 23 Oct — EDA, claim a gene, databases (09:00–16:00)**
+*Reading: `co-expression analysis.pdf`, `bulk atlas.pdf`, `cell atlas.pdf`.*
 
-> **Scope:** the live in-browser R lesson is **Stages 1–4** (normalization → PCA/clustering → claim a gene → co-expression neighbourhood); the **database** and **MYB46-GRN network** exercises follow. **Functional enrichment** — the hypergeometric over-representation test (a 20×20-gene grid panel, then your gene's real GO terms) — is now an **optional appendix at the end of the page**. *(These replace the old generic co-expression/threshold/network/GO/DE stages.)*
+- **09:00 – 10:15** — Lecture **M4F3**: Exploratory Data Analysis (EDA) & data preprocessing
+- **10:15 – 10:30** — Break
+- **10:30 – 12:00** — Exercise **M4.W1.E2**: PCA & clustering *(detect & remove the Gene8 artefact)*
+- **12:00 – 13:00** — Lunch
+- **13:00 – 13:55** — Lecture **M4F4**: Basic transcriptomics analyses & online databases
+- **13:55 – 14:10** — Break
+- **14:10 – 15:00** — Exercise **M4.W1.E3–E4**: Claim a gene + build its co-expression neighbourhood
+- **15:00 – 15:15** — Break
+- **15:15 – 16:00** — Exercise **M4.W1.E5**: Transcriptomic databases *(D1–D2; D3–D4 as homework)*
+
+### Week 2 — Biological networks & conference · Tuesday 28 Oct & Thursday 30 Oct
+
+**Tuesday, 28 Oct — Biological networks (09:00–12:00)**
+*Reading: biological networks (M4F5 slides); the MYB46-GRN concept.*
+
+- **09:00 – 09:50** — Lecture **M4F5**: Biological networks & the MYB46 gene-regulatory network
+- **09:50 – 10:05** — Break
+- **10:05 – 12:00** — Exercise **M4.W2.E1–E7**: build & measure your gene's network — N0 → **N1** co-expression → **N2** +BioGRID PPI → **N3** the MYB46 GRN *(case study)* → **N4/N4b** metrics → **N4c** measure your **own** network
+  *Flex / homework: **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) + the exam-style questions.*
+
+**Thursday, 30 Oct — Prepare, present, feedback (09:00–16:00)**
+
+- **09:00 – 09:45** — Lecture **M4F6**: Multi-omic network analysis of secondary-cell-wall biosynthesis
+- **10:00 – 12:00** — **Group preparation**: finish the dossier; build a **5-min talk** (expression + co-expression); screenshot your network (📷 PNG button); AI-check the dossier
+- **12:00 – 13:00** — Lunch
+- **13:00 – 14:15** — **Student conference**: 10 groups × ~5 min (+ ~2 min Q&A) — your gene, its co-expression module, and (bonus) its place in / contrast to the MYB46 network
+- **14:15 – 14:25** — Break
+- **14:25 – 16:00** — **Feedback + open Q&A**: individual dossier feedback, exam prep, teacher synthesis (the different modules side by side)
+
+> **On this page:** the in-browser R exercises (**M4.W1.E1–E5**, **M4.W2.E1–E9**), the web **database** worksheet, the **exam-style** self-tests at the end of each week, and an optional **GO over-representation** appendix at the very end.
 
 ---
 
