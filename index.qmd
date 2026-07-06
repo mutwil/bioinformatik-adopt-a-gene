@@ -240,8 +240,14 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 
 - **09:00 – 09:50** — Lecture **M4F5**: Biological networks & the MYB46 gene-regulatory network
 - **09:50 – 10:05** — Break
-- **10:05 – 12:00** — Exercise **M4.W2.E1–E7**: build & measure your gene's network — N0 → **N1** co-expression → **N2** +BioGRID PPI → **N3** the MYB46 GRN *(case study)* → **N4/N4b** metrics → **N4c** measure your **own** network
-  *Flex / homework: **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) + the exam-style questions.*
+- **10:05 – 12:00** — Exercise **M4.W2.E1–E7**: build & measure your gene's network
+    - **N0–N1** — reclaim your gene, then build its **co-expression** network
+    - **N2** — overlay the **BioGRID PPI** layer
+    - **N3** — add the curated **MYB46 GRN** *(the shared case study)*
+    - **N4 / N4b** — read the hierarchy and measure the metrics
+    - **N4c** — measure your **own** network
+
+*Flex / homework:* **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) and the exam-style questions.
 
 **Thursday, 30 Oct — Prepare, present, feedback (09:00–16:00)**
 
