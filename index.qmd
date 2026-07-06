@@ -728,6 +728,29 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 > **By the end of Week 2 you can:** (1) build and read a co-expression network for *your own* gene; (2) tell co-expression, physical (PPI) and regulatory (GRN) edges apart, and say what each does and doesn't license; (3) find a **hub**, a **bottleneck** (betweenness) and an **articulation point**, and explain why removing MYB46 shatters the cascade; (4) explain why you **cannot** read a regulatory *sign* or *direction* off a correlation.
 
+---
+
+**🎯 Your 2-hour group-work mission — Tuesday 09:50–12:00 · *Five Verdicts + the Evidence Board*.** Work through **N0 → N4c** below as a group; the clicking is the easy part — the marks are in the **interpretation**. Keep a running **Evidence Board** (5 columns on paper/whiteboard: *Expression · Co-expression · Database · PPI · Regulation*) and write **one defensible sentence at each checkpoint** — those five sentences are the first draft of your Thursday talk.
+
+> **Hand in by 12:00 (dossier §5 — Network):** ① a 📷 **PNG** of your gene's co-expression network · ② **one number** measured on it in **N4c** (clique-vs-star clustering, or your secondary bridge) · ③ **one sentence** from the MYB46 case study on why co-expression is *not* proof of regulation.
+
+**Roles (2–4 students):** **Driver** — only one on the keyboard · **Scribe** — owns the board + the verdict sentences · **Skeptic** — challenges every causal claim and physically moves a mis-filed *regulation* note back into *co-expression* · **Reporter** — screenshots + talk bullets. *Rotate roles at the 10:50 break so everyone drives once and interprets once.*
+
+| Time | Do this | Write one sentence |
+|---|---|---|
+| 09:50–10:00 | Draw the board; pre-fill *Expression* + *Database* from your Week-1 **D1–D4** dossier; run **N0** | What ONE function will we try to prove — and what single fact would make us drop it? |
+| 10:00–10:25 | **N1** at cutoff **0.90** (guess the gene count *before* you run; then try 0.95); 📷 a screenshot | Is our module the broad 0.90 net or the tight 0.95 core — and how do we justify the cutoff we report? |
+| 10:25–10:50 | **N2** BioGRID PPI — *zero edges is a **finding**, not a failure* | With our N PPI edges: does our gene act alone, or is the database just silent? |
+| 10:50–11:00 | **Break** + check you have N0–N2, a screenshot and 2 sentences; **rotate roles** | — |
+| 11:00–11:15 | **N3** the MYB46 GRN + **N4** hierarchy (non-wall genes sit *beside* the cascade — that's the correct picture) | Which of our sentences may use the word "regulates" — and why only that one? |
+| 11:15–11:35 | **N4b** (shared worked example) → **N4c** on **your own** network | Is our module a tight **clique** or a loose **star**? Name our secondary bridge. |
+| 11:35–11:52 | Work the board; assemble the 3 hand-in items; draft 3 talk bullets | "Our gene acts in ___; our strongest evidence is ___; we **cannot** yet claim ___" — naming **≥3 evidence types** |
+| 11:52–12:00 | Read your verdict to a neighbour group | Did we anywhere say co-expression *proves* regulation? Fix it before Thursday. |
+
+> **⚠️ Keep `MY_CUTOFF` at 0.90 (never below 0.85):** a lower cutoff pulls in up to 200 genes and the viewer + N4c slow to a crawl — if N4c stalls, *raise* the cutoff and re-run N1. Reloaded the page? webR forgets everything — just re-run **N0 → N3** top to bottom once.
+
+---
+
 ### M4.W2.E1 · N0 — (Re)claim your gene
 
 webR forgets everything when the page reloads, so **set your gene here** before the network steps — whether you're continuing from Week 1 or starting a fresh session. Use **the same gene you claimed in Stage 3** (any gene from that pool).
