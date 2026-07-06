@@ -810,6 +810,8 @@ say(any(grepl("GRN", all_edges$type)) && any(all_edges$type == "GRN_represses"),
 
 ### M4.W2.E5 · N4 — Read the hierarchy
 
+> **Adopted a non-wall gene? Most of you did.** The curated table below is the **MYB46 secondary-cell-wall GRN**. Read **N4–N4e as a worked example of the method**, then put the same three questions to **your own** network — you measure it in **N4c** (just after the metrics) and report it in the dossier: *who is my module's hub or bridge? is my gene central or peripheral? does a co-expression edge prove regulation?* (that last answer is always **no**).
+
 ```{webr}
 if (!exists("grn_edges")) stop("Run N3 first so 'grn_edges' exists.")
 out_deg <- sort(table(grn_edges$source), decreasing = TRUE)   # a regulator's number of targets
@@ -917,7 +919,52 @@ say(names(which.max(btw)) == "AT5G12870",
 
 > **The trap trio:** SND1, CESA8 and KNAT7 all have **degree 3**, yet betweenness 8.0 / 8.0 / 0.3 and clustering 0.333 / 0.333 / 0.667. Same degree, completely different roles — degree alone never tells you what a node *does*. (Sharper still: **MYB58 and MYB63 have only degree 2 yet also reach betweenness 8.0** — they sit on the only routes from the hub to LAC4, so a *lower*-degree node can be just as much a bottleneck.)
 
-### M4.W2.E7 · N4d — Topology & robustness
+### M4.W2.E7 · N4c — Measure your OWN network
+
+You just measured the MYB46 GRN. Now turn the **same helpers** (`build_adj`, `betweenness_base`, `clustering_matrix` — already defined in N4b) on **your own** co-expression module from N1. Your adopted gene is the module's hub *by construction* (its neighbours were picked for correlating with it), so the two questions worth asking are: **which neighbour bridges the module** (the highest betweenness that *isn't* your gene), and is your module a **tight clique** (neighbours all interlink) or a **loose star**? *(Run N1 and N4b first.)*
+
+```{webr}
+if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0 and N1 first (so MY_GENE, nb and edges exist).")
+if (!exists("betweenness_base")) stop("Run N4b first — it defines the helpers (build_adj, betweenness_base, clustering_matrix).")
+
+co    <- edges[edges$type == "coexpression", c("source","target"), drop = FALSE]  # YOUR co-expression skeleton (drop the PPI overlay)
+nnode <- length(unique(c(co$source, co$target)))
+
+if (length(nb) > 2 && nrow(co) > 0 && MY_GENE %in% c(co$source, co$target)) {
+  As     <- build_adj(co)                              # undirected adjacency of your own module
+  cc_own <- clustering_matrix(As)                      # clique (-> 1) vs star (-> 0), per node
+
+  # (1) clique or star? (cheap — always computed)
+  mean_ncc <- mean(cc_own[names(cc_own) != MY_GENE])
+  cat(sprintf("Your module: %d genes, %d co-expression edges.\n", nnode, nrow(co)))
+  cat(sprintf("Your gene's clustering = %.2f ; mean neighbour clustering = %.2f\n", cc_own[MY_GENE], mean_ncc))
+
+  # (2) the secondary bridge: highest betweenness that ISN'T your seed. Skip on very large modules —
+  #     the base-R Brandes loop gets slow in the browser; raise MY_CUTOFF in N1 for a crisper core if so.
+  if (nnode <= 80) {
+    others <- betweenness_base(As); others <- others[names(others) != MY_GENE]
+    if (length(others) > 0 && max(others) > 0)
+      cat(sprintf("Secondary bridge: %s (betweenness %.1f) — the neighbour the others most pass through.\n",
+                  lab(names(which.max(others))), max(others)))
+    else
+      cat("No secondary bridge: your module is a near-pure STAR — the neighbours barely interconnect.\n")
+  } else {
+    cat("(module has ", nnode, " genes — raise MY_CUTOFF in N1 for a crisper core, then re-run to find the bridge)\n", sep = "")
+  }
+
+  say(TRUE,
+      sprintf("measured YOUR module. Mean neighbour clustering %.2f -> %s. (Contrast MYB46 in the GRN: clustering 0.02 = a pure star that every NAC signal funnels through.)",
+              mean_ncc, if (mean_ncc >= 0.5) "a tight clique (a coherent, mutually-correlated unit)" else "a looser, more star-like module"),
+      "-")
+} else {
+  say(FALSE, "-",
+      "your network is too small to measure — lower MY_CUTOFF in N1 to pull in more neighbours, then re-run N1 and this cell.")
+}
+```
+
+> **What this says about *your* gene.** A **high** mean neighbour clustering means your neighbours co-express with *each other*, not just with you — a coherent module (a real pathway/complex signature). A **low** value means a **star**: genes that each track yours but not one another. The **secondary bridge** is the neighbour that, if removed, would most split your module — a candidate sub-hub worth looking up. Carry one of these numbers into your dossier.
+
+### M4.W2.E8 · N4d — Topology & robustness
 
 This curated GRN is a **hub-and-spoke (star) topology**: one dominant hub (MYB46) and many degree-1 leaves. Such architectures are **robust to random failure** but **fragile to targeted attack on the hub** (lethality–centrality) — which the removal experiment below proves directly. *(A real "scale-free" claim needs thousands of nodes; with only ~19 here and a handful of distinct degrees, the plot below shows the **shape only** — you cannot fit a power law to this. Genome-scale co-expression networks are often approximately scale-free, but you establish that with far more data.)* Raising the co-expression cutoff `MY_CUTOFF` steadily breaks **your** network into more, smaller pieces.
 
@@ -953,7 +1000,7 @@ say(frag["AT5G12870"] > 5,
     "removing MYB46 should fragment the network far more than removing any other node.")
 ```
 
-### M4.W2.E8 · N4e — What the three edge types mean
+### M4.W2.E9 · N4e — What the three edge types mean
 
 An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the GRN layer licenses a knockout prediction.
 
@@ -968,6 +1015,8 @@ An edge isn't just a line — its meaning is fixed by **what it represents, whet
 Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN gives the most direct evidence of control.* (Even then, a GRN edge only *licenses* a knockout hypothesis — **redundancy** can mask the phenotype, as the multiple NAC masters here back each other up.) Two paradoxes from your own data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** (in this BioGRID dataset) — a TF binds its target's DNA, not its protein (TFs *do* bind protein co-factors — a different kind of edge), so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
 
 **The one brake — and a co-expression trap.** The GRN has a single repression: **KNAT7 ⊣ CESA8**. Yet MYB46 *activates* CESA8 **and** activates KNAT7 (which represses CESA8) — an **incoherent feed-forward loop**: MYB46 switches CESA8 on while simultaneously arming its brake. That is *self-limiting* control (a pulse-like response, depending on the kinetics), **not** feedback — nothing loops back to MYB46. It also sets a trap for co-expression: because both ride the same MYB46 wave, KNAT7 and CESA8 **tend to co-express positively**, so their correlation can **hide** the repression — proof again that you cannot read a regulatory *sign* off co-expression.
+
+> **✍️ For your dossier — your module vs a regulatory cascade.** Name **one** structural feature *your* co-expression module (N1 / N4c) has that the MYB46 cascade lacks, and **one** the cascade has that yours lacks. *(Think: undirected vs directed, unsigned vs signed, dense clique vs sparse star — and what happens when you delete the single most central node: your module degrades gradually, the cascade shatters the moment MYB46 goes.)*
 
 ### Close the dossier
 
@@ -987,7 +1036,7 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.
 3. **Co-expression** (Stage 4) — your top-5 neighbours + the module they name.
 4. **Database cross-check** (D1–D4) — your filled results table.
-5. **Network** (N1–N4) — a screenshot of *your gene's* co-expression network, plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
+5. **Network** (N1–N4c) — a screenshot of *your gene's* co-expression network **and one metric you measured on it in N4c** (its secondary bridge, or its clique-vs-star clustering), plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
 6. **Verdict** — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** data quality & normalization reasoning (15%) · **your gene's expression + co-expression** characterisation (30%) · **database cross-check (20%)** · interpretation — correlation-vs-regulation + a verdict with named evidence (20%) · communication & Q&A (15%). You present this at the **student conference** (~5-min group talk).
