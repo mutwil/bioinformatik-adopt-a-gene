@@ -732,9 +732,20 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 **🎯 Your 2-hour group-work mission — Tuesday 09:50–12:00 · *Five Verdicts + the Evidence Board*.** Work through **N0 → N4c** below as a group; the clicking is the easy part — the marks are in the **interpretation**. Keep a running **Evidence Board** (5 columns on paper/whiteboard: *Expression · Co-expression · Database · PPI · Regulation*) and write **one defensible sentence at each checkpoint** — those five sentences are the first draft of your Thursday talk.
 
-> **Hand in by 12:00 (dossier §5 — Network):** ① a 📷 **PNG** of your gene's co-expression network · ② **one number** measured on it in **N4c** (clique-vs-star clustering, or your secondary bridge) · ③ **one sentence** from the MYB46 case study on why co-expression is *not* proof of regulation.
+**Hand in by 12:00** (dossier §5 — Network):
 
-**Roles (2–4 students):** **Driver** — only one on the keyboard · **Scribe** — owns the board + the verdict sentences · **Skeptic** — challenges every causal claim and physically moves a mis-filed *regulation* note back into *co-expression* · **Reporter** — screenshots + talk bullets. *Rotate roles at the 10:50 break so everyone drives once and interprets once.*
+- a 📷 **PNG** of your gene's co-expression network
+- **one number** measured on it in **N4c** (clique-vs-star clustering, or your secondary bridge)
+- **one sentence** from the MYB46 case study on why co-expression is *not* proof of regulation
+
+**Roles (2–4 students):**
+
+- **Driver** — the only person on the keyboard
+- **Scribe** — owns the Evidence Board and writes the verdict sentences
+- **Skeptic** — challenges every causal claim; physically moves a mis-filed *regulation* note back into *co-expression*
+- **Reporter** — captures screenshots and drafts the talk bullets
+
+*Rotate roles at the 10:50 break so everyone drives once and interprets once.*
 
 | Time | Do this | Write one sentence |
 |---|---|---|
