@@ -759,7 +759,7 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 | 11:35–11:52 | Work the board; assemble the 3 hand-in items; draft 3 talk bullets | "Our gene acts in ___; our strongest evidence is ___; we **cannot** yet claim ___" — naming **≥3 evidence types** |
 | 11:52–12:00 | Read your verdict to a neighbour group | Did we anywhere say co-expression *proves* regulation? Fix it before Thursday. |
 
-> **⚠️ Keep `MY_CUTOFF` at 0.90 (never below 0.85):** a lower cutoff pulls in up to 200 genes and the viewer + N4c slow to a crawl — if N4c stalls, *raise* the cutoff and re-run N1. Reloaded the page? webR forgets everything — just re-run **N0 → N3** top to bottom once.
+> **⚠️ Your network is capped at the top 20 genes** so it stays readable — `MY_CUTOFF` (start at **0.90**) just sets how *tightly* those 20 track your gene. Reloaded the page? webR forgets everything — just re-run **N0 → N3** top to bottom once.
 
 ---
 
@@ -780,7 +780,7 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 
 ### M4.W2.E2 · N1 — Build your co-expression network
 
-webR forgets on reload, so we recompute how strongly **every** gene correlates with yours, then build a network with **one knob**: a correlation **cutoff** that decides *both* which genes are in (those correlated with your gene above it, capped at 200) *and* which gene-pairs get an edge. Raise the cutoff → fewer, tighter genes; lower it → more. *(Run N0 first so `MY_GENE` is set.)*
+webR forgets on reload, so we recompute how strongly **every** gene correlates with yours, then build a network with **one knob**: a correlation **cutoff** that decides *both* which genes are in (the top 20 correlated with your gene above it) *and* which gene-pairs get an edge. Raise the cutoff → fewer, tighter genes; lower it → more. *(Run N0 first so `MY_GENE` is set.)*
 
 ```{webr}
 if (!exists("MY_GENE")) stop("Run N0 first to set your gene (MY_GENE).")
@@ -793,13 +793,13 @@ nbhd   <- data.frame(gene = rownames(EXPR), symbol = lab(rownames(EXPR)),
 nbhd   <- nbhd[order(-nbhd$PCC), ]
 print(head(nbhd, 12))                              # your closest neighbours (row 1 = your gene, PCC = 1.000)
 
-# guide — how big is the network at each cutoff? (genes correlated with YOUR gene above it, capped at 200)
-for (cut0 in c(0.70, 0.80, 0.90, 0.95, 0.99))
-  cat("  cutoff", cut0, "->", min(200, sum(pcc >= cut0)), "genes\n")
+# guide — how big is the network at each cutoff? (top genes correlated with YOUR gene above it, capped at 20)
+for (cut0 in c(0.85, 0.90, 0.93, 0.95, 0.99))
+  cat("  cutoff", cut0, "->", min(20, sum(pcc >= cut0)), "genes\n")
 
 # ONE knob: genes correlated with your gene above the cutoff = the network's nodes (your gene is always in)
-MY_CUTOFF <- ______                                # <- e.g. 0.9   (raise -> fewer genes; lower -> more, up to 200)
-nb <- head(nbhd$gene[nbhd$PCC >= MY_CUTOFF], 200)  # capped at 200 for the browser
+MY_CUTOFF <- ______                                # <- e.g. 0.9   (raise -> fewer, tighter; lower -> more, up to the top 20)
+nb <- head(nbhd$gene[nbhd$PCC >= MY_CUTOFF], 20)   # capped at the top 20 so the network stays readable
 
 # draw an edge between any TWO of those genes whose profiles also correlate above the cutoff
 C    <- cor(t(EXPR[nb, , drop = FALSE]))            # gene × gene correlation among the selected genes
@@ -809,16 +809,16 @@ edges <- data.frame(source = rownames(C)[row(C)[keep]],
                     target = colnames(C)[col(C)[keep]], type = "coexpression")
 
 cat("\nAt cutoff", MY_CUTOFF, "->", length(nb), "genes",
-    if (length(nb) >= 200) "(capped at 200)" else "", "and", nrow(edges), "edges.\n")
+    if (length(nb) >= 20) "(capped at 20)" else "", "and", nrow(edges), "edges.\n")
 cynet(edges, hub = HUB, id = "cy_n1", title = paste(MY_NAME, "co-expression network (cutoff", MY_CUTOFF, ")"))
 
 say(length(nb) > 1 && nrow(edges) > 0,
     paste0("network at cutoff ", MY_CUTOFF, ": ", length(nb), " genes, ", nrow(edges),
-           " edges. Raise the cutoff to shrink it; lower it to grow it (up to 200)."),
+           " edges. Raise the cutoff for a tighter core; lower it for more (up to the top 20)."),
     "fill MY_CUTOFF (e.g. 0.9). If you get almost nothing, lower it.")
 ```
 
-> **🔬 One knob, one network.** `MY_CUTOFF` does two jobs at once — it decides which genes are *in* (those correlated with yours) **and** which pairs get an edge. The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module grows toward the 200-gene cap. Because these genes are *defined* by being co-expressed with yours, the network stays **densely connected** even at high cutoffs — that density is the hallmark of a real functional module, not a bug. **Drag nodes apart** in the viewer to read it; a very low cutoff makes a large, slow mesh, so start around `0.9`.
+> **🔬 One knob, one network.** `MY_CUTOFF` does two jobs at once — it decides which genes are *in* (those correlated with yours) **and** which pairs get an edge. The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module fills up to its **top-20 cap**. Because these genes are *defined* by being co-expressed with yours, the network stays **densely connected** even at high cutoffs — that density is the hallmark of a real functional module, not a bug. **Drag nodes apart** in the viewer to read it; start around `0.9`.
 
 ### M4.W2.E3 · N2 — Add the physical layer (BioGRID PPI)
 
