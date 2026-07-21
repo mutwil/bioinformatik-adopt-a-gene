@@ -262,7 +262,10 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 
 # Week 1 — uge 43 · clean data → what does my gene do?
 
-> 📅 **Tuesday 21 Oct (09:00–12:00)** — today you do **M4.W1.E1** only.
+<div style="background:#0b5394;color:#fff;padding:14px 20px;border-radius:10px;margin:38px 0 20px;font:600 15px/1.5 system-ui,-apple-system,sans-serif">
+<span style="display:block;font-size:23px;font-weight:800;letter-spacing:.2px;margin-bottom:5px">📅 Tuesday 21 Oct · 09:00–12:00</span>
+Today you do <b>M4.W1.E1</b> only — normalization.
+</div>
 
 ## M4.W1.E1 — Normalization: raw counts → TPM → log → z-score
 
@@ -424,7 +427,10 @@ say(exists("z") && abs(mean(z)) < 1e-6,
 
 ---
 
-> 📅 **Thursday 23 Oct (09:00–16:00)** — today you do **M4.W1.E2 → M4.W1.E5**: PCA & clustering, claim your gene, co-expression, then the databases.
+<div style="background:#0b5394;color:#fff;padding:14px 20px;border-radius:10px;margin:38px 0 20px;font:600 15px/1.5 system-ui,-apple-system,sans-serif">
+<span style="display:block;font-size:23px;font-weight:800;letter-spacing:.2px;margin-bottom:5px">📅 Thursday 23 Oct · 09:00–16:00</span>
+Today you do <b>M4.W1.E2 → M4.W1.E5</b> — PCA &amp; clustering, claim your gene, co-expression, then the databases.
+</div>
 
 ## M4.W1.E2 — Explore the structure: PCA & clustering
 
@@ -752,7 +758,12 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 ---
 
-**🎯 Your 2-hour group-work mission — Tuesday 09:50–12:00 · *Five Verdicts + the Evidence Board*.** Work through **N0 → N4c** below as a group; the clicking is the easy part — the marks are in the **interpretation**. Keep a running **Evidence Board** (5 columns on paper/whiteboard: *Expression · Co-expression · Database · PPI · Regulation*) and write **one defensible sentence at each checkpoint** — those five sentences are the first draft of your Thursday talk.
+<div style="background:#0b5394;color:#fff;padding:14px 20px;border-radius:10px;margin:38px 0 20px;font:600 15px/1.5 system-ui,-apple-system,sans-serif">
+<span style="display:block;font-size:23px;font-weight:800;letter-spacing:.2px;margin-bottom:5px">📅 Tuesday 28 Oct · 09:50–12:00</span>
+Group work — today you do <b>M4.W2.E1 → M4.W2.E8</b> (N0 → N4c). <b>E9–E10</b> are flex / homework.
+</div>
+
+**🎯 Your 2-hour group-work mission · *Five Verdicts + the Evidence Board*.** Work through **N0 → N4c** below as a group; the clicking is the easy part — the marks are in the **interpretation**. Keep a running **Evidence Board** (5 columns on paper/whiteboard: *Expression · Co-expression · Database · PPI · Regulation*) and write **one defensible sentence at each checkpoint** — those five sentences are the first draft of your Thursday talk.
 
 **Hand in by 12:00** (dossier §5 — Network):
 
@@ -1132,6 +1143,11 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 **The one brake — and a co-expression trap.** The GRN has a single repression: **KNAT7 ⊣ CESA8**. Yet MYB46 *activates* CESA8 **and** activates KNAT7 (which represses CESA8) — an **incoherent feed-forward loop**: MYB46 switches CESA8 on while simultaneously arming its brake. That is *self-limiting* control (a pulse-like response, depending on the kinetics), **not** feedback — nothing loops back to MYB46. It also sets a trap for co-expression: because both ride the same MYB46 wave, KNAT7 and CESA8 **tend to co-express positively**, so their correlation can **hide** the repression — proof again that you cannot read a regulatory *sign* off co-expression.
 
 > **✍️ For your dossier — your module vs a regulatory cascade.** Name **one** structural feature *your* co-expression module (N1 / N4c) has that the MYB46 cascade lacks, and **one** the cascade has that yours lacks. *(Think: undirected vs directed, unsigned vs signed, dense clique vs sparse star — and what happens when you delete the single most central node: your module degrades gradually, the cascade shatters the moment MYB46 goes.)*
+
+<div style="background:#0b5394;color:#fff;padding:14px 20px;border-radius:10px;margin:38px 0 20px;font:600 15px/1.5 system-ui,-apple-system,sans-serif">
+<span style="display:block;font-size:23px;font-weight:800;letter-spacing:.2px;margin-bottom:5px">📅 Thursday 30 Oct · 09:00–15:00</span>
+Presentations, exam Q&amp;A and course evaluation. <b>Bring a finished dossier and a 5-min talk</b> — close it out below <i>before</i> today.
+</div>
 
 ### Close the dossier
 
