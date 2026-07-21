@@ -634,20 +634,20 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **Stage 4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
-**📋 Your database dossier — fill it in as you go (this table is what's assessed):**
+**📋 Your database dossier — the 10 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
-| Field | Your gene | From |
-|---|---|---|
-| Protein domain (PFAM/InterPro) | | D1 · PEO |
-| Biological function (MapMan) | | D1 · PEO |
-| Highest organ | | D1, D4 |
-| Root cell type | xylem? | D1 · ePlant |
-| Top 3 co-expressed (databases) | | D2 |
-| Overlap with my Stage-4 list (of 5) | / 5 | D2 |
-| Physical (PPI) partners | | D3 · STRING |
-| Regulator directly above my gene | | D3 · CoNekT |
-| Top organ — agrees across 3 DBs? | yes / no | D4 |
-| **One-line function + 3 evidence types** | | synthesis |
+| # | What to record | Where to get it | Example — if your gene were **CESA7** |
+|---|---|---|---|
+| 1 | Protein domain (PFAM / InterPro) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
+| 2 | Biological function (MapMan) | **D1** → PEO | cell wall → cellulose synthesis |
+| 3 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
+| 4 | Root cell type it switches on in | **D1** → ePlant *Root eFP* | xylem |
+| 5 | Top 3 co-expressed genes (databases) | **D2** → CoNekT + ATTED-II | CESA4, CESA8, FLA11 |
+| 6 | How many of your **Stage-4 top-5** reappear there? | **D2** | 3 / 5 |
+| 7 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
+| 8 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
+| 9 | Does the top organ agree across all 3 databases? | **D4** | yes |
+| 10 | **Your one-line function + 3 evidence types** | synthesis of 1–9 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
 
 ### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
