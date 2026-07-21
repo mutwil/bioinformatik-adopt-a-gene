@@ -682,7 +682,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 > ✅ *Expected:* all three converge on **stem**; the second-ranked organs may differ.
 > **→ Dossier:** "top organ — agrees across 3 DBs? yes / no".
 
-> **Demo only (not assessed):** the **EBI Single-Cell Atlas** ([ebi.ac.uk/gxa/sc](https://www.ebi.ac.uk/gxa/sc)) shows SCW genes restricted to xylem cell clusters; **Genevestigator** needs free academic registration → projector-only.
+> **Demo only (not assessed):** **Genevestigator** needs free academic registration → projector-only.
 
 > **✍️ Dossier:** your completed results table is the **database cross-check** graded at the conference (rubric criterion 3). *(The database exam questions are in the **Week-1 exam-style questions** block at the end of the week.)*
 
