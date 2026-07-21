@@ -634,19 +634,18 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **Stage 4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
-**📋 Your database dossier — the 9 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
+**📋 Your database dossier — the 8 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
 | # | What to record | Where to get it | Example — if your gene were **CESA7** |
 |---|---|---|---|
 | 1 | Protein domain (Pfam) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
 | 2 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
 | 3 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
-| 4 | Top 3 co-expressed genes (databases) | **D2** → CoNekT + ATTED-II | CESA4, CESA8, FLA11 |
-| 5 | How many of your **Stage-4 top 5** reappear here? *(the 5 genes ranked just below your own in the Stage-4 table)* | **D2** | 3 / 5 |
-| 6 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
-| 7 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
-| 8 | Does the top organ agree across all 3 databases? | **D4** | yes |
-| 9 | **Your one-line function + 3 evidence types** | synthesis of 1–8 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
+| 4 | Top 3 co-expressed genes (databases) | **D2** → CoNekT | CESA4, CESA8, FLA11 |
+| 5 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
+| 6 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
+| 7 | Does the top organ agree across all 3 databases? | **D4** | yes |
+| 8 | **Your one-line function + 3 evidence types** | synthesis of 1–7 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
 
 ### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
@@ -657,14 +656,13 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 > ✅ *Expected:* a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
 > **→ Dossier:** Pfam domain · highest organ · highest cell type / tissue · top 3 co-expressed.
 
-### D2 — Who does my gene work with — and do other atlases agree?  *(CoNekT + ATTED-II)*
+### D2 — Who does my gene work with?  *(CoNekT)*
 
 1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** and click **View neighbourhood as graph**. Write down the neighbours you recognise and the **process they point to**.
-2. **ATTED-II** ([atted.jp](https://atted.jp/)) → search box → same locus → read its co-expressed list.
-3. **Cross-check (the point):** go back to the co-expression table you built in **Stage 4** and take the **5 genes ranked just below your own** (rows 2–6 — row 1 is your own gene at PCC = 1.000). How many of those 5 reappear in CoNekT and/or ATTED-II — two atlases *independent* of ours? Record the overlap as **__ / 5**.
+2. Record your **top 3 co-expressed genes** from that graph.
 
-> ✅ *Expected:* both return a tight SCW module; for a CESA, the strongest partners **CESA4 + CESA8** recur across atlases. Reproducibility across independent datasets is the signal.
-> **→ Dossier:** top 3 databases co-expressed · overlap with your Stage-4 list.
+> ✅ *Expected:* CoNekT returns a tight module pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your Stage-4 list did, that agreement is real evidence.
+> **→ Dossier:** top 3 co-expressed genes from CoNekT.
 
 ### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
 
@@ -722,7 +720,7 @@ Close the week the way the exam tests it — these cover **all of Week 1**: Stag
 
 <details><summary>✅ Model answer (4 p)</summary>(a) The more <i>specific</i> the shared context, the lower the chance of coincidence — co-localising at cell-type resolution rules out the trivial "both are just stem-abundant" explanation, so the guilt-by-association is stronger (2 p). (b) Housekeeping / broadly high genes are abundant everywhere; or both genes respond independently to the same cue (e.g. both stress-induced) without working together (2 p).</details>
 
-**Q7 (4 p) — Reproducibility across atlases.** Three of your Stage-4 top co-expressed genes reappear in CoNekT/ATTED-II; one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
+**Q7 (4 p) — Reproducibility across atlases.** Suppose three of your Stage-4 top co-expressed genes also show up in your gene's CoNekT neighbourhood, but one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
 
