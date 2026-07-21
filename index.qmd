@@ -634,35 +634,34 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **Stage 4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
-**📋 Your database dossier — the 10 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
+**📋 Your database dossier — the 9 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
 | # | What to record | Where to get it | Example — if your gene were **CESA7** |
 |---|---|---|---|
-| 1 | Protein domain (PFAM / InterPro) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
-| 2 | Biological function (MapMan) | **D1** → PEO | cell wall → cellulose synthesis |
-| 3 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
-| 4 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
-| 5 | Top 3 co-expressed genes (databases) | **D2** → CoNekT + ATTED-II | CESA4, CESA8, FLA11 |
-| 6 | How many of your **Stage-4 top-5** reappear there? | **D2** | 3 / 5 |
-| 7 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
-| 8 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
-| 9 | Does the top organ agree across all 3 databases? | **D4** | yes |
-| 10 | **Your one-line function + 3 evidence types** | synthesis of 1–9 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
+| 1 | Protein domain (Pfam) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
+| 2 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
+| 3 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
+| 4 | Top 3 co-expressed genes (databases) | **D2** → CoNekT + ATTED-II | CESA4, CESA8, FLA11 |
+| 5 | How many of your **Stage-4 top 5** reappear here? *(the 5 genes ranked just below your own in the Stage-4 table)* | **D2** | 3 / 5 |
+| 6 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
+| 7 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
+| 8 | Does the top organ agree across all 3 databases? | **D4** | yes |
+| 9 | **Your one-line function + 3 evidence types** | synthesis of 1–8 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
 
 ### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
 1. **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → search your gene (e.g. `AT5G17420` CESA7, `AT5G12870` MYB46) → **Plant eFP**: record the **highest organ** + colour scale.
 2. Now go finer than the organ: open the **cell-type / tissue-level views** (e.g. **Tissue-Specific Root eFP**) and record the **highest-expressing cell type or tissue** you can find for your gene. *(A secondary-cell-wall gene lights up the root **xylem**, where thick lignified walls are built; a photosynthesis gene the leaf mesophyll; a seed gene the embryo or endosperm. If your gene is simply **not expressed in root**, that is a real result — record its top tissue from the Plant eFP instead and say so.)*
-3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (PFAM/InterPro) + **MapMan biological function** — the annotation skills from the database & sequence modules.
+3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (Pfam) — the annotation skills from the database & sequence modules.
 
 > ✅ *Expected:* a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
-> **→ Dossier:** domain · MapMan function · highest organ · highest cell type / tissue · top 3 co-expressed.
+> **→ Dossier:** Pfam domain · highest organ · highest cell type / tissue · top 3 co-expressed.
 
-### D2 — Who does my gene work with — and does it replicate?  *(CoNekT + ATTED-II)*
+### D2 — Who does my gene work with — and do other atlases agree?  *(CoNekT + ATTED-II)*
 
 1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → your gene → open its **co-expression neighbourhood**; list the SCW neighbours you recognise (e.g. CESA4 `AT5G44030`, CESA8 `AT4G18780`, IRX9 `AT2G37090`, COBL4 `AT5G15630`, KNAT7 `AT1G62990`, MYB46 `AT5G12870`).
 2. **ATTED-II** ([atted.jp](https://atted.jp/)) → search box → same locus → read its co-expressed list.
-3. **Cross-check (the point):** how many of **your Stage-4 top-5** (your atlas) reappear in CoNekT and/or ATTED-II (two *independent* atlases)? Record the overlap **/ 5**.
+3. **Cross-check (the point):** go back to the co-expression table you built in **Stage 4** and take the **5 genes ranked just below your own** (rows 2–6 — row 1 is your own gene at PCC = 1.000). How many of those 5 reappear in CoNekT and/or ATTED-II — two atlases *independent* of ours? Record the overlap as **__ / 5**.
 
 > ✅ *Expected:* both return a tight SCW module; for a CESA, the strongest partners **CESA4 + CESA8** recur across atlases. Reproducibility across independent datasets is the signal.
 > **→ Dossier:** top 3 databases co-expressed · overlap with your Stage-4 list.
@@ -1142,7 +1141,7 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 
 **✍️ Dossier (assessed) — close it out (about *your* gene):**
 
-1. **What & where:** your gene's molecular identity (domain / MapMan function) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
+1. **What & where:** your gene's molecular identity (its Pfam domain) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
 2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your Stage-3 hypothesis?
 3. **Cross-check:** do the databases (eFP / PEO / CoNekT / STRING / EBI) **agree** on your gene's tissue, partners and domain?
 4. **Correlation vs regulation** *(from the MYB46 case study)*: why is co-expression **not** proof that one gene regulates another? Use the MYB46→CESA / KNAT7 ⊣ CESA8 example.
