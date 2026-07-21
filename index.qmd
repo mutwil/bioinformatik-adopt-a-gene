@@ -573,11 +573,11 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 
 *In this developmental atlas the **cytosolic and mitochondrial** ribosome rise together with the cell's growth / translation programme, while the **plastid** ribosome tracks **photosynthesis** (chloroplast biogenesis) — adopt different compartments to see the split.*
 
-**Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
+**Instructions:** replace the `______` with your gene's AGI code, then **Run** — the cell tells you if your gene is valid.
 
 ```{webr}
-MY_GENE <- "______"   # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
-MY_NAME <- "______"   # <- any short label you like, e.g. "CESA7"  (only used to print/title things - never looked up)
+MY_GENE <- "______"        # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
+MY_NAME <- lab(MY_GENE)    # the gene's symbol, looked up for you (falls back to the AGI if it has none)
 cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
 
 # instant check: grepl() tests the AGI text pattern; %in% checks the gene is actually in the data
@@ -641,7 +641,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 | 1 | Protein domain (PFAM / InterPro) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
 | 2 | Biological function (MapMan) | **D1** → PEO | cell wall → cellulose synthesis |
 | 3 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
-| 4 | Root cell type it switches on in | **D1** → ePlant *Root eFP* | xylem |
+| 4 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
 | 5 | Top 3 co-expressed genes (databases) | **D2** → CoNekT + ATTED-II | CESA4, CESA8, FLA11 |
 | 6 | How many of your **Stage-4 top-5** reappear there? | **D2** | 3 / 5 |
 | 7 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
@@ -652,11 +652,11 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 ### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
 1. **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → search your gene (e.g. `AT5G17420` CESA7, `AT5G12870` MYB46) → **Plant eFP**: record the **highest organ** + colour scale.
-2. Switch to **Tissue-Specific Root eFP** → record **which root cell type** it switches on in (secondary-cell-wall genes → the **xylem**, where thick lignified walls are built).
+2. Now go finer than the organ: open the **cell-type / tissue-level views** (e.g. **Tissue-Specific Root eFP**) and record the **highest-expressing cell type or tissue** you can find for your gene. *(A secondary-cell-wall gene lights up the root **xylem**, where thick lignified walls are built; a photosynthesis gene the leaf mesophyll; a seed gene the embryo or endosperm. If your gene is simply **not expressed in root**, that is a real result — record its top tissue from the Plant eFP instead and say so.)*
 3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (PFAM/InterPro) + **MapMan biological function** — the annotation skills from the database & sequence modules.
 
 > ✅ *Expected:* a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
-> **→ Dossier:** domain · MapMan function · highest organ · root cell type · top 3 co-expressed.
+> **→ Dossier:** domain · MapMan function · highest organ · highest cell type / tissue · top 3 co-expressed.
 
 ### D2 — Who does my gene work with — and does it replicate?  *(CoNekT + ATTED-II)*
 
@@ -794,12 +794,12 @@ webR forgets everything when the page reloads, so **set your gene here** before 
 > **Got an "object not found" error later, or reloaded the page?** webR forgets all state on reload — just re-run **N0 → N1 → N2 → N3** top-to-bottom once, then continue.
 
 ```{webr}
-MY_GENE <- "______"   # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
-MY_NAME <- "______"   # <- any short label,   e.g. "CESA7"      (only used to print/title things - never looked up)
+MY_GENE <- "______"        # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
+MY_NAME <- lab(MY_GENE)    # the gene's symbol, looked up for you (falls back to the AGI if it has none)
 
 say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     paste("adopted", MY_NAME, "(", MY_GENE, ") — ready for the network."),
-    "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\", MY_NAME <- \"CESA7\") and re-run.")
+    "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\") and re-run.")
 ```
 
 ### M4.W2.E2 · N1 — Build your co-expression network
@@ -1142,7 +1142,7 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 
 **✍️ Dossier (assessed) — close it out (about *your* gene):**
 
-1. **What & where:** your gene's molecular identity (domain / MapMan function) and where it acts — top tissue + (if relevant) root cell type, from eFP / PEO.
+1. **What & where:** your gene's molecular identity (domain / MapMan function) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
 2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your Stage-3 hypothesis?
 3. **Cross-check:** do the databases (eFP / PEO / CoNekT / STRING / EBI) **agree** on your gene's tissue, partners and domain?
 4. **Correlation vs regulation** *(from the MYB46 case study)*: why is co-expression **not** proof that one gene regulates another? Use the MYB46→CESA / KNAT7 ⊣ CESA8 example.
