@@ -666,11 +666,11 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 ### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
 
-1. **STRING** ([string-db.org](https://string-db.org/)) → your gene, organism *Arabidopsis thaliana*, required score **medium (0.400)** → which neighbours appear, and by **which evidence channel** (experiments / co-expression / text-mining)? Record the **physical (experiment-backed) partners**.
+1. **STRING** ([string-db.org](https://string-db.org/)) → paste your gene's AGI code and search (STRING detects the organism itself). You get a network of predicted partners. **Click on an edge** to see *which evidence channel* supports it — experiments, co-expression, text-mining, databases. Record the partners backed by **experiments** — those are the genuinely physical ones.
 2. **CoNekT** → in your gene's neighbourhood graph, look for a **transcription factor** among the neighbours (CoNekT labels TF families) — a plausible regulator sitting directly above your gene. Record it, or record **"none found"** if there is no TF in the neighbourhood — that is a legitimate answer. *(For a secondary-wall gene this is typically **MYB46** `AT5G12870`, **MYB83** `AT3G08500` or **SND1** `AT1G32770`.)*
 
-> ✅ *Expected:* the CESA4/7/8 triangle is recovered by **experiments**, but **MYB46→CESA links appear only via co-expression / text-mining — never physical experiments**, because a TF binds its target's **DNA**, not its protein. That gap is exactly why Week 2 adds a curated **regulatory** layer. *(The DNA motif MYB46 binds in those promoters is the **SMRE / M46RE** element — it reappears in the Week-2 exam.)*
-> **→ Dossier:** PPI partners · the regulator directly above your gene.
+> ✅ *Expected:* what matters is **which channel carries each edge**. Partners that sit in the same **physical complex or machine** as your gene tend to be backed by **experiments**; partners that merely share a pathway or programme are often backed only by **co-expression / text-mining**. And a **transcription factor** linked to your gene will almost never have an *experimental* edge to it — a TF binds its target's **DNA, not its protein**, so PPI assays cannot see the relationship. That gap is exactly why Week 2 adds a curated **regulatory** layer. If STRING shows your gene **no experiment-backed partners at all**, that is a real result — record it as such.
+> **→ Dossier:** experiment-backed PPI partners · the regulator directly above your gene.
 
 ### D4 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
 
