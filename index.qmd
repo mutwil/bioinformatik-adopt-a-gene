@@ -659,7 +659,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 ### D2 — Who does my gene work with — and do other atlases agree?  *(CoNekT + ATTED-II)*
 
-1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → your gene → open its **co-expression neighbourhood**; list the SCW neighbours you recognise (e.g. CESA4 `AT5G44030`, CESA8 `AT4G18780`, IRX9 `AT2G37090`, COBL4 `AT5G15630`, KNAT7 `AT1G62990`, MYB46 `AT5G12870`).
+1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** and click **View neighbourhood as graph**. Write down the neighbours you recognise and the **process they point to**.
 2. **ATTED-II** ([atted.jp](https://atted.jp/)) → search box → same locus → read its co-expressed list.
 3. **Cross-check (the point):** go back to the co-expression table you built in **Stage 4** and take the **5 genes ranked just below your own** (rows 2–6 — row 1 is your own gene at PCC = 1.000). How many of those 5 reappear in CoNekT and/or ATTED-II — two atlases *independent* of ours? Record the overlap as **__ / 5**.
 
@@ -669,7 +669,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 ### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
 
 1. **STRING** ([string-db.org](https://string-db.org/)) → your gene, organism *Arabidopsis thaliana*, required score **medium (0.400)** → which neighbours appear, and by **which evidence channel** (experiments / co-expression / text-mining)? Record the **physical (experiment-backed) partners**.
-2. **CoNekT** → look up the regulators **MYB46** `AT5G12870`, **MYB83** `AT3G08500`, **SND1/NST3** `AT1G32770`, **KNAT7** `AT1G62990`. Which one sits **directly above your gene** in the secondary-wall hierarchy? Record it.
+2. **CoNekT** → in your gene's neighbourhood graph, look for a **transcription factor** among the neighbours (CoNekT labels TF families) — a plausible regulator sitting directly above your gene. Record it, or record **"none found"** if there is no TF in the neighbourhood — that is a legitimate answer. *(For a secondary-wall gene this is typically **MYB46** `AT5G12870`, **MYB83** `AT3G08500` or **SND1** `AT1G32770`.)*
 
 > ✅ *Expected:* the CESA4/7/8 triangle is recovered by **experiments**, but **MYB46→CESA links appear only via co-expression / text-mining — never physical experiments**, because a TF binds its target's **DNA**, not its protein. That gap is exactly why Week 2 adds a curated **regulatory** layer. *(The DNA motif MYB46 binds in those promoters is the **SMRE / M46RE** element — it reappears in the Week-2 exam.)*
 > **→ Dossier:** PPI partners · the regulator directly above your gene.
