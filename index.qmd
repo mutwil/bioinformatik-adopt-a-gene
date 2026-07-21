@@ -264,7 +264,7 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 
 > 📅 **Tuesday 21 Oct (09:00–12:00)** — today you do **M4.W1.E1** only.
 
-## M4.W1.E1 · Stage 1 — Normalization: raw counts → TPM → log → z-score
+## M4.W1.E1 — Normalization: raw counts → TPM → log → z-score
 
 This stage builds the standard normalization pipeline one metric at a time, and shows the matrix as a heatmap after each step so you can *see* what every transformation fixes. The aim is for you to understand **why** each metric exists, not just how to type it.
 
@@ -418,7 +418,7 @@ say(exists("z") && abs(mean(z)) < 1e-6,
     "the blank is log_tpm:  z <- (log_tpm - row_mean) / row_sd.")
 ```
 
-> **But look at `Root2`.** Even after z-scoring, `Root2` still doesn't line up with `Root1`/`Root3` — its whole column looks scrambled. That's `Gene8` *still* making trouble: because TPM forces every sample to sum to a million, the `Gene8` spike ate most of `Root2`'s budget and deflated every *other* gene in that sample (Step 1.3). A per-gene z-score recentres each gene on its own mean, but it **cannot** undo a distortion that lives in one entire *column* — so z-scoring did **not** rescue `Root2`. The only fix is to remove `Gene8` and re-normalize, which is exactly what Stage 2 does next.
+> **But look at `Root2`.** Even after z-scoring, `Root2` still doesn't line up with `Root1`/`Root3` — its whole column looks scrambled. That's `Gene8` *still* making trouble: because TPM forces every sample to sum to a million, the `Gene8` spike ate most of `Root2`'s budget and deflated every *other* gene in that sample (Step 1.3). A per-gene z-score recentres each gene on its own mean, but it **cannot** undo a distortion that lives in one entire *column* — so z-scoring did **not** rescue `Root2`. The only fix is to remove `Gene8` and re-normalize, which is exactly what M4.W1.E2 does next.
 >
 > **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples; log / z-score → visualising and clustering.*
 
@@ -426,9 +426,9 @@ say(exists("z") && abs(mean(z)) < 1e-6,
 
 > 📅 **Thursday 23 Oct (09:00–16:00)** — today you do **M4.W1.E2 → M4.W1.E5**: PCA & clustering, claim your gene, co-expression, then the databases.
 
-## M4.W1.E2 · Stage 2 — Explore the structure: PCA & clustering
+## M4.W1.E2 — Explore the structure: PCA & clustering
 
-Now that the matrix is normalized, step back and ask whether the **samples** group the way biology predicts — and deal with the `Gene8` artefact honestly. We do it in the right order: **first see the damage** the artefact does to the global picture, **then** remove it and re-normalize, and watch the structure snap into place. *(Run Stage 1 first so `counts`, `gene_len` and `z` exist.)*
+Now that the matrix is normalized, step back and ask whether the **samples** group the way biology predicts — and deal with the `Gene8` artefact honestly. We do it in the right order: **first see the damage** the artefact does to the global picture, **then** remove it and re-normalize, and watch the structure snap into place. *(Run M4.W1.E1 first so `counts`, `gene_len` and `z` exist.)*
 
 ### PCA — first, with the artefact still in
 
@@ -540,11 +540,11 @@ say(exists("groups") && length(unique(groups)) == 3,
     "we have three tissues, so cut the tree into 3 groups.")
 ```
 
-> Notice this only worked **after** removing `Gene8`: with the artefact in, its spike dominated `Root2` and scrambled the clustering — no choice of linkage fixes that, you have to remove the bad data. In **real** data you watch for **batch effects** the same way: if samples cluster by sequencing run instead of biology, correct for it (batch term in DESeq2, or ComBat) **before** drawing conclusions.
+> Notice this only worked **after** removing `Gene8`: with the artefact in, its spike dominated `Root2` and scrambled the clustering — no choice of linkage fixes that, you have to remove the bad data.
 
 ---
 
-## M4.W1.E3 · Stage 3 — Claim your gene
+## M4.W1.E3 — Claim your gene
 
 You've got the skills — now make it personal. Pick **one** gene — your TA spreads them so every group gets a **different biology**. These span very different processes; your job is to *discover* what yours does and where it acts.
 
@@ -594,14 +594,14 @@ An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes
 
 ---
 
-## M4.W1.E4 · Stage 4 — Co-expression: find your gene's neighbours
+## M4.W1.E4 — Co-expression: find your gene's neighbours
 
 Before you reach for a database or build a network, do the simplest, most powerful trick in transcriptomics yourself: **guilt by association**. Genes that rise and fall *together* across many samples are often part of the same process — so the genes whose expression profile most resembles your gene's are your first, data-driven guess at what it does.
 
-We measure "resembles" with the **Pearson correlation** of each gene's profile against your gene's, then sort: the top of the list is your gene's **co-expression neighbourhood**. *(Run Stage 3 first so `MY_GENE` is set.)*
+We measure "resembles" with the **Pearson correlation** of each gene's profile against your gene's, then sort: the top of the list is your gene's **co-expression neighbourhood**. *(Run M4.W1.E3 first so `MY_GENE` is set.)*
 
 ```{webr}
-HUB    <- MY_GENE                                  # your adopted gene (from Stage 3)
+HUB    <- MY_GENE                                  # your adopted gene (from M4.W1.E3)
 target <- EXPR[HUB, ]                              # its expression across every organ
 # cor(r, target): Pearson correlation of each gene's profile with your gene's profile
 pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))   # <- blank: target
@@ -632,7 +632,7 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 ## M4.W1.E5 · Database exercises — the database half of your dossier (D1–D4)
 
-Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **Stage 4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
+Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **M4.W1.E4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
 **📋 Your database dossier — the 8 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
@@ -661,7 +661,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** and click **View neighbourhood as graph**. Write down the neighbours you recognise and the **process they point to**.
 2. Record your **top 3 co-expressed genes** from that graph.
 
-> ✅ *Expected:* CoNekT returns a tight module pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your Stage-4 list did, that agreement is real evidence.
+> ✅ *Expected:* CoNekT returns a tight module pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence.
 > **→ Dossier:** top 3 co-expressed genes from CoNekT.
 
 ### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
@@ -690,9 +690,9 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 ## 📝 Week 1 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-Close the week the way the exam tests it — these cover **all of Week 1**: Stages 1–4 **and** the database exercises. Answer in 2–4 sentences; the model answers and their points match the grading. **(10 questions · 40 p.)**
+Close the week the way the exam tests it — these cover **all of Week 1**: **M4.W1.E1–E4** **and** the database exercises (**E5**). Answer in 2–4 sentences; the model answers and their points match the grading. **(10 questions · 40 p.)**
 
-### Data, normalization & exploration (Stages 1–2)
+### Data, normalization & exploration (M4.W1.E1–E2)
 
 **Q1 (4 p) — Why normalize.** Raw counts can't be compared (a) between two *genes* in one sample, nor (b) for one *gene* between two samples. Give the confound in each case and the TPM step that removes it.
 
@@ -702,15 +702,15 @@ Close the week the way the exam tests it — these cover **all of Week 1**: Stag
 
 <details><summary>✅ Model answer (4 p)</summary>(a) TPM forces every sample to sum to 1e6, so one runaway gene eats most of `Root2`'s budget and <b>deflates every other gene</b> in that column — a composition effect scaling cannot undo (2 p). (b) In PCA `Root2` separated from the other roots; dropping `Gene8` and re-normalizing restored each sample's true composition, so samples clustered by tissue (2 p).</details>
 
-**Q3 (4 p) — z-score & clustering.** (a) Why z-score each gene before clustering samples? (b) Your three clusters match root/leaf/pollen — what would it mean if samples instead clustered by *sequencing run*, and what would you do?
+**Q3 (4 p) — z-score & clustering.** (a) Why z-score each gene before clustering samples? (b) Your clustering only separated root/leaf/pollen *after* `Gene8` was removed. Why could no choice of linkage or distance fix it while the artefact was still in?
 
-<details><summary>✅ Model answer (4 p)</summary>(a) Per-gene z-scoring compares each gene's <b>pattern</b>, not its magnitude, so highly expressed genes don't dominate the distance and weakly expressed but informative genes still count (2 p). (b) That is a <b>batch effect</b> — technical variation outweighs biology; correct for batch (a batch term in DESeq2, or ComBat) before interpreting (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) Per-gene z-scoring compares each gene's <b>pattern</b>, not its magnitude, so highly expressed genes don't dominate the distance and weakly expressed but informative genes still count (2 p). (b) The artefact was one enormous value that dominated every distance involving <b>Root2</b>. Clustering can only re-arrange the distances it is given, so corrupted data has to be <b>removed</b> — normalization rescales values, it cannot undo a bad measurement (2 p).</details>
 
 **Q4 (4 p) — PCA & the scree plot.** Your scree plot shows PC1 = 62 %, PC2 = 21 %. (a) What does each bar mean, and can you trust the 2-D PCA picture here? (b) What would it mean if all the bars were roughly equal height? (c) *Before* you removed Gene8, why did Root2 sit apart on PC1?
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Each bar = the share of total variance that component captures; PC1 + PC2 = 83 %, so the 2-D plot is a <b>faithful</b> summary — most structure lives in two dimensions (2 p). (b) Variance spread evenly across many PCs → the data is genuinely high-dimensional, no 2-D plot represents it, and you should distrust any clustering read off it (1 p). (c) The Gene8 spike — and TPM's deflation of every other gene in Root2 — made Root2's whole profile an outlier, so PC1 captured that artefact rather than tissue (1 p).</details>
 
-### Gene function: co-expression & databases (Stage 4 + D1–D4)
+### Gene function: co-expression & databases (M4.W1.E4 + D1–D4)
 
 **Q5 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
 
@@ -720,13 +720,13 @@ Close the week the way the exam tests it — these cover **all of Week 1**: Stag
 
 <details><summary>✅ Model answer (4 p)</summary>(a) The more <i>specific</i> the shared context, the lower the chance of coincidence — co-localising at cell-type resolution rules out the trivial "both are just stem-abundant" explanation, so the guilt-by-association is stronger (2 p). (b) Housekeeping / broadly high genes are abundant everywhere; or both genes respond independently to the same cue (e.g. both stress-induced) without working together (2 p).</details>
 
-**Q7 (4 p) — Reproducibility across atlases.** Suppose three of your Stage-4 top co-expressed genes also show up in your gene's CoNekT neighbourhood, but one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
+**Q7 (4 p) — Reproducibility across atlases.** Suppose three of your M4.W1.E4 top co-expressed genes also show up in your gene's CoNekT neighbourhood, but one does not. (a) What does cross-atlas reproducibility tell you that a single atlas cannot? (b) Give two distinct reasons a *real* partner could be missing from one atlas's list.
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
 
 **Q8 (5 p) — PPI vs co-expression vs regulation (core concept).** In STRING the CESA4/7/8 are joined by *experiments*, but MYB46 links to its targets only by *co-expression / text-mining*. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) Which database type *can* draw the MYB46→CESA edge, and what experiment supports it? (c) What general rule about reading a single database follows?
 
-<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Each database reports only <b>one kind</b> of evidence; absence in one (e.g. PPI) is not absence of a relationship — you must combine layers (1 p).</details>
+<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Databases differ in <b>which kinds</b> of evidence they carry, and some (e.g. STRING) report several channels at once — so a missing link in one database, or in one evidence channel, is not absence of a relationship. You have to check <i>which</i> channel supports an edge and combine layers (1 p).</details>
 
 **Q9 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
 
@@ -786,7 +786,7 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 ### M4.W2.E1 · N0 — (Re)claim your gene
 
-webR forgets everything when the page reloads, so **set your gene here** before the network steps — whether you're continuing from Week 1 or starting a fresh session. Use **the same gene you claimed in Stage 3** (any gene from that pool).
+webR forgets everything when the page reloads, so **set your gene here** before the network steps — whether you're continuing from Week 1 or starting a fresh session. Use **the same gene you claimed in M4.W1.E3** (any gene from that pool).
 
 > **Got an "object not found" error later, or reloaded the page?** webR forgets all state on reload — just re-run **N0 → N1 → N2 → N3** top-to-bottom once, then continue.
 
@@ -1140,16 +1140,16 @@ Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidate
 **✍️ Dossier (assessed) — close it out (about *your* gene):**
 
 1. **What & where:** your gene's molecular identity (its Pfam domain) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
-2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your Stage-3 hypothesis?
+2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your M4.W1.E3 hypothesis?
 3. **Cross-check:** do the databases (eFP / PEO / CoNekT / STRING / EBI) **agree** on your gene's tissue, partners and domain?
 4. **Correlation vs regulation** *(from the MYB46 case study)*: why is co-expression **not** proof that one gene regulates another? Use the MYB46→CESA / KNAT7 ⊣ CESA8 example.
 5. **Verdict:** does the evidence **confirm or revise** your hypothesis? Name **≥3** evidence types — any three of: expression pattern, a co-expression neighbour, a database hit, a PPI / regulatory edge, and (*only if you ran the Appendix*) an enriched GO term.
 
 **📄 Assemble your 1-page dossier (the conference hand-in).** Fill these in the **📋 Dossier** panel (bottom-left) as you go — it autosaves, you can **Download** it, and **Check with AI** gives formative feedback. Transfer them onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
 
-1. **Hypothesis** (Stage 3) — your adopted gene + your one-line guess at its function.
-2. **Data quality** (Stage 2) — one line: the `Gene8` artefact you detected and removed, and why.
-3. **Co-expression** (Stage 4) — your top-5 neighbours + the module they name.
+1. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
+2. **Data quality** (M4.W1.E2) — one line: the `Gene8` artefact you detected and removed, and why.
+3. **Co-expression** (M4.W1.E4) — your top-5 neighbours + the module they name.
 4. **Database cross-check** (D1–D4) — your filled results table.
 5. **Network** (N1–N4c) — a screenshot of *your gene's* co-expression network **and one metric you measured on it in N4c** (its secondary bridge, or its clique-vs-star clustering), plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
 6. **Verdict** — confirm or revise, naming ≥3 evidence types.
@@ -1191,7 +1191,7 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 # Appendix — Functional enrichment (GO over-representation)
 
-*Optional extension (also covered in more depth in the Big Data course). Run it any time **after** you've claimed a gene — Stage 3 in Week 1 or N0 in Week 2 — it needs `MY_GENE`, `EXPR` and `gene_sets`, which are all in place by then.*
+*Optional extension (also covered in more depth in the Big Data course). Run it any time **after** you've claimed a gene — M4.W1.E3 in Week 1 or N0 in Week 2 — it needs `MY_GENE`, `EXPR` and `gene_sets`, which are all in place by then.*
 
 Is your gene's neighbourhood **over-represented** for a biological process? The **hypergeometric test** (the one-sided Fisher exact test) answers it. Picture an urn:
 
