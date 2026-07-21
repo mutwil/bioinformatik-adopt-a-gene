@@ -240,14 +240,14 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 *Reading: biological networks (M4F5 slides); the MYB46-GRN concept.*
 
 - **09:00 – 09:50** — Lecture **M4F5**: Biological networks & the MYB46 gene-regulatory network
-- **09:50 – 12:00** — **Group work**: build & measure your gene's network (**M4.W2.E1–E7**)
+- **09:50 – 12:00** — **Group work**: build & measure your gene's network (**M4.W2.E1–E8**)
     - **N0–N1** — reclaim your gene, then build its **co-expression** network
     - **N2** — overlay the **BioGRID PPI** layer
     - **N3** — add the curated **MYB46 GRN** *(the shared case study)*
     - **N4 / N4b** — read the hierarchy and measure the metrics
     - **N4c** — measure your **own** network
 
-*Flex / homework:* **M4.W2.E8–E9** (N4d topology & robustness, N4e edge types) and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
+*Flex / homework:* **M4.W2.E9–E10** (N4d topology & robustness, N4e edge types) and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
 
 **Thursday, 30 Oct — Presentations, exam Q&A, evaluation (09:00–~15:00)**
 
@@ -261,6 +261,8 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 ---
 
 # Week 1 — uge 43 · clean data → what does my gene do?
+
+> 📅 **Tuesday 21 Oct (09:00–12:00)** — today you do **M4.W1.E1** only.
 
 ## M4.W1.E1 · Stage 1 — Normalization: raw counts → TPM → log → z-score
 
@@ -351,7 +353,7 @@ print(data.frame(gene = names(gene_len), length_bp = gene_len, row.names = NULL)
 
 The aim is to remove the two confounds from Step 1.2 and end with **TPM**, the metric the atlas uses. TPM is two normalizations done **in order** — do them one at a time, each with its own check.
 
-**Step 1.3a — divide out gene length (→ RPK).** Divide each count by the gene's length in **kilobases**. Fill the blank, then **Run**.
+**Step 1.3a — divide out gene length (→ RPK).** **RPK = Reads Per Kilobase**: the read count divided by the gene's length in **kilobases** (1 kb = 1000 bp). After this step a long gene and a short gene at the same true expression give the same number. Fill the blank, then **Run**.
 
 ```{webr}
 # gene_len is in bp, so /1000 converts it to kilobases. gene_len has one value per gene (per row),
@@ -418,9 +420,11 @@ say(exists("z") && abs(mean(z)) < 1e-6,
 
 > **But look at `Root2`.** Even after z-scoring, `Root2` still doesn't line up with `Root1`/`Root3` — its whole column looks scrambled. That's `Gene8` *still* making trouble: because TPM forces every sample to sum to a million, the `Gene8` spike ate most of `Root2`'s budget and deflated every *other* gene in that sample (Step 1.3). A per-gene z-score recentres each gene on its own mean, but it **cannot** undo a distortion that lives in one entire *column* — so z-scoring did **not** rescue `Root2`. The only fix is to remove `Gene8` and re-normalize, which is exactly what Stage 2 does next.
 >
-> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples; log / z-score → visualising and clustering.* Never DE-test TPM.
+> **Rule for your dossier:** *estimated counts → differential expression; TPM → comparing a gene across samples; log / z-score → visualising and clustering.*
 
 ---
+
+> 📅 **Thursday 23 Oct (09:00–16:00)** — today you do **M4.W1.E2 → M4.W1.E5**: PCA & clustering, claim your gene, co-expression, then the databases.
 
 ## M4.W1.E2 · Stage 2 — Explore the structure: PCA & clustering
 
@@ -572,8 +576,8 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 **Instructions:** replace both `______`, then **Run** — the cell tells you if your gene is valid.
 
 ```{webr}
-MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
-MY_NAME <- "______"   # <- a short name, e.g. "CESA7"
+MY_GENE <- "______"   # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
+MY_NAME <- "______"   # <- any short label you like, e.g. "CESA7"  (only used to print/title things - never looked up)
 cat("Adopted:", MY_NAME, "(", MY_GENE, ")\n")   # cat() prints its arguments
 
 # instant check: grepl() tests the AGI text pattern; %in% checks the gene is actually in the data
@@ -601,10 +605,11 @@ HUB    <- MY_GENE                                  # your adopted gene (from Sta
 target <- EXPR[HUB, ]                              # its expression across every organ
 # cor(r, target): Pearson correlation of each gene's profile with your gene's profile
 pcc  <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, ______)))   # <- blank: target
-nbhd <- data.frame(gene = rownames(EXPR), symbol = sym[rownames(EXPR)],
-                   description = desc[rownames(EXPR)], PCC = round(pcc, 3))
+nbhd <- data.frame(gene = rownames(EXPR), symbol = lab(rownames(EXPR)),
+                   description = substr(desc[rownames(EXPR)], 1, 40), PCC = round(pcc, 3),
+                   row.names = NULL)               # row.names = NULL -> the AGI appears ONCE, in the gene column
 nbhd <- head(nbhd[order(-nbhd$PCC), ], 60)         # keep the top-60 neighbours
-print(head(nbhd, 12))
+print(head(nbhd, 12), right = FALSE, row.names = FALSE)   # left-aligned: gene | symbol | description | PCC
 
 say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
     paste("row 1 is", MY_NAME, "at PCC = 1.000 — neighbour list ready."),
@@ -615,9 +620,9 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 <details><summary>💡 Hint</summary>A gene's expression profile is identical to itself, and the Pearson correlation of any profile with itself is exactly 1.0 — so every gene is its own perfect "neighbour". (It's also a quick sanity check that the correlation ran correctly.)</details>
 
-> Now look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes. **For another process** the module is different but just as tight: a *photosynthesis* gene pulls in `LHCB`/photosystem genes, a *histone* pulls in other histones + `PCNA` (DNA replication), a *ribosomal* protein pulls in other `RPL`/`RPS` genes (translation), a *defence* gene pulls in pathogen-response genes. Whichever you got, **naming that module is your gene's functional story** (and not recognising every gene name is fine).
+> Now look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes. **For another process** the module is different but just as tight: a *photosynthesis* gene pulls in `LHCB`/photosystem genes, a *histone* pulls in other histones + `PCNA` (DNA replication), a *ribosomal* protein pulls in other `RPL`/`RPS` genes (translation), a *defence* gene pulls in pathogen-response genes. **Your job is to name the one process those neighbours share** — "these are mostly photosynthesis genes", "these are mostly ribosomal proteins", "these are mostly cell-wall genes". That short label *is* your gene's predicted function, and it goes straight into your dossier. You do **not** need to recognise every gene in the list — recognising a handful is enough to name the module.
 
-**🤔 Your top neighbour correlates at PCC ≈ 0.95 with your gene. Does that *prove* the two proteins interact, or that one regulates the other?**
+**🤔 Look at the PCC of your top neighbour (row 2) — it will be high. Does a high correlation *prove* that the two proteins interact, or that one regulates the other?**
 
 <details><summary>💡 Hint</summary>No — a high correlation only means the two genes share an expression <i>pattern</i>. That is <i>consistent with</i> a functional link, but it could equally come from both being switched on by the same upstream regulator, or both being specific to the same tissue. Proof needs <b>physical</b> (PPI) or <b>directed</b> (regulatory) evidence — which you add in <b>Week 2</b>, where you turn this ranked list into a real network and see where co-expression does and doesn't line up with mechanism.</details>
 
@@ -627,7 +632,7 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 ## M4.W1.E5 · Database exercises — the database half of your dossier (D1–D4)
 
-Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step also tests what you just built in **Stage 4** (your co-expression list) and sets up the **Week-2 MYB46 network**. All four are **assessed** (TA-checked against an answer key). *URLs verified 2026-06-19; all open in a new tab.*
+Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **Stage 4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
 **📋 Your database dossier — fill it in as you go (this table is what's assessed):**
 
@@ -789,8 +794,8 @@ webR forgets everything when the page reloads, so **set your gene here** before 
 > **Got an "object not found" error later, or reloaded the page?** webR forgets all state on reload — just re-run **N0 → N1 → N2 → N3** top-to-bottom once, then continue.
 
 ```{webr}
-MY_GENE <- "______"   # <- your gene's AGI locus, e.g. "AT5G17420"
-MY_NAME <- "______"   # <- a short name,       e.g. "CESA7"
+MY_GENE <- "______"   # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
+MY_NAME <- "______"   # <- any short label,   e.g. "CESA7"      (only used to print/title things - never looked up)
 
 say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     paste("adopted", MY_NAME, "(", MY_GENE, ") — ready for the network."),
@@ -808,9 +813,10 @@ target <- EXPR[HUB, ]                              # its expression across every
 pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # corr of EVERY gene with yours
 pcc[is.na(pcc)] <- 0                               # a flat gene gives NA -> treat as uncorrelated
 nbhd   <- data.frame(gene = rownames(EXPR), symbol = lab(rownames(EXPR)),
-                     description = desc[rownames(EXPR)], PCC = round(pcc, 3))
+                     description = substr(desc[rownames(EXPR)], 1, 40), PCC = round(pcc, 3),
+                     row.names = NULL)             # row.names = NULL -> the AGI appears ONCE, in the gene column
 nbhd   <- nbhd[order(-nbhd$PCC), ]
-print(head(nbhd, 12))                              # your closest neighbours (row 1 = your gene, PCC = 1.000)
+print(head(nbhd, 12), right = FALSE, row.names = FALSE)   # left-aligned; row 1 = your gene, PCC = 1.000
 
 # guide — how big is the network at each cutoff? (top genes correlated with YOUR gene above it, capped at 20)
 for (cut0 in c(0.85, 0.90, 0.93, 0.95, 0.99))
