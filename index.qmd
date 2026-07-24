@@ -232,7 +232,7 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 - **13:55 – 14:10** — Break
 - **14:10 – 15:00** — Exercise **M4.W1.E3–E4**: Claim a gene + build its co-expression neighbourhood
 - **15:00 – 15:15** — Break
-- **15:15 – 16:00** — Exercise **M4.W1.E5**: Transcriptomic databases *(D1–D2; D3–D4 as homework)*
+- **15:15 – 16:00** — Exercise **M4.W1.E5**: Transcriptomic databases *(D1–D2; D3 as homework)*
 
 ### Week 2 — Biological networks & conference · Tuesday 28 Oct & Thursday 30 Oct
 
@@ -638,22 +638,20 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 ---
 
-### M4.W1.E5 · Database exercises — the database half of your dossier (D1–D4)
+### M4.W1.E5 · Database exercises — the database half of your dossier (D1–D3)
 
-Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these four short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **M4.W1.E4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
+Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these three short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **M4.W1.E4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
 
-**📋 Your database dossier — the 8 things to record.** Work down this list as you do D1 → D4 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
+**📋 Your database dossier — the 6 things to record.** Work down this list as you do D1 → D3 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
 | # | What to record | Where to get it | Example — if your gene were **CESA7** |
 |---|---|---|---|
 | 1 | Protein domain (Pfam) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
-| 2 | Highest-expressing organ | **D1** → ePlant *(re-checked in D4)* | mature / inflorescence stem |
+| 2 | Highest-expressing organ | **D1** → ePlant *(re-checked in D3)* | mature / inflorescence stem |
 | 3 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
 | 4 | Top 3 co-expressed genes (databases) | **D2** → CoNekT | CESA4, CESA8, FLA11 |
-| 5 | Physical (PPI) partners, experiment-backed | **D3** → STRING | CESA4, CESA8 |
-| 6 | The regulator sitting directly above your gene | **D3** → CoNekT | MYB46 |
-| 7 | Does the top organ agree across all 3 databases? | **D4** | yes |
-| 8 | **Your one-line function + 3 evidence types** | synthesis of 1–7 | *"Secondary-wall cellulose synthase — xylem expression, co-expression with CESA4/CESA8, and an experiment-backed CESA complex (PPI)."* |
+| 5 | Does the top organ agree across all 3 databases? | **D3** | yes |
+| 6 | **Your one-line function + the evidence for it** | synthesis of 1–5 | *"Secondary-wall cellulose synthase — stem/xylem expression (eFP+PEO+EBI), CESA4/CESA8 co-expression reproduced in CoNekT, and a cellulose-synthase Pfam domain."* |
 
 #### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
 
@@ -672,15 +670,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 > ✅ *Expected:* CoNekT returns a tight module pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence.
 > **→ Dossier:** top 3 co-expressed genes from CoNekT.
 
-#### D3 — From correlation to mechanism: PPI vs regulation  *(STRING + CoNekT)* — the centrepiece
-
-1. **STRING** ([string-db.org](https://string-db.org/)) → paste your gene's AGI code and search (STRING detects the organism itself). You get a network of predicted partners. **Click on an edge** to see *which evidence channel* supports it — experiments, co-expression, text-mining, databases. Record the partners backed by **experiments** — those are the genuinely physical ones.
-2. **CoNekT** → in your gene's neighbourhood graph, look for a **transcription factor** among the neighbours (CoNekT labels TF families) — a plausible regulator sitting directly above your gene. Record it, or record **"none found"** if there is no TF in the neighbourhood — that is a legitimate answer. *(For a secondary-wall gene this is typically **MYB46** `AT5G12870`, **MYB83** `AT3G08500` or **SND1** `AT1G32770`.)*
-
-> ✅ *Expected:* what matters is **which channel carries each edge**. Partners that sit in the same **physical complex or machine** as your gene tend to be backed by **experiments**; partners that merely share a pathway or programme are often backed only by **co-expression / text-mining**. And a **transcription factor** linked to your gene will almost never have an *experimental* edge to it — a TF binds its target's **DNA, not its protein**, so PPI assays cannot see the relationship. That gap is exactly why Week 2 adds a curated **regulatory** layer. If STRING shows your gene **no experiment-backed partners at all**, that is a real result — record it as such.
-> **→ Dossier:** experiment-backed PPI partners · the regulator directly above your gene.
-
-#### D4 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
+#### D3 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
 
 1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → your gene → top organ.
 2. **EBI Expression Atlas** → `ebi.ac.uk/gxa/genes/<your AGI>` (e.g. [ebi.ac.uk/gxa/genes/AT5G17420](https://www.ebi.ac.uk/gxa/genes/AT5G17420)) → Baseline → top tissue.
@@ -698,7 +688,7 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 ### 📝 Week 1 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-Close the week the way the exam tests it — these cover **all of Week 1**: **M4.W1.E1–E4** **and** the database exercises (**E5**). Answer in 2–4 sentences; the model answers and their points match the grading. **(10 questions · 40 p.)**
+Close the week the way the exam tests it — these cover **all of Week 1**: **M4.W1.E1–E4** **and** the database exercises (**E5**). Answer in 2–4 sentences; the model answers and their points match the grading. **(8 questions · 31 p.)**
 
 #### Data, normalization & exploration (M4.W1.E1–E2)
 
@@ -718,7 +708,7 @@ Close the week the way the exam tests it — these cover **all of Week 1**: **M4
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Each bar = the share of total variance that component captures; PC1 + PC2 = 83 %, so the 2-D plot is a <b>faithful</b> summary — most structure lives in two dimensions (2 p). (b) Variance spread evenly across many PCs → the data is genuinely high-dimensional, no 2-D plot represents it, and you should distrust any clustering read off it (1 p). (c) The Gene8 spike — and TPM's deflation of every other gene in Root2 — made Root2's whole profile an outlier, so PC1 captured that artefact rather than tissue (1 p).</details>
 
-#### Gene function: co-expression & databases (M4.W1.E4 + D1–D4)
+#### Gene function: co-expression & databases (M4.W1.E4 + D1–D3)
 
 **Q5 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
 
@@ -732,17 +722,9 @@ Close the week the way the exam tests it — these cover **all of Week 1**: **M4
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Recurrence across <i>independent</i> datasets argues the correlation is genuine biology, not a batch/condition artefact of one experiment (2 p). (b) Any two of: different tissues/conditions sampled (the partnership is condition-specific); different normalization / network method / correlation cutoff; the gene is absent from that database's genome version or was filtered out (2 p).</details>
 
-**Q8 (5 p) — PPI vs co-expression vs regulation (core concept).** In STRING the CESA4/7/8 are joined by *experiments*, but MYB46 links to its targets only by *co-expression / text-mining*. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) Which database type *can* draw the MYB46→CESA edge, and what experiment supports it? (c) What general rule about reading a single database follows?
-
-<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge (ChIP/EMSA-backed): ChIP-seq/EMSA showing MYB46 binds the SMRE/M46RE elements in the CESA promoters, plus transactivation (2 p). (c) Databases differ in <b>which kinds</b> of evidence they carry, and some (e.g. STRING) report several channels at once — so a missing link in one database, or in one evidence channel, is not absence of a relationship. You have to check <i>which</i> channel supports an edge and combine layers (1 p).</details>
-
-**Q9 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
+**Q8 (3 p) — Reading a disagreement.** Three databases agree your gene's top organ is stem but rank the 2nd/3rd organs differently. (a) Which disagreement matters more for your conclusion, and why? (b) What property of the underlying data most often explains rank shuffling low down the list?
 
 <details><summary>✅ Model answer (3 p)</summary>(a) The <b>top-organ agreement</b> carries the biological conclusion (where the gene acts); the low-expression rank order sits near the detection floor and is noisy, so reshuffling there is expected and harmless (2 p). (b) Different sample sets / conditions (and sequencing depth / normalization) between atlases (1 p).</details>
-
-**Q10 (4 p) — Synthesis.** (a) In one sentence, state your gene's function and name the **three independent evidence types** from your dossier that support it. (b) Which of those evidence types is the **weakest** for *proving* the function, and why?
-
-<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + PEO + CoNekT), <b>physical/regulatory</b> (CESA triangle by STRING experiments + a MYB46→CESA regulatory edge) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof of a functional link; a physical (experiment-backed PPI) or a ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
 
 > **✍️ Dossier:** keep your answers — the reasoning here (why TPM, artefact vs batch, PCA trust, correlation vs causation, evidence types) is exactly what the conference Q&A and the rubric (criteria 1 & 3) probe.
 
@@ -785,7 +767,7 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 | Time | Do this | Write one sentence |
 |---|---|---|
-| 09:50–10:00 | Draw the board; pre-fill *Expression* + *Database* from your Week-1 **D1–D4** dossier; run **N0** | What ONE function will we try to prove — and what single fact would make us drop it? |
+| 09:50–10:00 | Draw the board; pre-fill *Expression* + *Database* from your Week-1 **D1–D3** dossier; run **N0** | What ONE function will we try to prove — and what single fact would make us drop it? |
 | 10:00–10:25 | **N1** at cutoff **0.90** (guess the gene count *before* you run; then try 0.95); 📷 a screenshot | Is our module the broad 0.90 net or the tight 0.95 core — and how do we justify the cutoff we report? |
 | 10:25–10:50 | **N2** BioGRID PPI — *zero edges is a **finding**, not a failure* | With our N PPI edges: does our gene act alone, or is the database just silent? |
 | 10:50–11:00 | **Break** + check you have N0–N2, a screenshot and 2 sentences; **rotate roles** | — |
@@ -1161,7 +1143,7 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 
 1. **What & where:** your gene's molecular identity (its Pfam domain) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
 2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your M4.W1.E3 hypothesis?
-3. **Cross-check:** do the databases (eFP / PEO / CoNekT / STRING / EBI) **agree** on your gene's tissue, partners and domain?
+3. **Cross-check:** do the databases (eFP / PEO / CoNekT / EBI) **agree** on your gene's tissue, partners and domain?
 4. **Correlation vs regulation** *(from the MYB46 case study)*: why is co-expression **not** proof that one gene regulates another? Use the MYB46→CESA / KNAT7 ⊣ CESA8 example.
 5. **Verdict:** does the evidence **confirm or revise** your hypothesis? Name **≥3** evidence types — any three of: expression pattern, a co-expression neighbour, a database hit, a PPI / regulatory edge, and (*only if you ran the Appendix*) an enriched GO term.
 
@@ -1170,7 +1152,7 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 1. **Data quality** (M4.W1.E2) — one line: the `Gene8` artefact you detected and removed, and why.
 2. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
 3. **Co-expression** (M4.W1.E4) — your top-5 neighbours + the module they name.
-4. **Database cross-check** (M4.W1.E5 · D1–D4) — your filled results table.
+4. **Database cross-check** (M4.W1.E5 · D1–D3) — your filled results table.
 5. **Network** (M4.W2 · N1–N4c) — a screenshot of *your gene's* co-expression network **and one metric you measured on it in N4c** (its secondary bridge, or its clique-vs-star clustering), plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
 6. **Verdict** (M4.W2) — confirm or revise, naming ≥3 evidence types.
 
@@ -1178,7 +1160,7 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 
 ### 📝 Week 2 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these five are the core.)* These questions probe the **shared** MYB46 GRN — the concepts transfer to any gene; your **own** gene is assessed in the dossier.
+The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these seven are the core.)* These questions probe the **shared** MYB46 GRN — the concepts transfer to any gene; your **own** gene is assessed in the dossier.
 
 **W2·Q1 (4 p) — Read the hub.** In the MYB46 GRN, MYB46 has the highest **out-degree**, the highest **betweenness**, and a **near-zero clustering coefficient**. Interpret each metric biologically, then say what network position they describe together.
 
@@ -1200,7 +1182,15 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the incoherent feed-forward structure described in N4e) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
 
-> **✍️ Dossier:** these five are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
+**W2·Q6 (5 p) — Physical vs regulatory edges.** In your network CESA4/7/8 are joined by **BioGRID PPI** edges (N2), but MYB46 reaches its targets only through the **curated GRN** (N3) — never by a PPI edge. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) What experiment type draws the MYB46→CESA edge instead? (c) What general rule about reading a single edge type follows?
+
+<details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge from ChIP-seq / EMSA / transactivation, showing MYB46 binds the SMRE/M46RE elements in the CESA promoters (2 p). (c) Each edge type carries only <b>one</b> kind of evidence; the absence of a PPI edge is not absence of a relationship — read which layer an edge comes from and combine them (1 p).</details>
+
+**W2·Q7 (4 p) — Synthesis (your gene).** (a) In one sentence, state your gene's function and name **three independent evidence types** from your dossier that support it. (b) Which of those is the **weakest** for *proving* the function, and why?
+
+<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + CoNekT), <b>physical / regulatory</b> (the CESA PPI triangle in N2 + a MYB46→CESA regulatory edge in N3) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof; a physical (BioGRID PPI) or ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
+
+> **✍️ Dossier:** these seven are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
 
 ---
 
