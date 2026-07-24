@@ -842,24 +842,29 @@ say(exists("edges") && nrow(edges) > 0,
 
 ### M4.W2.E4 · N3 — Add the regulatory layer  *(PlantConnectome)*
 
-Co-expression (N1) and PPI (N2) are **undirected** — they cannot say who controls whom. Now overlay the **regulatory** layer on your module: for **every** gene in your co-expression neighbourhood, PlantConnectome's directed, signed, PubMed-cited edges (text-mined from tens of thousands of papers) — green = activates, red = represses, grey = regulates. **Many modules have no regulatory edges at all**, and a gene's true regulator (a TF) often isn't co-expressed with it — so an empty layer is a real finding, not a failure. *(Run N1 first so `nb` exists.)*
+Co-expression (N1) and PPI (N2) are **undirected** — they cannot say who controls whom. Now add the **regulatory** layer from **PlantConnectome** (directed, signed, PubMed-cited edges text-mined from tens of thousands of papers). The cell reports two things: **who regulates your gene** (and what it regulates), and — the strongest signal — **how many regulatory edges fall *between two of your co-expressed genes*** (co-expression **and** regulation on the same pair is the best convergence you can show). **Many genes have none** (housekeeping genes, or genes the literature hasn't resolved) — an empty layer is a real finding, not a failure. *(Run N1 first so `nb` exists.)*
 
 ```{webr}
 if (!exists("nb")) stop("Run N1 first so 'nb' (your neighbourhood) exists.")
-# regulatory edges incident to ANY gene in your co-expression neighbourhood (either end in nb) — every neighbour's regulators + targets
-rg <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$target_AGI %in% nb, ]
-my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])   # genes in your module that regulate yours
-my_tgts <- unique(rg$target_AGI[rg$source_AGI == MY_GENE])   # genes in your module that yours regulates
+rg     <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$target_AGI %in% nb, ]  # edges touching your module
+within <- rg[rg$source_AGI %in% nb & rg$target_AGI %in% nb, ]      # BOTH ends co-expressed -> regulation AMONG your module
+my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])         # who regulates your gene
+my_tgts <- unique(rg$target_AGI[rg$source_AGI == MY_GENE])         # what your gene regulates
 if (nrow(rg) == 0) {
-  cat(sprintf("No documented regulatory edges among %s's co-expression module.\n", MY_NAME))
-  cat("Common: text-mined regulation is sparse, and a gene's TF regulators are often NOT co-expressed with it. The absence is a finding you can report.\n")
+  cat(sprintf("PlantConnectome has no regulatory edges touching %s's module.\n", MY_NAME))
+  cat("Common for housekeeping genes (ribosomes, histones) or genes the literature hasn't resolved — the absence is a finding.\n")
 } else {
-  cat(sprintf("%d regulatory edge(s) within your module.  %s: %d regulator(s) in, %d target(s) out.\n",
-              nrow(rg), MY_NAME, length(my_regs), length(my_tgts)))
-  reg_edges <- data.frame(source = rg$source_AGI, target = rg$target_AGI, type = rg$type)
+  cat(sprintf("%s: %d regulator(s) in, %d target(s) out.\n", MY_NAME, length(my_regs), length(my_tgts)))
+  cat(sprintf("%d regulatory edges touch your module; %d of them are BETWEEN two of your co-expressed genes\n", nrow(rg), nrow(within)))
+  cat("  -> co-expression AND regulation on the same pair = the strongest convergence you can show.\n")
+  pri   <- rbind(within, rg[rg$source_AGI == MY_GENE | rg$target_AGI == MY_GENE, ], rg)   # draw the interesting edges first
+  pri   <- pri[!duplicated(paste(pri$source_AGI, pri$target_AGI)), ]
+  drawn <- head(pri, 70)                                            # cap the drawing so it stays readable
+  reg_edges <- data.frame(source = drawn$source_AGI, target = drawn$target_AGI, type = drawn$type)
   cynet(reg_edges, hub = MY_GENE, id = "cy_n3",
-        title = paste(MY_NAME, "module regulation — green activates, red represses, grey regulates (PlantConnectome)"))
-  say(TRUE, sprintf("%d directed, signed, PubMed-cited regulatory edge(s) among your neighbourhood — unlike co-expression (N1), regulation has direction and sign.", nrow(rg)), "-")
+        title = paste(MY_NAME, "regulation — green activates, red represses, grey regulates;",
+                      if (nrow(rg) > 70) paste("top 70 of", nrow(rg)) else "PlantConnectome"))
+  say(TRUE, sprintf("%d regulatory edge(s) around your module, %d of them among co-expressed genes — directed, signed, PubMed-cited (unlike co-expression, N1).", nrow(rg), nrow(within)), "-")
 }
 ```
 
