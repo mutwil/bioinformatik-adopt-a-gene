@@ -565,7 +565,7 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 **Other processes** *(each a different module)*:
 
 - `CAB1 AT1G29930` — photosynthesis
-- `AG AT4G18960` — flower
+- `AP3 AT3G54340` — flower (B-class organ identity; co-expresses with its partner **PI** — try cutoff ~0.80)
 - `OLE1 AT4G25140` — seed oil-body
 - `RD29A AT5G52310` — cold / abiotic stress
 - `PR1 AT2G14610` — pathogen defence
