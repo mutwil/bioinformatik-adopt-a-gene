@@ -86,3 +86,15 @@
 
   --exercise-editor-hl-va: #e6edf3;  --quarto-hl-va-color: #e6edf3;
 }
+
+/* ---------- Day banners: Week > Day > Exercise TOC hierarchy ---------- */
+/* the class may land on the wrapping section or the h2 itself — cover both */
+.dayband > h2, section.dayband > h2, h2.dayband {
+  background: #0b5394; color: #fff;
+  padding: 12px 18px; border-radius: 10px;
+  margin: 44px 0 8px; border-bottom: none !important;
+  font-weight: 800; letter-spacing: .2px;
+}
+.dayband > h2 a, section.dayband > h2 a, h2.dayband a,
+.dayband > h2 .anchorjs-link { color: #fff !important; }
+.dayband-sub { color: #555; font-style: italic; margin: -2px 0 20px 3px; }
