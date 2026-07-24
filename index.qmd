@@ -246,7 +246,7 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
     - **N3** — add your gene's **regulatory** layer (PlantConnectome)
     - **N4** — **measure** your network (clique/star, bridge, regulatory role)
 
-*Flex / homework:* **M4.W2.E6–E7** (N5 the MYB46 gold-standard example, N6 edge types) and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
+*Flex / homework:* **M4.W2.E6** (N5 — edge types) + the **optional MYB46 appendix** and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
 
 **Thursday, 30 Oct — Presentations, exam Q&A, evaluation (09:00–~15:00)**
 
@@ -255,7 +255,7 @@ Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions
 - **13:00 – 14:30** — **Exam Q&A** + individual dossier feedback (bring your questions; teacher synthesis of the different gene modules side by side)
 - **14:30 – 15:00** — **Course evaluation**
 
-> **On this page:** the in-browser R exercises (**M4.W1.E1–E5**, **M4.W2.E1–E7**), the web **database** worksheet, the **exam-style** self-tests at the end of each week, and an optional **GO over-representation** appendix at the very end.
+> **On this page:** the in-browser R exercises (**M4.W1.E1–E5**, **M4.W2.E1–E6**), the web **database** worksheet, the **exam-style** self-tests, and two optional appendices (the **MYB46 GRN** worked example and **GO over-representation**) at the end.
 
 ---
 
@@ -734,12 +734,12 @@ Close the week the way the exam tests it — these cover **all of Week 1**: **M4
 ## 📅 Tuesday 28 Oct · 09:50–12:00 {.dayband}
 
 ::: {.dayband-sub}
-Group work — today you do **M4.W2.E1 → M4.W2.E5** (N0 → N4) on **your own** gene. **E6–E7** (the MYB46 gold-standard example + edge types) are flex / homework.
+Group work — today you do **M4.W2.E1 → M4.W2.E5** (N0 → N4) on **your own** gene. **E6** (edge types) and the optional **MYB46 appendix** are flex / homework.
 :::
 
 ### Build & measure your gene's network  *(R, interactive in the browser)*
 
-You build and measure **your own gene's** network, layer by layer: its co-expression neighbourhood (**N1**), a **physical** layer from BioGRID (**N2**), and a **regulatory** layer for your gene from PlantConnectome (**N3**). Then you **measure** it (**N4**) — is your module a clique or a star, and is your gene a regulatory master or a target? Only then do you meet the hand-curated **MYB46 secondary-cell-wall GRN** (**N5**) as a **gold-standard example** of a clean, experiment-typed regulatory network — to compare with your own. **N6** spells out what the three edge types do and don't license.
+You build and measure **your own gene's** network, layer by layer: its co-expression neighbourhood (**N1**), a **physical** layer from BioGRID (**N2**), and a **regulatory** layer for your gene from PlantConnectome (**N3**). Then you **measure** it (**N4**) — is your module a clique or a star, and does anything regulate your gene? **N5** spells out what the three edge types do and don't license. *(An optional appendix at the end shows the hand-curated **MYB46 GRN** as a gold-standard example to compare with your own.)*
 
 Each build step (**N1 → N2 → N3**) **draws the network right in the page** — drag nodes, scroll to zoom, and use the **layout buttons** (Spread / Circle / Concentric / Grid / Hierarchy) if it looks crowded — so you watch your gene's network grow layer by layer: co-expression, then physical (PPI), then regulatory.
 
@@ -747,7 +747,7 @@ Each build step (**N1 → N2 → N3**) **draws the network right in the page** �
 
 ---
 
-> **How to run today.** Work through **N0 → N4** below as a group — organise yourselves however you like. Everything you produce feeds your **1-page gene dossier** (the 📋 panel, bottom-left), which you **hand in on Thursday**, not today. **N5** (the curated MYB46 example) and **N6** are flex / homework.
+> **How to run today.** Work through **N0 → N4** below as a group — organise yourselves however you like. Everything you produce feeds your **1-page gene dossier** (the 📋 panel, bottom-left), which you **hand in on Thursday**, not today. **N5** (edge types) and the optional **MYB46 appendix** are flex / homework.
 >
 > *Reloaded the page, or hit an "object not found" error? webR forgets all state on reload — just re-run **N0 → N4** top-to-bottom once.*
 
@@ -846,8 +846,8 @@ Co-expression (N1) and PPI (N2) are **undirected** — they cannot say who contr
 
 ```{webr}
 if (!exists("nb")) stop("Run N1 first so 'nb' (your neighbourhood) exists.")
-# regulatory edges AMONG your whole co-expression neighbourhood (both ends in nb) — as N2 did for PPI
-rg <- connectome_grn[connectome_grn$source_AGI %in% nb & connectome_grn$target_AGI %in% nb, ]
+# regulatory edges incident to ANY gene in your co-expression neighbourhood (either end in nb) — every neighbour's regulators + targets
+rg <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$target_AGI %in% nb, ]
 my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])   # genes in your module that regulate yours
 my_tgts <- unique(rg$target_AGI[rg$source_AGI == MY_GENE])   # genes in your module that yours regulates
 if (nrow(rg) == 0) {
@@ -863,7 +863,7 @@ if (nrow(rg) == 0) {
 }
 ```
 
-> **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). You'll meet a hand-curated, experiment-typed gold-standard network in **N5**.
+> **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). You'll meet a hand-curated, experiment-typed gold-standard network in the **optional MYB46 appendix**.
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
@@ -948,42 +948,7 @@ say(nn > 2, "measured YOUR network — its shape (clique/star), hub/bridge, and 
 
 > **Into your dossier:** your module's shape (clique vs star), its secondary bridge, and your gene's regulatory role (usually **target** or **leaf** — most genes are regulated, not regulators). Every gene gives a different answer — that is your result to present.
 
-### M4.W2.E6 · N5 — The MYB46 GRN: a gold-standard worked example
-
-Your regulatory network came from **text-mining**. Here is the opposite — the **hand-curated MYB46 secondary-cell-wall GRN**, every edge backed by a named experiment (ChIP / EMSA / transactivation). Measured with the **same helpers**, it is a textbook **hub-and-spoke**: MYB46 is the **hub** *and* **bottleneck** *and* a **star**, and the single **articulation point**. Compare its clean shape with your own network (N4).
-
-```{webr}
-if (!exists("build_adj")) stop("Run N4 first — it defines the network helpers.")
-grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI, type = paste0("GRN_", grn$interaction))
-A <- build_adj(grn_edges); deg <- rowSums(A)
-btw <- betweenness_base(A); cc <- clustering_matrix(A)
-
-od <- sort(table(grn_edges$source), decreasing = TRUE); names(od) <- lab(names(od))
-cat("Top regulators (out-degree):\n"); print(head(od, 3))
-cat(sprintf("\nMYB46: betweenness %.1f (~%.0fx the next node) ; clustering %.3f (a star).\n",
-            max(btw), max(btw) / sort(btw, decreasing = TRUE)[2], cc["AT5G12870"]))
-trio <- c("AT1G32770","AT4G18780","AT1G62990")                 # SND1, CESA8, KNAT7 — all degree 3
-tb <- round(btw[trio], 1); names(tb) <- lab(trio)
-cat("The trap trio (all degree 3) — betweenness:\n"); print(tb)   # 8.0 / 8.0 / 0.3
-
-remove_node <- function(A, v) { keep <- setdiff(rownames(A), v); A[keep, keep, drop = FALSE] }
-frag <- length(unique(components_base(remove_node(A, "AT5G12870"))))
-cat(sprintf("Remove MYB46 -> %d components; remove any other single node -> 1 (MYB46 is the only articulation point).\n", frag))
-
-nn2  <- rownames(A); nrm <- function(v) if (diff(range(v)) > 0) (v - min(v)) / diff(range(v)) else rep(.5, length(v))
-heat <- colorRampPalette(c("#f7f7f7","#fdae6b","#e6550d","#a50f15"))(24)
-cynet(grn_edges, hub = "AT5G12870", id = "cy_n5",
-      title = "Curated MYB46 GRN — node size: degree | fill: betweenness (reddest = bottleneck)",
-      node_fill = setNames(heat[1 + round(nrm(btw[nn2]) * 23)], nn2),
-      node_size = setNames(24 + 34 * nrm(deg[nn2]), nn2))
-say(names(which.max(btw)) == "AT5G12870",
-    sprintf("MYB46 is the hub + bottleneck + star and the only cut-vertex (remove -> %d pieces). A curated, experiment-typed network — the gold standard your PlantConnectome edges (N3) approximate.", frag),
-    "expected MYB46 on top — did 'grn' load (it loads on page open)?")
-```
-
-> **The one brake — a co-expression trap.** The GRN's single repression is **KNAT7 ⊣ CESA8**. Yet MYB46 *activates* both CESA8 **and** KNAT7 (which represses CESA8) — an **incoherent feed-forward loop** (self-limiting / pulse-like; *not* feedback, nothing loops back to MYB46). Because both ride the same MYB46 wave, KNAT7 and CESA8 **co-express positively**, so their correlation *hides* the repression — you cannot read a regulatory **sign** off co-expression.
-
-### M4.W2.E7 · N6 — What the three edge types mean
+### M4.W2.E6 · N5 — What the three edge types mean
 
 An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the regulatory layer licenses a knockout prediction.
 
@@ -1023,7 +988,7 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 2. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
 3. **Co-expression** (M4.W1.E4) — your top-5 neighbours + the module they name.
 4. **Database cross-check** (M4.W1.E5 · D1–D3) — your filled results table.
-5. **Network** (M4.W2 · N1–N5) — a screenshot of *your gene's* network **and one metric you measured on it in N4** (its clique-vs-star clustering, its secondary bridge, or your regulatory role), plus one insight from the **MYB46 gold-standard example** (N5: the hub / the KNAT7 ⊣ CESA8 brake).
+5. **Network** (M4.W2 · N1–N5) — a screenshot of *your gene's* network **and one metric you measured on it in N4** (its clique-vs-star clustering, its secondary bridge, or your regulatory role), plus (optionally) one insight from the **MYB46 appendix example** (the hub / the KNAT7 ⊣ CESA8 brake).
 6. **Verdict** (M4.W2) — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** data quality & normalization reasoning (15%) · **your gene's expression + co-expression** characterisation (30%) · **database cross-check (20%)** · interpretation — correlation-vs-regulation + a verdict with named evidence (20%) · communication & Q&A (15%). You present this at the **student conference** (~5-min group talk).
@@ -1050,9 +1015,9 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 **W2·Q5 (4 p) — A repressor that co-expresses *positively*.** KNAT7 **represses** CESA8, yet across the atlas KNAT7 and CESA8 are *positively* co-expressed (both rise in secondary-wall tissue). (a) How can a repressor positively correlate with its own target? (b) What does this prove about inferring a regulatory *sign* from co-expression?
 
-<details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the incoherent feed-forward structure described in N5) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the incoherent feed-forward structure — see the MYB46 appendix) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
 
-**W2·Q6 (5 p) — Physical vs regulatory edges.** In your network CESA4/7/8 are joined by **BioGRID PPI** edges (N2), but MYB46 reaches its targets only through the **curated GRN** (N5) — never by a PPI edge. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) What experiment type draws the MYB46→CESA edge instead? (c) What general rule about reading a single edge type follows?
+**W2·Q6 (5 p) — Physical vs regulatory edges.** In your network CESA4/7/8 are joined by **BioGRID PPI** edges (N2), but MYB46 reaches its targets only through the **curated GRN** (the MYB46 appendix) — never by a PPI edge. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) What experiment type draws the MYB46→CESA edge instead? (c) What general rule about reading a single edge type follows?
 
 <details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge from ChIP-seq / EMSA / transactivation, showing MYB46 binds the SMRE/M46RE elements in the CESA promoters (2 p). (c) Each edge type carries only <b>one</b> kind of evidence; the absence of a PPI edge is not absence of a relationship — read which layer an edge comes from and combine them (1 p).</details>
 
@@ -1066,6 +1031,45 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 *Built on the course's real kallisto + E-MTAB-7978 + BioGRID + GO + curated-literature pipeline; heavy steps pre-computed so the analysis runs in your browser. The regulatory edges are curated from primary papers (Zhong 2007, 2010; McCarthy 2009; Ohashi-Ito 2010; Yamaguchi 2011; Zhong & Ye 2012; Kim 2013; Zhou 2009; Li 2012), each cited per edge in `scw_grn_edges.csv`.*
 
+
+---
+
+# Appendix — the MYB46 GRN: a gold-standard example  *(optional)*
+
+*A fully hand-curated, experiment-typed regulatory network — the opposite of the text-mined layer you built in N3. Compare its clean shape with your own network (N4). Needs the helpers from **N4** and the `grn` table (loaded on page open).*
+
+Your regulatory network (N3) came from **text-mining**. Here is the opposite — the **hand-curated MYB46 secondary-cell-wall GRN**, every edge backed by a named experiment (ChIP / EMSA / transactivation). Measured with the **same helpers** (N4), it is a textbook **hub-and-spoke**: MYB46 is the **hub** *and* **bottleneck** *and* a **star**, and the single **articulation point**.
+
+```{webr}
+if (!exists("build_adj")) stop("Run N4 first — it defines the network helpers.")
+grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI, type = paste0("GRN_", grn$interaction))
+A <- build_adj(grn_edges); deg <- rowSums(A)
+btw <- betweenness_base(A); cc <- clustering_matrix(A)
+
+od <- sort(table(grn_edges$source), decreasing = TRUE); names(od) <- lab(names(od))
+cat("Top regulators (out-degree):\n"); print(head(od, 3))
+cat(sprintf("\nMYB46: betweenness %.1f (~%.0fx the next node) ; clustering %.3f (a star).\n",
+            max(btw), max(btw) / sort(btw, decreasing = TRUE)[2], cc["AT5G12870"]))
+trio <- c("AT1G32770","AT4G18780","AT1G62990")                 # SND1, CESA8, KNAT7 — all degree 3
+tb <- round(btw[trio], 1); names(tb) <- lab(trio)
+cat("The trap trio (all degree 3) — betweenness:\n"); print(tb)   # 8.0 / 8.0 / 0.3
+
+remove_node <- function(A, v) { keep <- setdiff(rownames(A), v); A[keep, keep, drop = FALSE] }
+frag <- length(unique(components_base(remove_node(A, "AT5G12870"))))
+cat(sprintf("Remove MYB46 -> %d components; remove any other single node -> 1 (MYB46 is the only articulation point).\n", frag))
+
+nn2  <- rownames(A); nrm <- function(v) if (diff(range(v)) > 0) (v - min(v)) / diff(range(v)) else rep(.5, length(v))
+heat <- colorRampPalette(c("#f7f7f7","#fdae6b","#e6550d","#a50f15"))(24)
+cynet(grn_edges, hub = "AT5G12870", id = "cy_n5",
+      title = "Curated MYB46 GRN — node size: degree | fill: betweenness (reddest = bottleneck)",
+      node_fill = setNames(heat[1 + round(nrm(btw[nn2]) * 23)], nn2),
+      node_size = setNames(24 + 34 * nrm(deg[nn2]), nn2))
+say(names(which.max(btw)) == "AT5G12870",
+    sprintf("MYB46 is the hub + bottleneck + star and the only cut-vertex (remove -> %d pieces). A curated, experiment-typed network — the gold standard your PlantConnectome edges (N3) approximate.", frag),
+    "expected MYB46 on top — did 'grn' load (it loads on page open)?")
+```
+
+> **The one brake — a co-expression trap.** The GRN's single repression is **KNAT7 ⊣ CESA8**. Yet MYB46 *activates* both CESA8 **and** KNAT7 (which represses CESA8) — an **incoherent feed-forward loop** (self-limiting / pulse-like; *not* feedback, nothing loops back to MYB46). Because both ride the same MYB46 wave, KNAT7 and CESA8 **co-express positively**, so their correlation *hides* the repression — you cannot read a regulatory **sign** off co-expression.
 
 ---
 
