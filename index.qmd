@@ -1167,12 +1167,12 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 
 **📄 Assemble your 1-page dossier (the conference hand-in).** Fill these in the **📋 Dossier** panel (bottom-left) as you go — it autosaves, you can **Download** it, and **Check with AI** gives formative feedback. Transfer them onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
 
-1. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
-2. **Data quality** (M4.W1.E2) — one line: the `Gene8` artefact you detected and removed, and why.
+1. **Data quality** (M4.W1.E2) — one line: the `Gene8` artefact you detected and removed, and why.
+2. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
 3. **Co-expression** (M4.W1.E4) — your top-5 neighbours + the module they name.
-4. **Database cross-check** (D1–D4) — your filled results table.
-5. **Network** (N1–N4c) — a screenshot of *your gene's* co-expression network **and one metric you measured on it in N4c** (its secondary bridge, or its clique-vs-star clustering), plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
-6. **Verdict** — confirm or revise, naming ≥3 evidence types.
+4. **Database cross-check** (M4.W1.E5 · D1–D4) — your filled results table.
+5. **Network** (M4.W2 · N1–N4c) — a screenshot of *your gene's* co-expression network **and one metric you measured on it in N4c** (its secondary bridge, or its clique-vs-star clustering), plus one insight from the **MYB46 case study** (the hub / the KNAT7 ⊣ CESA8 brake).
+6. **Verdict** (M4.W2) — confirm or revise, naming ≥3 evidence types.
 
 > **Graded (5 criteria):** data quality & normalization reasoning (15%) · **your gene's expression + co-expression** characterisation (30%) · **database cross-check (20%)** · interpretation — correlation-vs-regulation + a verdict with named evidence (20%) · communication & Q&A (15%). You present this at the **student conference** (~5-min group talk).
 
