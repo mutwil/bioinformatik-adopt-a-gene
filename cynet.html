@@ -20,7 +20,6 @@
 <script>
 (function () {
   var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
-  var EXPENSIVE_CAP = 120;           // above this many nodes, skip live betweenness/clustering (too slow)
 
   var LAYOUTS = {
     Spread:     { name:"cose", animate:false, randomize:true, padding:24, nodeOverlap:28, nodeRepulsion:20000,
@@ -80,7 +79,7 @@
   // ---- graph metrics (match the base-R helpers: undirected, Brandes/2) ---
   function adjFrom(cy, on) {
     var adj = {}, ids = [];
-    cy.nodes().forEach(function (n) { var id = n.id(); ids.push(id); adj[id] = new Set(); });
+    cy.nodes(":visible").forEach(function (n) { var id = n.id(); ids.push(id); adj[id] = new Set(); });
     cy.edges().forEach(function (e) {
       if (!on[LAYER_OF(e.data("kind"))]) return;
       var s = e.data("source"), t = e.data("target");
@@ -143,13 +142,9 @@
   function applyMetric(cy, on, metric, legend) {
     if (metric === "plain") { cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); }); legend.innerHTML = ""; return; }
     var g = adjFrom(cy, on), ids = g.ids, adjSet = g.adj, val = {}, isComp = false, compK = 0;
+    if (!ids.length) { legend.innerHTML = ""; return; }
     if (metric === "degree") { ids.forEach(function (n) { val[n] = adjSet[n].size; }); }
     else if (metric === "components") { var r = componentsJS(ids, adjSet); val = r.comp; compK = r.k; isComp = true; }
-    else if (ids.length > EXPENSIVE_CAP) {
-      cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); });
-      legend.innerHTML = "⚠ " + ids.length + " nodes — too many for live " + metric + ". Raise the cutoff (N1) for a crisper core, or use Degree / Components.";
-      return;
-    }
     else if (metric === "betweenness") { val = betweennessJS(ids, adjSet); }
     else if (metric === "clustering") { val = clusteringJS(ids, adjSet); }
 
@@ -189,10 +184,15 @@
     var row0 = addRow(cap), row2 = addRow(cap), legend = addRow(cap);
     legend.style.cssText = "font-size:11px;color:#444;padding:2px 2px;min-height:14px;";
 
+    var lastLayout = LAYOUTS.Spread;
+    function relayout() {                       // lay out ONLY the visible (connected) nodes
+      var vis = cy.elements(":visible"); if (!vis.length) return;
+      var lay = vis.layout(lastLayout); lay.one("layoutstop", function () { cy.fit(undefined, 20); }); lay.run();
+    }
     var t = document.createElement("span");
     t.textContent = "🕸 " + (cap.dataset.title || "network") + "  —  drag · scroll-zoom · hover for info · layout:";
     row0.appendChild(t);
-    Object.keys(LAYOUTS).forEach(function (name) { mkbtn(row0, name, function () { cy.layout(LAYOUTS[name]).run(); }); });
+    Object.keys(LAYOUTS).forEach(function (name) { mkbtn(row0, name, function () { lastLayout = LAYOUTS[name]; relayout(); }); });
     mkbtn(row0, "⤢ fit", function () { cy.fit(undefined, 20); });
     mkbtn(row0, "⛶ Full screen", function () { toggleFull(wrap, cy); });
     mkbtn(row0, "📷 PNG", function () {
@@ -202,8 +202,18 @@
     });
 
     function recolor() { applyMetric(cy, on, metric, legend); }
-    function setLayers() {
+    function hideIsolated() {                   // hide nodes with no edge in the switched-on layers
+      var deg = {}; cy.nodes().forEach(function (n) { deg[n.id()] = 0; });
+      cy.edges().forEach(function (e) {
+        if (!on[LAYER_OF(e.data("kind"))]) return;
+        var s = e.data("source"), tg = e.data("target"); if (s === tg) return;
+        if (deg[s] != null) deg[s]++; if (deg[tg] != null) deg[tg]++;
+      });
+      cy.nodes().forEach(function (n) { n.style("display", deg[n.id()] > 0 ? "element" : "none"); });
+    }
+    function applyVisibility() {
       cy.edges().forEach(function (e) { e.style("display", on[LAYER_OF(e.data("kind"))] ? "element" : "none"); });
+      hideIsolated();                           // drop disconnected nodes so layouts only place connected ones
       recolor();
     }
 
@@ -215,7 +225,7 @@
         var cnt = cy.edges().filter(function (e) { return LAYER_OF(e.data("kind")) === l; }).length;
         var b = mkbtn(row1, meta.label + " (" + cnt + ")", null);
         function paint() { b.style.background = on[l] ? meta.color : "#fff"; b.style.color = on[l] ? "#fff" : "#555"; b.style.borderColor = meta.color; }
-        b.onclick = function () { on[l] = !on[l]; paint(); setLayers(); };
+        b.onclick = function () { on[l] = !on[l]; paint(); applyVisibility(); relayout(); };
         paint();
       });
     }
@@ -234,7 +244,7 @@
       });
     }
     paintMetric();
-    setLayers();
+    applyVisibility();
   }
 
   function render(div, data) {

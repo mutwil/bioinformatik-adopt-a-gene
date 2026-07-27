@@ -46,7 +46,8 @@
     function paint() {
       btn.textContent = open ? "▾ Hide R code"
         : "▸ Show R code (" + nlines + " lines — nothing to fill in, just press Run)";
-      editor.style.display = open ? "" : "none";
+      if (open) editor.style.removeProperty("display");
+      else editor.style.setProperty("display", "none", "important");   // beat CodeMirror's own display rule
     }
     btn.onclick = function () {
       open = !open; paint();
