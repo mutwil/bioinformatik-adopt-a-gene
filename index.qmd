@@ -570,7 +570,7 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 - `NCED3 AT3G14440` — abiotic stress / ABA (rate-limiting drought-response enzyme)
 - `PR1 AT2G14610` — pathogen defence
 - `SAG13 AT2G29350` — senescence
-- `HTR2 AT1G09200` — histone (cell cycle / DNA replication)
+- `HTA6 AT5G59870` — histone H2A (cell cycle / DNA replication)
 - `TT4 AT5G13930` — flavonoid / anthocyanin biosynthesis
 
 **Ribosomal proteins — two compartments** *(a built-in comparison)*:
