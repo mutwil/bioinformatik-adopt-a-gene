@@ -706,7 +706,9 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 2. Now go finer than the organ: open the **cell-type / tissue-level views** (e.g. **Tissue-Specific Root eFP**) and record the **highest-expressing cell type or tissue** you can find for your gene. *(A secondary-cell-wall gene lights up the root **xylem**, where thick lignified walls are built; a photosynthesis gene the leaf mesophyll; a seed gene the embryo or endosperm. If your gene is simply **not expressed in root**, that is a real result — record its top tissue from the Plant eFP instead and say so.)*
 3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (Pfam) — the annotation skills from the database & sequence modules.
 
-> ✅ *Expected:* a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
+::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
+a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
+:::
 > **→ Dossier:** Pfam domain · highest organ · highest cell type / tissue · top 3 co-expressed.
 
 #### D2 — Who does my gene work with?  *(CoNekT)*
@@ -714,7 +716,9 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** → **download the direct neighbours as a text file** (the neighbourhood table has an export / download option).
 2. Open the file: note the neighbours you **recognise** and the **process they point to**, and record your **top 3 co-expressed genes**.
 
-> ✅ *Expected:* CoNekT returns a tight set of partners pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence. *(Building and measuring the network itself is next week — this week just collect and eyeball the partner list.)*
+::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
+CoNekT returns a tight set of partners pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence. *(Building and measuring the network itself is next week — this week just collect and eyeball the partner list.)*
+:::
 > **→ Dossier:** top 3 co-expressed genes from CoNekT (keep the downloaded neighbour file as your record).
 
 #### D3 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
@@ -724,7 +728,9 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 3. **CoNekT** → your gene → specificity → top organ.
 4. Fill a 3-row table: *database | top organ | agrees?*
 
-> ✅ *Expected:* all three converge on **stem**; the second-ranked organs may differ.
+::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
+all three converge on **stem**; the second-ranked organs may differ.
+:::
 > **→ Dossier:** "top organ — agrees across 3 DBs? yes / no".
 
 > **Demo only (not assessed):** **Genevestigator** needs free academic registration → projector-only.

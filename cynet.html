@@ -78,15 +78,16 @@
 
   // ---- graph metrics (match the base-R helpers: undirected, Brandes/2) ---
   function adjFrom(cy, on) {
-    var adj = {}, ids = [];
-    cy.nodes(":visible").forEach(function (n) { var id = n.id(); ids.push(id); adj[id] = new Set(); });
+    var adj = {};                                   // node set = every node touched by a switched-on edge = the current view
     cy.edges().forEach(function (e) {
       if (!on[LAYER_OF(e.data("kind"))]) return;
       var s = e.data("source"), t = e.data("target");
-      if (s === t || !adj[s] || !adj[t]) return;
+      if (s === t) return;
+      if (!adj[s]) adj[s] = new Set();
+      if (!adj[t]) adj[t] = new Set();
       adj[s].add(t); adj[t].add(s);
     });
-    return { adj: adj, ids: ids };
+    return { adj: adj, ids: Object.keys(adj) };
   }
   function betweennessJS(ids, adjSet) {
     var adj = {}; ids.forEach(function (n) { adj[n] = Array.from(adjSet[n]); });
@@ -149,15 +150,16 @@
     else if (metric === "clustering") { val = clusteringJS(ids, adjSet); }
 
     if (isComp) {
-      cy.nodes().forEach(function (n) { n.style("background-color", CPAL[(val[n.id()] - 1) % CPAL.length]); n.style("width", 28); n.style("height", 28); });
-      legend.innerHTML = "<b>Components</b>: " + compK + " disconnected part" + (compK === 1 ? "" : "s") + " in the visible layers.";
+      ids.forEach(function (id) { var n = cy.getElementById(id);
+        n.style("background-color", CPAL[(val[id] - 1) % CPAL.length]); n.style("width", 28); n.style("height", 28); });
+      legend.innerHTML = "<b>Components</b>: " + compK + " disconnected part" + (compK === 1 ? "" : "s") + " in the current view.";
       return;
     }
-    var arr = ids.map(function (n) { return val[n]; });
+    var arr = ids.map(function (id) { return val[id]; });
     var mn = Math.min.apply(null, arr), mx = Math.max.apply(null, arr), top = ids[0];
-    ids.forEach(function (n) { if (val[n] > val[top]) top = n; });
-    cy.nodes().forEach(function (n) {
-      var t = (mx > mn) ? (val[n.id()] - mn) / (mx - mn) : 0.5;
+    ids.forEach(function (id) { if (val[id] > val[top]) top = id; });
+    ids.forEach(function (id) {                       // colour ONLY the nodes in the current view (no NaN on hidden ones)
+      var t = (mx > mn) ? (val[id] - mn) / (mx - mn) : 0.5, n = cy.getElementById(id);
       n.style("background-color", heatJS(t)); n.style("width", 20 + 30 * t); n.style("height", 20 + 30 * t);
     });
     var fmt = function (x) { return metric === "clustering" ? x.toFixed(2) : Math.round(x * 10) / 10; };
