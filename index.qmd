@@ -567,18 +567,18 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 - `CAB1 AT1G29930` — photosynthesis
 - `AP3 AT3G54340` — flower (B-class organ identity; co-expresses with its partner **PI** — try cutoff ~0.80)
 - `OLE1 AT4G25140` — seed oil-body
-- `RD29A AT5G52310` — cold / abiotic stress
+- `NCED3 AT3G14440` — abiotic stress / ABA (rate-limiting drought-response enzyme)
 - `PR1 AT2G14610` — pathogen defence
-- `SAG12 AT5G45890` — senescence
+- `SAG13 AT2G29350` — senescence
 - `HTR2 AT1G09200` — histone (cell cycle / DNA replication)
+- `TT4 AT5G13930` — flavonoid / anthocyanin biosynthesis
 
-**Ribosomal proteins — three compartments** *(a built-in comparison)*:
+**Ribosomal proteins — two compartments** *(a built-in comparison)*:
 
 - `RPL19A AT1G02780` — cytosolic (translation)
 - `RPL15 AT3G25920` — plastid / chloroplast
-- `RPS19 AT5G47320` — mitochondrial
 
-*In this developmental atlas the **cytosolic and mitochondrial** ribosome rise together with the cell's growth / translation programme, while the **plastid** ribosome tracks **photosynthesis** (chloroplast biogenesis) — adopt different compartments to see the split.*
+*In this developmental atlas the **cytosolic** ribosome tracks the cell's growth / translation programme, while the **plastid** ribosome tracks **photosynthesis** (chloroplast biogenesis) — adopt both to see the split. (The **mitochondrial** ribosome co-varies with the cytosolic one, so it isn't a separate module here — and ribosomal genes have little documented regulation, so their **N3 layer is often empty**: a real "housekeeping" finding.)*
 
 **Instructions:** replace the `______` with your gene's AGI code, then **Run** — the cell tells you if your gene is valid.
 
