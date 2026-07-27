@@ -1,0 +1,70 @@
+<!-- Fold long, no-input webR cells. Rule (prof): if a cell's code is LONGER than FOLD_MIN lines
+     AND has no fill-in blank (____), the student doesn't need to read or edit it — so hide the
+     CodeMirror editor behind a "Show R code" toggle. The Run button and the cell OUTPUT stay
+     visible (just press Run); a curious student can unfold to read the code. Cells with a blank,
+     or short cells, are never folded. -->
+<style>
+  .foldcell-toggle{display:inline-flex;align-items:center;gap:6px;margin:1px 0 8px;padding:5px 11px;
+    font:600 12px system-ui,sans-serif;color:#2b6cb0;background:#eef4fb;border:1px solid #cbd8e8;
+    border-radius:7px;cursor:pointer}
+  .foldcell-toggle:hover{background:#e2edf9}
+  @media (prefers-color-scheme: dark){
+    .foldcell-toggle{color:#90cdf4;background:#1a2733;border-color:#2d3f52}
+    .foldcell-toggle:hover{background:#223243}
+  }
+</style>
+<script>
+(function () {
+  var FOLD_MIN = 15;                 // fold cells with MORE than this many lines...
+  var BLANK = /_{4,}/;               // ...unless the code has a fill-in blank (____)
+
+  // read the code out of a CodeMirror 6 editor (mirrors save-work.html)
+  function viewOf(contentEl) {
+    try { var cv = contentEl.cmView; if (!cv) return null;
+      var root = cv; while (root.parent) root = root.parent; return root.view || null;
+    } catch (e) { return null; }
+  }
+  function codeOf(contentEl) {
+    var v = viewOf(contentEl);
+    if (v && v.state && v.state.doc) { try { return v.state.doc.toString(); } catch (e) {} }
+    return contentEl.innerText || "";
+  }
+
+  function foldOne(contentEl) {
+    if (contentEl.dataset.foldChecked) return;
+    var code = codeOf(contentEl);
+    if (!code) return;                                   // editor not ready yet — a later scan retries
+    contentEl.dataset.foldChecked = "1";
+    var nlines = code.split("\n").length;
+    if (nlines <= FOLD_MIN || BLANK.test(code)) return;  // short, or has a student blank -> leave open
+    var editor = contentEl.closest(".cm-editor");
+    if (!editor || !editor.parentNode) return;
+
+    var open = false;
+    var btn = document.createElement("button");
+    btn.className = "foldcell-toggle";
+    function paint() {
+      btn.textContent = open ? "▾ Hide R code"
+        : "▸ Show R code (" + nlines + " lines — nothing to fill in, just press Run)";
+      editor.style.display = open ? "" : "none";
+    }
+    btn.onclick = function () {
+      open = !open; paint();
+      if (open) { var v = viewOf(contentEl); if (v && v.requestMeasure) { try { v.requestMeasure(); } catch (e) {} } }
+    };
+    editor.parentNode.insertBefore(btn, editor);
+    paint();                                             // starts folded
+  }
+
+  function scan() { document.querySelectorAll(".cm-content").forEach(foldOne); }
+
+  function start() {
+    new MutationObserver(function (muts) {
+      for (var i = 0; i < muts.length; i++) if (muts[i].addedNodes && muts[i].addedNodes.length) { scan(); break; }
+    }).observe(document.body, { childList: true, subtree: true });
+    scan();
+    var n = 0, iv = setInterval(function () { scan(); if (++n > 30) clearInterval(iv); }, 500);  // ~15 s of retries while webR boots
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
+})();
+</script>

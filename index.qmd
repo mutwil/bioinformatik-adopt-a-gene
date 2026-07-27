@@ -11,6 +11,7 @@ format:
       - external-links.html
       - cynet.html
       - dossier.html
+      - fold-cells.html
     resources:
       - data
       - cytoscape.min.js
@@ -29,7 +30,7 @@ This page **runs R live in your browser** (via webR) — nothing to install. Fir
 **How it works**
 
 - Edit the code where you see `______`, then press **Run** (▶). Cells share state, so run them **top to bottom**.
-- Most code cells are **commented line-by-line**, so you can follow the R even if a function is new. A few Week-2 cells use pre-written **"black-box" helper functions** (e.g. betweenness, shortest paths) that you only need to *call*, not read — those are labelled as such.
+- Most code cells are **commented line-by-line**, so you can follow the R even if a function is new. A few Week-2 cells use pre-written **"black-box" helper functions** (e.g. betweenness, shortest paths) that you only need to *call*, not read — those are labelled as such. **Long cells that only run machinery and have nothing to fill in start with their code folded** — just press **Run**, or click **Show R code** to read them.
 - When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
 - The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
 - A floating **📋 Dossier** panel (bottom-left) collects your findings as you go — it **autosaves**, you can **download** it, and **"Check with AI"** gives formative feedback (no answers — it coaches). The dossier is your **assessed deliverable** for the conference.
@@ -920,49 +921,9 @@ say(nrow(all_edges) > 0,
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
-Put numbers on **your own** module. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix` — provided for you; **unfold them below** if you're curious) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
+Put numbers on **your own** module. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`) are **provided for you** — this cell just calls them to answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? *(The cell has nothing to fill in, so its code starts **folded** — hit **Show R code** if you want to read it.)* And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
 
 > **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network. Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
-
-::: {.callout-note collapse="true" title="🔧 The base-R network helpers — for the curious (you don't need to read these to do the exercise)"}
-These four functions are defined for you when the page loads; the cell below just calls them. They use **base R only** (no `igraph`) — so nothing is hidden, this is exactly how each metric is computed.
-
-```r
-build_adj <- function(edges, directed = FALSE) {          # edge list -> adjacency matrix (0/1)
-  nodes <- sort(unique(c(edges$source, edges$target)))
-  A <- matrix(0L, length(nodes), length(nodes), dimnames = list(nodes, nodes))
-  for (i in seq_len(nrow(edges))) { A[edges$source[i], edges$target[i]] <- 1L
-    if (!directed) A[edges$target[i], edges$source[i]] <- 1L }
-  diag(A) <- 0L; A
-}
-betweenness_base <- function(A) {                         # Brandes' algorithm: shortest paths through each node
-  nm <- rownames(A); n <- length(nm); CB <- setNames(numeric(n), nm)
-  for (s in nm) {
-    S <- character(0); P <- setNames(vector("list", n), nm)
-    sigma <- setNames(rep(0, n), nm); sigma[s] <- 1
-    d <- setNames(rep(-1, n), nm); d[s] <- 0; q <- s
-    while (length(q) > 0) { v <- q[1]; q <- q[-1]; S <- c(S, v)
-      for (w in nm[A[v, ] == 1L]) {
-        if (d[w] < 0) { d[w] <- d[v] + 1; q <- c(q, w) }
-        if (d[w] == d[v] + 1) { sigma[w] <- sigma[w] + sigma[v]; P[[w]] <- c(P[[w]], v) } } }
-    delta <- setNames(rep(0, n), nm)
-    for (w in rev(S)) { for (v in P[[w]]) delta[v] <- delta[v] + (sigma[v]/sigma[w]) * (1 + delta[w])
-      if (w != s) CB[w] <- CB[w] + delta[w] } }
-  CB / 2
-}
-clustering_matrix <- function(A) {                        # do my neighbours link to each other? (triangles)
-  k <- rowSums(A); tri <- diag(A %*% (A %*% A)) / 2; denom <- k * (k - 1) / 2
-  ifelse(denom > 0, tri / denom, 0)
-}
-components_base <- function(A) {                          # label the disconnected pieces (BFS)
-  nm <- rownames(A); comp <- setNames(rep(NA_integer_, length(nm)), nm); k <- 0
-  for (start in nm) if (is.na(comp[start])) { k <- k + 1; q <- start; comp[start] <- k
-    while (length(q) > 0) { u <- q[1]; q <- q[-1]
-      for (w in nm[A[u, ] == 1L]) if (is.na(comp[w])) { comp[w] <- k; q <- c(q, w) } } }
-  comp
-}
-```
-:::
 
 ```{webr}
 if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
