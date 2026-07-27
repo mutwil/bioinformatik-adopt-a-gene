@@ -709,11 +709,11 @@ Every number so far came from **one** atlas. Real evidence is a *consensus* acro
 
 #### D2 — Who does my gene work with?  *(CoNekT)*
 
-1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** and click **View neighbourhood as graph**. Write down the neighbours you recognise and the **process they point to**.
-2. Record your **top 3 co-expressed genes** from that graph.
+1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** → **download the direct neighbours as a text file** (the neighbourhood table has an export / download option).
+2. Open the file: note the neighbours you **recognise** and the **process they point to**, and record your **top 3 co-expressed genes**.
 
-> ✅ *Expected:* CoNekT returns a tight module pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence.
-> **→ Dossier:** top 3 co-expressed genes from CoNekT.
+> ✅ *Expected:* CoNekT returns a tight set of partners pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence. *(Building and measuring the network itself is next week — this week just collect and eyeball the partner list.)*
+> **→ Dossier:** top 3 co-expressed genes from CoNekT (keep the downloaded neighbour file as your record).
 
 #### D3 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
 
