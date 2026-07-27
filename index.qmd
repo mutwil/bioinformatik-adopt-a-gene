@@ -190,11 +190,20 @@ cynet <- function(edges, hub = NULL, id = "cy", title = "", metric = NULL,
   pick <- function(v, d){ if (is.null(v)) return(rep(d, length(nodes))); x <- v[nodes]; x[is.na(x)] <- d; x }
   fillv <- pick(node_fill, ""); sizev <- pick(node_size, 0)
   bordv <- pick(node_border, ""); lwdv <- pick(node_lwd, 0)
+  dev  <- desc[nodes]; dev[is.na(dev)] <- ""; dev <- clean(substr(dev, 1, 90))          # gene description -> node tooltip
+  base_lbl <- ifelse(ty == "coexpression", "co-expression (correlated profiles)",       # relationship -> edge tooltip
+              ifelse(ty == "PPI", "physical interaction (BioGRID)",
+              ifelse(ty == "GRN_activates", "activates (regulatory, text-mined)",
+              ifelse(ty == "GRN_represses", "represses (regulatory, text-mined)",
+              ifelse(grepl("^GRN", ty), "regulates (regulatory, text-mined)", ty)))))
+  if ("desc" %in% names(edges)) { dd <- as.character(edges$desc); miss <- is.na(dd) | dd == ""
+    dd[miss] <- base_lbl[miss]; edesc <- clean(substr(dd, 1, 140)) } else edesc <- base_lbl
   nj <- paste0('{"id":"', nodes, '","label":"', clean(lab),
                '","hub":', tolower(as.character(hubv)),
                ',"reg":', tolower(as.character(nodes %in% grn_src)),
-               ',"col":"', fillv, '","sz":', sizev, ',"bc":"', bordv, '","bw":', lwdv, '}', collapse = ",")
-  ej <- paste0('{"s":"', src, '","t":"', tgt, '","ty":"', ty, '"}', collapse = ",")
+               ',"col":"', fillv, '","sz":', sizev, ',"bc":"', bordv, '","bw":', lwdv,
+               ',"de":"', dev, '"}', collapse = ",")
+  ej <- paste0('{"s":"', src, '","t":"', tgt, '","ty":"', ty, '","d":"', edesc, '"}', collapse = ",")
   cat("\n@@CYNET@@", '{"id":"', id, '","title":"', clean(title),
       '","metric":"', if (is.null(metric)) "" else metric, '"',
       ',"nodes":[', nj, '],"edges":[', ej, ']}', "@@END@@\n", sep = "")
@@ -834,7 +843,8 @@ C    <- cor(t(EXPR[nb, , drop = FALSE]))            # gene × gene correlation a
 ut   <- upper.tri(C)                               # each pair once (not the diagonal)
 keep <- ut & C > MY_CUTOFF
 edges <- data.frame(source = rownames(C)[row(C)[keep]],
-                    target = colnames(C)[col(C)[keep]], type = "coexpression")
+                    target = colnames(C)[col(C)[keep]], type = "coexpression",
+                    desc = sprintf("co-expression · PCC %.2f", C[keep]), stringsAsFactors = FALSE)
 
 cat("\nAt cutoff", MY_CUTOFF, "->", length(nb), "genes",
     if (length(nb) >= 200) "(hit the 200 safety limit — raise the cutoff)" else "", "and", nrow(edges), "edges.\n")
@@ -861,7 +871,7 @@ if (nrow(pp) > 0) {
   pp  <- pp[pp$source != pp$target, , drop = FALSE]                       # drop self-loops
   key <- apply(pp, 1, function(r) paste(sort(r), collapse = "|"))         # PPI is undirected: one key per pair
   pp  <- pp[!duplicated(key), , drop = FALSE]                             # so A-B and B-A don't draw twice
-  if (nrow(pp) > 0) { pp$type <- "PPI"; edges <- rbind(edges, pp) }
+  if (nrow(pp) > 0) { pp$type <- "PPI"; pp$desc <- "physical interaction (BioGRID)"; edges <- rbind(edges, pp) }
 }
 
 cesa <- c("AT5G44030","AT5G17420","AT4G18780")     # the secondary-wall CESA triangle
@@ -889,7 +899,7 @@ rg     <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$targ
 within <- rg[rg$source_AGI %in% nb & rg$target_AGI %in% nb, ]      # BOTH ends co-expressed -> regulation AMONG your module
 my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])         # who regulates your gene
 my_tgts <- unique(rg$target_AGI[rg$source_AGI == MY_GENE])         # what your gene regulates
-grn_drawn <- data.frame(source = character(0), target = character(0), type = character(0))  # the GRN edges we'll draw
+grn_drawn <- data.frame(source = character(0), target = character(0), type = character(0), desc = character(0))  # GRN edges we'll draw
 if (nrow(rg) == 0) {
   cat(sprintf("PlantConnectome has no regulatory edges touching %s's module.\n", MY_NAME))
   cat("Common for housekeeping genes (ribosomes, histones) or genes the literature hasn't resolved — the absence is a finding.\n")
@@ -900,12 +910,15 @@ if (nrow(rg) == 0) {
   pri   <- rbind(within, rg[rg$source_AGI == MY_GENE | rg$target_AGI == MY_GENE, ], rg)   # draw the interesting edges first
   pri   <- pri[!duplicated(paste(pri$source_AGI, pri$target_AGI)), ]
   drawn <- head(pri, 70)                                            # cap the drawing so it stays readable
-  grn_drawn <- data.frame(source = drawn$source_AGI, target = drawn$target_AGI, type = drawn$type)
+  grn_drawn <- data.frame(source = drawn$source_AGI, target = drawn$target_AGI, type = drawn$type,
+                          desc = sprintf("%s · PlantConnectome · %d mention(s) · PubMed %s",
+                                         sub("^GRN_", "", drawn$type), drawn$n_mentions, drawn$pubmedID),
+                          stringsAsFactors = FALSE)
 }
 
 # draw ALL THREE layers together — co-expression + PPI (from N1/N2) + regulation (green/red/grey).
 # In the viewer, use the "Layers" panel to switch each on/off; "Colour nodes by" recomputes metrics live.
-base_edges <- edges[edges$type %in% c("coexpression","PPI"), c("source","target","type"), drop = FALSE]
+base_edges <- edges[edges$type %in% c("coexpression","PPI"), c("source","target","type","desc"), drop = FALSE]
 all_edges  <- rbind(base_edges, grn_drawn)
 cynet(all_edges, hub = MY_GENE, id = "cy_n3",
       title = paste(MY_NAME, "integrated network — toggle Co-expression / PPI / Regulation",
@@ -961,7 +974,7 @@ if (exists("my_regs")) {
 } else cat("Run N3 to read your regulatory position.\n")
 
 # ---- draw YOUR whole network — toggle the layers & recolour by a metric in the viewer ----
-all_edges <- rbind(edges[edges$type %in% c("coexpression","PPI"), c("source","target","type"), drop = FALSE],
+all_edges <- rbind(edges[edges$type %in% c("coexpression","PPI"), c("source","target","type","desc"), drop = FALSE],
                    if (exists("grn_drawn")) grn_drawn else NULL)
 cynet(all_edges, hub = MY_GENE, id = "cy_n4", metric = "betweenness",
       title = paste(MY_NAME, "network — toggle Co-expression / PPI / Regulation, colour by a metric"))
@@ -1066,7 +1079,9 @@ Your regulatory network (N3) came from **text-mining**. Here is the opposite —
 
 ```{webr}
 if (!exists("grn")) stop("Reload the page — the curated GRN table loads on page open.")
-grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI, type = paste0("GRN_", grn$interaction))
+grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI, type = paste0("GRN_", grn$interaction),
+                        desc = sprintf("%s · %s · %s", grn$interaction, grn$evidence, grn$reference),
+                        stringsAsFactors = FALSE)
 A <- build_adj(grn_edges); deg <- rowSums(A)
 btw <- betweenness_base(A); cc <- clustering_matrix(A)
 

@@ -1,17 +1,27 @@
 <!-- interactive network bridge: webR R cells emit a @@CYNET@@{json}@@END@@ marker via cat();
      this script catches it in the DOM, strips the raw marker, and renders an interactive
      cytoscape.js graph (drag / zoom / pan) right below the cell output.
-     The viewer adds LAYER toggles (co-expression / PPI / regulation) and a COLOUR-BY-METRIC
-     panel (degree / betweenness / clustering / components) that recomputes the metric, in the
-     browser, on whichever layers are currently switched on — using the same algorithms as the
-     lesson's base-R helpers (undirected adjacency, Brandes/2 betweenness) so the numbers match. -->
+     Features: LAYER toggles (co-expression / PPI / regulation); a COLOUR-BY-METRIC panel
+     (degree / betweenness / clustering / components) recomputed in-browser on the switched-on
+     layers (same algorithms as the base-R helpers, so numbers match); a FULL-SCREEN button; and
+     hover TOOLTIPS (gene description on nodes, relationship description on edges). -->
 <script src="cytoscape.min.js"></script>
+<style>
+  /* full-screen (viewport-fill) mode for a network */
+  .cynet-wrap.cynet-max{ position:fixed; inset:0; z-index:9999; background:#fff; box-sizing:border-box;
+    padding:10px; margin:0 !important; display:flex; flex-direction:column; }
+  .cynet-wrap.cynet-max > .cynet-graph{ flex:1 1 auto !important; height:auto !important; }
+  @media (prefers-color-scheme: dark){ .cynet-wrap.cynet-max{ background:#0f141a; } }
+  #cynet-tip{ position:fixed; z-index:10001; max-width:340px; pointer-events:none; display:none;
+    background:rgba(20,22,26,.96); color:#fff; font:12px/1.45 system-ui,sans-serif; padding:7px 10px;
+    border-radius:7px; box-shadow:0 3px 14px rgba(0,0,0,.35); }
+  #cynet-tip .agi{ opacity:.62; font-weight:400; }
+</style>
 <script>
 (function () {
   var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
-  var EXPENSIVE_CAP = 120;   // above this many nodes, skip live betweenness/clustering (too slow in-browser)
+  var EXPENSIVE_CAP = 120;           // above this many nodes, skip live betweenness/clustering (too slow)
 
-  // selectable layouts — students switch when the default piles nodes up
   var LAYOUTS = {
     Spread:     { name:"cose", animate:false, randomize:true, padding:24, nodeOverlap:28, nodeRepulsion:20000,
                   idealEdgeLength:95, edgeElasticity:120, componentSpacing:140, gravity:0.15, numIter:1500 },
@@ -35,9 +45,40 @@
     grn:   { label:"Regulation",    color:"#2e8b2e" }
   };
   var MNAME = { degree:"Degree", betweenness:"Betweenness", clustering:"Clustering", components:"Components" };
+  function EDGE_LABEL(kind) {
+    if (kind === "PPI") return "physical interaction (BioGRID)";
+    if (kind === "GRN_activates") return "activates (regulatory)";
+    if (kind === "GRN_represses") return "represses (regulatory)";
+    if (kind && kind.indexOf("GRN") === 0) return "regulates (regulatory)";
+    return "co-expression (correlated profiles)";
+  }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // ---- hover tooltip (shared, appended to body) --------------------------
+  var TIP = null;
+  function tip() { if (!TIP) { TIP = document.createElement("div"); TIP.id = "cynet-tip"; document.body.appendChild(TIP); } return TIP; }
+  function showTip(html, e) { var t = tip(); t.innerHTML = html; t.style.display = "block"; moveTip(e); }
+  function moveTip(e) {
+    if (!TIP || TIP.style.display !== "block") return;
+    var oe = (e && e.originalEvent) || e; if (!oe || oe.clientX == null) return;
+    var w = TIP.offsetWidth, h = TIP.offsetHeight, nx = oe.clientX + 14, ny = oe.clientY + 14;
+    if (nx + w > window.innerWidth)  nx = oe.clientX - w - 14;
+    if (ny + h > window.innerHeight) ny = oe.clientY - h - 14;
+    TIP.style.left = Math.max(4, nx) + "px"; TIP.style.top = Math.max(4, ny) + "px";
+  }
+  function hideTip() { if (TIP) TIP.style.display = "none"; }
+
+  // ---- full-screen (viewport-fill) ---------------------------------------
+  function resizeSoon(cy) { setTimeout(function () { try { cy.resize(); cy.fit(undefined, 20); } catch (e) {} }, 120); }
+  function toggleFull(wrap, cy) { wrap.classList.toggle("cynet-max"); hideTip(); resizeSoon(cy); }
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") document.querySelectorAll(".cynet-wrap.cynet-max").forEach(function (w) {
+      w.classList.remove("cynet-max"); if (w._cy) resizeSoon(w._cy);
+    });
+  });
 
   // ---- graph metrics (match the base-R helpers: undirected, Brandes/2) ---
-  function adjFrom(cy, on) {                       // adjacency (Set per node) over the SWITCHED-ON layers
+  function adjFrom(cy, on) {
     var adj = {}, ids = [];
     cy.nodes().forEach(function (n) { var id = n.id(); ids.push(id); adj[id] = new Set(); });
     cy.edges().forEach(function (e) {
@@ -48,7 +89,7 @@
     });
     return { adj: adj, ids: ids };
   }
-  function betweennessJS(ids, adjSet) {           // Brandes (unweighted), halved for undirected — as in R
+  function betweennessJS(ids, adjSet) {
     var adj = {}; ids.forEach(function (n) { adj[n] = Array.from(adjSet[n]); });
     var CB = {}; ids.forEach(function (n) { CB[n] = 0; });
     ids.forEach(function (s) {
@@ -69,7 +110,7 @@
     ids.forEach(function (n) { CB[n] /= 2; });
     return CB;
   }
-  function clusteringJS(ids, adjSet) {            // local clustering coefficient (≈1 clique, ≈0 star)
+  function clusteringJS(ids, adjSet) {
     var cc = {};
     ids.forEach(function (n) {
       var nb = Array.from(adjSet[n]), k = nb.length;
@@ -80,7 +121,7 @@
     });
     return cc;
   }
-  function componentsJS(ids, adjSet) {            // connected components (BFS)
+  function componentsJS(ids, adjSet) {
     var comp = {}, k = 0;
     ids.forEach(function (s) {
       if (comp[s] !== undefined) return;
@@ -91,17 +132,14 @@
     return { comp: comp, k: k };
   }
 
-  // ---- colour scales -----------------------------------------------------
-  var HEAT = [[247,247,247],[253,174,107],[230,85,13],[165,15,21]];   // R: f7f7f7 fdae6b e6550d a50f15
+  var HEAT = [[247,247,247],[253,174,107],[230,85,13],[165,15,21]];
   function heatJS(t) {
     t = Math.max(0, Math.min(1, t)); var seg = HEAT.length - 1;
     var x = t * seg, i = Math.min(Math.floor(x), seg - 1), f = x - i, a = HEAT[i], b = HEAT[i + 1];
     return "rgb(" + Math.round(a[0]+(b[0]-a[0])*f) + "," + Math.round(a[1]+(b[1]-a[1])*f) + "," + Math.round(a[2]+(b[2]-a[2])*f) + ")";
   }
   var CPAL = ["#4e79a7","#f28e2b","#59a14f","#e15759","#b07aa1","#76b7b2","#edc948","#ff9da7","#9c755f","#bab0ac"];
-  function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-  // recolour/resize the nodes by the chosen metric, computed on the switched-on layers
   function applyMetric(cy, on, metric, legend) {
     if (metric === "plain") { cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); }); legend.innerHTML = ""; return; }
     var g = adjFrom(cy, on), ids = g.ids, adjSet = g.adj, val = {}, isComp = false, compK = 0;
@@ -132,7 +170,7 @@
                        " (dark/large) · top: <b>" + esc(cy.getElementById(top).data("label")) + "</b> (" + fmt(val[top]) + ")";
   }
 
-  // ---- controls (layout + layer toggles + metric panel + legend) ---------
+  // ---- controls ----------------------------------------------------------
   function addRow(cap) { var d = document.createElement("div"); d.style.cssText = "padding:2px 2px;"; cap.appendChild(d); return d; }
   function mkbtn(row, label, fn) {
     var b = document.createElement("button"); b.textContent = label;
@@ -141,7 +179,7 @@
     row.appendChild(b); return b;
   }
 
-  function buildControls(cap, cy, data) {
+  function buildControls(cap, cy, data, wrap) {
     cap.innerHTML = "";
     var kinds = {}; cy.edges().forEach(function (e) { kinds[LAYER_OF(e.data("kind"))] = true; });
     var present = ["coexp","ppi","grn"].filter(function (l) { return kinds[l]; });
@@ -151,12 +189,12 @@
     var row0 = addRow(cap), row2 = addRow(cap), legend = addRow(cap);
     legend.style.cssText = "font-size:11px;color:#444;padding:2px 2px;min-height:14px;";
 
-    // row0 — title + layouts + fit + PNG
     var t = document.createElement("span");
-    t.textContent = "🕸 " + (cap.dataset.title || "network") + "  —  drag · scroll-zoom · layout:";
+    t.textContent = "🕸 " + (cap.dataset.title || "network") + "  —  drag · scroll-zoom · hover for info · layout:";
     row0.appendChild(t);
     Object.keys(LAYOUTS).forEach(function (name) { mkbtn(row0, name, function () { cy.layout(LAYOUTS[name]).run(); }); });
     mkbtn(row0, "⤢ fit", function () { cy.fit(undefined, 20); });
+    mkbtn(row0, "⛶ Full screen", function () { toggleFull(wrap, cy); });
     mkbtn(row0, "📷 PNG", function () {
       var a = document.createElement("a");
       a.href = cy.png({ full: true, scale: 2, bg: "#fff" });
@@ -169,7 +207,6 @@
       recolor();
     }
 
-    // row1 — layer toggles (only when ≥2 layers are present)
     if (present.length >= 2) {
       var row1 = document.createElement("div"); row1.style.cssText = "padding:2px 2px;"; cap.insertBefore(row1, row2);
       var l1 = document.createElement("span"); l1.textContent = "Layers: "; l1.style.fontWeight = "600"; row1.appendChild(l1);
@@ -183,7 +220,6 @@
       });
     }
 
-    // row2 — colour-by-metric panel
     var l2 = document.createElement("span"); l2.textContent = "Colour nodes by: "; l2.style.fontWeight = "600"; row2.appendChild(l2);
     var mbtns = {};
     [["plain","Plain"],["degree","Degree"],["betweenness","Betweenness"],["clustering","Clustering"],["components","Components"]]
@@ -198,18 +234,18 @@
       });
     }
     paintMetric();
-    setLayers();     // initial paint (applies data.metric if given)
+    setLayers();
   }
 
   function render(div, data) {
     div.innerHTML = "";
     var els = [];
     data.nodes.forEach(function (n) {
-      els.push({ data: { id: n.id, label: n.label, hub: !!n.hub, reg: !!n.reg,
+      els.push({ data: { id: n.id, label: n.label, de: n.de || "", hub: !!n.hub, reg: !!n.reg,
                          col: n.col || "", sz: +n.sz || 0, bc: n.bc || "", bw: +n.bw || 0 } });
     });
     data.edges.forEach(function (e) {
-      els.push({ data: { id: e.s + "__" + e.t + "__" + e.ty, source: e.s, target: e.t, kind: e.ty } });
+      els.push({ data: { id: e.s + "__" + e.t + "__" + e.ty, source: e.s, target: e.t, kind: e.ty, de: e.d || "" } });
     });
     var cy = cytoscape({
       container: div,
@@ -239,22 +275,37 @@
       layout: LAYOUTS.Spread
     });
     cy.fit(undefined, 20);
+
+    // hover tooltips: gene description on nodes, relationship description on edges
+    cy.on("mouseover", "node", function (e) {
+      var n = e.target, de = n.data("de");
+      showTip("<b>" + esc(n.data("label")) + "</b> <span class='agi'>" + esc(n.id()) + "</span>" + (de ? "<br>" + esc(de) : "<br><span class='agi'>(no description)</span>"), e);
+    });
+    cy.on("mouseover", "edge", function (e) {
+      var ed = e.target, kind = ed.data("kind");
+      var arrow = (kind && kind.indexOf("GRN") === 0) ? " → " : " — ";
+      var rel = ed.data("de") || EDGE_LABEL(kind);
+      showTip("<b>" + esc(ed.source().data("label")) + esc(arrow) + esc(ed.target().data("label")) + "</b><br>" + esc(rel), e);
+    });
+    cy.on("mouseout", "node", hideTip);
+    cy.on("mouseout", "edge", hideTip);
+    cy.on("mousemove", function (e) { moveTip(e); });
+    cy.on("tapstart pan zoom drag", hideTip);
     return cy;
   }
 
-  // Remove the @@CYNET@@…@@END@@ marker even when webR has split it across MANY text nodes
-  // (big networks): join all text, find the span, then trim it out node-by-node.
+  // Remove the @@CYNET@@…@@END@@ marker even when webR has split it across MANY text nodes.
   function stripMarker(root) {
     var nodes = [], w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), t;
     while ((t = w.nextNode())) nodes.push(t);
     var full = "", i;
     for (i = 0; i < nodes.length; i++) full += nodes[i].nodeValue;
-    var m = full.match(/@@CYNET@@[\s\S]*?@@END@@/);     // first complete marker
+    var m = full.match(/@@CYNET@@[\s\S]*?@@END@@/);
     if (!m) return;
     var start = full.indexOf(m[0]), end = start + m[0].length, pos = 0;
     for (i = 0; i < nodes.length; i++) {
       var v = nodes[i].nodeValue, a = pos, b = pos + v.length;
-      if (b > start && a < end) {                       // this node overlaps the marker span
+      if (b > start && a < end) {
         var head = a < start ? v.slice(0, start - a) : "";
         var tail = b > end   ? v.slice(end - a)       : "";
         nodes[i].nodeValue = head + tail;
@@ -268,38 +319,35 @@
     var host = node.nodeType === 3 ? node.parentElement : node;
     if (!host || !host.textContent || host.textContent.indexOf("@@CYNET@@") === -1) return;
     var m = host.textContent.match(RE);
-    if (!m) return;                                 // marker not complete yet — wait for next mutation
+    if (!m) return;
     var data; try { data = JSON.parse(m[1]); } catch (e) { return; }
 
     var box = (host.closest && host.closest(".cell-output, .cell-output-display, .exercise-cell-output, pre")) || host;
-    if (box.dataset && box.dataset.cynetId === data.id) return;   // already handled this output
+    if (box.dataset && box.dataset.cynetId === data.id) return;
     if (box.dataset) box.dataset.cynetId = data.id;
 
-    stripMarker(box);                               // remove the raw JSON, keep summary + ✅ feedback
+    stripMarker(box);
 
-    var divId = "cynet-" + data.id;
-    var div = document.getElementById(divId), cap;
-    if (!div) {
-      div = document.createElement("div");
-      div.id = divId;
-      div.style.cssText = "width:100%;height:480px;border:1px solid #ddd;border-radius:8px;margin:4px 0 14px;background:#fff;";
-      cap = document.createElement("div");
-      cap.className = "cynet-cap";
-      cap.style.cssText = "font-size:12px;color:#555;padding:3px 2px;";
+    var wrapId = "cynetwrap-" + data.id;
+    var wrap = document.getElementById(wrapId), div, cap;
+    if (!wrap) {
+      wrap = document.createElement("div"); wrap.id = wrapId; wrap.className = "cynet-wrap"; wrap.style.cssText = "margin:4px 0 14px;";
+      cap = document.createElement("div"); cap.className = "cynet-cap"; cap.style.cssText = "font-size:12px;color:#555;padding:3px 2px;";
+      div = document.createElement("div"); div.className = "cynet-graph";
+      div.style.cssText = "width:100%;height:480px;border:1px solid #ddd;border-radius:8px;background:#fff;";
+      wrap.appendChild(cap); wrap.appendChild(div);
     } else {
-      cap = div.previousElementSibling;
+      cap = wrap.querySelector(".cynet-cap"); div = wrap.querySelector(".cynet-graph");
     }
     cap.dataset.title = data.title || "network";
-    cap.textContent = "🕸 " + cap.dataset.title;     // placeholder until cytoscape mounts
-    // (re)place the caption + graph just after the current cell output
-    box.parentNode.insertBefore(cap, box.nextSibling);
-    box.parentNode.insertBefore(div, cap.nextSibling);
+    cap.textContent = "🕸 " + cap.dataset.title;
+    box.parentNode.insertBefore(wrap, box.nextSibling);
 
-    function mount() { var cy = render(div, data); buildControls(cap, cy, data); }
+    function mount() { var cy = render(div, data); wrap._cy = cy; buildControls(cap, cy, data, wrap); }
     if (window.cytoscape) { mount(); return; }
     var tries = 0, iv = setInterval(function () {
       if (window.cytoscape) { clearInterval(iv); mount(); }
-      else if (++tries > 40) {            // ~6 s: cytoscape.js never loaded (CDN/proxy blocked, offline)
+      else if (++tries > 40) {
         clearInterval(iv);
         div.innerHTML = '<div style="padding:16px;color:#a00;font:13px system-ui">⚠ Could not load the network viewer (cytoscape.js). The R analysis above still ran — its results are in the text output. Try a page reload, or a network without a proxy/firewall.</div>';
       }
