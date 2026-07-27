@@ -200,6 +200,41 @@ cynet <- function(edges, hub = NULL, id = "cy", title = "", metric = NULL,
   invisible(NULL)
 }
 
+# ---- base-R network helpers (used by N4 + the MYB46 appendix) — defined here so the cells stay short ----
+build_adj <- function(edges, directed = FALSE) {
+  nodes <- sort(unique(c(edges$source, edges$target)))
+  A <- matrix(0L, length(nodes), length(nodes), dimnames = list(nodes, nodes))
+  for (i in seq_len(nrow(edges))) { A[edges$source[i], edges$target[i]] <- 1L
+    if (!directed) A[edges$target[i], edges$source[i]] <- 1L }
+  diag(A) <- 0L; A
+}
+betweenness_base <- function(A) {               # Brandes' algorithm (unweighted)
+  nm <- rownames(A); n <- length(nm); CB <- setNames(numeric(n), nm)
+  for (s in nm) {
+    S <- character(0); P <- setNames(vector("list", n), nm)
+    sigma <- setNames(rep(0, n), nm); sigma[s] <- 1
+    d <- setNames(rep(-1, n), nm); d[s] <- 0; q <- s
+    while (length(q) > 0) { v <- q[1]; q <- q[-1]; S <- c(S, v)
+      for (w in nm[A[v, ] == 1L]) {
+        if (d[w] < 0) { d[w] <- d[v] + 1; q <- c(q, w) }
+        if (d[w] == d[v] + 1) { sigma[w] <- sigma[w] + sigma[v]; P[[w]] <- c(P[[w]], v) } } }
+    delta <- setNames(rep(0, n), nm)
+    for (w in rev(S)) { for (v in P[[w]]) delta[v] <- delta[v] + (sigma[v]/sigma[w]) * (1 + delta[w])
+      if (w != s) CB[w] <- CB[w] + delta[w] } }
+  CB / 2
+}
+clustering_matrix <- function(A) {
+  k <- rowSums(A); tri <- diag(A %*% (A %*% A)) / 2; denom <- k * (k - 1) / 2
+  ifelse(denom > 0, tri / denom, 0)
+}
+components_base <- function(A) {
+  nm <- rownames(A); comp <- setNames(rep(NA_integer_, length(nm)), nm); k <- 0
+  for (start in nm) if (is.na(comp[start])) { k <- k + 1; q <- start; comp[start] <- k
+    while (length(q) > 0) { u <- q[1]; q <- q[-1]
+      for (w in nm[A[u, ] == 1L]) if (is.na(comp[w])) { comp[w] <- k; q <- c(q, w) } } }
+  comp
+}
+
 cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
             nrow(EXPR), length(organ_cols)))
 ```
@@ -881,26 +916,26 @@ say(nrow(all_edges) > 0,
     "run N1 (and N2) first so 'nb' and 'edges' exist, then re-run.")
 ```
 
-> **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). You'll meet a hand-curated, experiment-typed gold-standard network in the **optional MYB46 appendix**.
+> **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). **Extra caution if your gene is *not* a transcription factor but appears to *regulate* others** (out-edges): only a TF binds a promoter directly, so a non-TF's out-edges are usually indirect, signalling (e.g. photosynthetic *retrograde* signals), or mis-parsed direction — watch for the *same pair pointing both ways in one paper*, a classic artefact. You'll meet a hand-curated, experiment-typed gold-standard network in the **optional MYB46 appendix**.
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
-Put numbers on **your own** module. The base-R helpers below (`build_adj`, `betweenness_base`, `clustering_matrix` — black boxes, just call them) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
+Put numbers on **your own** module. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix` — provided for you; **unfold them below** if you're curious) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
 
 > **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network. Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
 
-```{webr}
-if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
+::: {.callout-note collapse="true" title="🔧 The base-R network helpers — for the curious (you don't need to read these to do the exercise)"}
+These four functions are defined for you when the page loads; the cell below just calls them. They use **base R only** (no `igraph`) — so nothing is hidden, this is exactly how each metric is computed.
 
-# ---- base-R network helpers (no packages) — black boxes: call and read the result ----
-build_adj <- function(edges, directed = FALSE) {
+```r
+build_adj <- function(edges, directed = FALSE) {          # edge list -> adjacency matrix (0/1)
   nodes <- sort(unique(c(edges$source, edges$target)))
   A <- matrix(0L, length(nodes), length(nodes), dimnames = list(nodes, nodes))
   for (i in seq_len(nrow(edges))) { A[edges$source[i], edges$target[i]] <- 1L
     if (!directed) A[edges$target[i], edges$source[i]] <- 1L }
   diag(A) <- 0L; A
 }
-betweenness_base <- function(A) {               # Brandes' algorithm (unweighted)
+betweenness_base <- function(A) {                         # Brandes' algorithm: shortest paths through each node
   nm <- rownames(A); n <- length(nm); CB <- setNames(numeric(n), nm)
   for (s in nm) {
     S <- character(0); P <- setNames(vector("list", n), nm)
@@ -915,17 +950,25 @@ betweenness_base <- function(A) {               # Brandes' algorithm (unweighted
       if (w != s) CB[w] <- CB[w] + delta[w] } }
   CB / 2
 }
-clustering_matrix <- function(A) {
+clustering_matrix <- function(A) {                        # do my neighbours link to each other? (triangles)
   k <- rowSums(A); tri <- diag(A %*% (A %*% A)) / 2; denom <- k * (k - 1) / 2
   ifelse(denom > 0, tri / denom, 0)
 }
-components_base <- function(A) {
+components_base <- function(A) {                          # label the disconnected pieces (BFS)
   nm <- rownames(A); comp <- setNames(rep(NA_integer_, length(nm)), nm); k <- 0
   for (start in nm) if (is.na(comp[start])) { k <- k + 1; q <- start; comp[start] <- k
     while (length(q) > 0) { u <- q[1]; q <- q[-1]
       for (w in nm[A[u, ] == 1L]) if (is.na(comp[w])) { comp[w] <- k; q <- c(q, w) } } }
   comp
 }
+```
+:::
+
+```{webr}
+if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
+
+# build_adj / betweenness_base / clustering_matrix / components_base are provided for you
+# (defined on page load — unfold "The base-R network helpers" above if you want to read them).
 
 # ---- your CO-EXPRESSION module: clique or star, hub/bridge (the numbers for your dossier) ----
 co <- edges[edges$type == "coexpression", c("source","target"), drop = FALSE]
@@ -944,13 +987,16 @@ if (nn > 2 && MY_GENE %in% c(co$source, co$target)) {
   } else cat("Module >80 genes — raise MY_CUTOFF in N1 for a crisper core (base-R betweenness is slow above 80).\n")
 } else cat("Co-expression module too small — lower MY_CUTOFF in N1 and re-run.\n")
 
-# ---- your REGULATORY position (from N3). Most genes are TARGETS or LEAVES — only TFs are masters ----
+# ---- your REGULATORY position (from N3). 'Regulator' is NOT only TFs (kinases, hormones, retrograde
+#      signals regulate too); and a non-TF with out-edges is usually indirect / signalling / a mining artefact ----
 if (exists("my_regs")) {
   ni <- length(my_regs); no <- length(my_tgts)
-  role <- if (ni + no == 0) "a LEAF — nothing in your module is a documented regulator of it (usual for a non-TF gene)" else
-          if (no > 0)       "a REGULATOR — your gene appears to control others in the module (it may be a TF)" else
-                            "a TARGET — your gene is regulated by others in the module"
+  role <- if (ni + no == 0)      "a LEAF — nothing in your module is a documented regulator of it (usual for a non-TF gene)" else
+          if (no > 0 && ni == 0) "reported to regulate others (out-edges only). Direct only if your gene is a known TF; for a structural or metabolic gene these are usually INDIRECT or signalling (e.g. photosynthetic 'retrograde' signals) — or text-mining artefacts. Verify them (a reciprocal edge from the same paper is a red flag)" else
+          if (no > 0)            "BOTH regulated and a reported regulator of others — treat the out-edges as leads to verify unless your gene is a known TF" else
+                                 "a TARGET — your gene is regulated by others in the module"
   cat(sprintf("Regulatory position: %d regulator(s) in, %d target(s) out -> %s.\n", ni, no, role))
+  cat("Note: 'regulator' isn't only TFs — kinases, hormones and retrograde signals regulate genes too; but only a TF binds a promoter directly, so verify a non-TF's out-edges.\n")
 } else cat("Run N3 to read your regulatory position.\n")
 
 # ---- draw YOUR whole network — toggle the layers & recolour by a metric in the viewer ----
@@ -1053,12 +1099,12 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 # Appendix — the MYB46 GRN: a gold-standard example  *(optional)*
 
-*A fully hand-curated, experiment-typed regulatory network — the opposite of the text-mined layer you built in N3. Compare its clean shape with your own network (N4). Needs the helpers from **N4** and the `grn` table (loaded on page open).*
+*A fully hand-curated, experiment-typed regulatory network — the opposite of the text-mined layer you built in N3. Compare its clean shape with your own network (N4). Uses the same network helpers and the `grn` table — both loaded when the page opens.*
 
 Your regulatory network (N3) came from **text-mining**. Here is the opposite — the **hand-curated MYB46 secondary-cell-wall GRN**, every edge backed by a named experiment (ChIP / EMSA / transactivation). Measured with the **same helpers** (N4), it is a textbook **hub-and-spoke**: MYB46 is the **hub** *and* **bottleneck** *and* a **star**, and the single **articulation point**.
 
 ```{webr}
-if (!exists("build_adj")) stop("Run N4 first — it defines the network helpers.")
+if (!exists("grn")) stop("Reload the page — the curated GRN table loads on page open.")
 grn_edges <- data.frame(source = grn$source_AGI, target = grn$target_AGI, type = paste0("GRN_", grn$interaction))
 A <- build_adj(grn_edges); deg <- rowSums(A)
 btw <- betweenness_base(A); cc <- clustering_matrix(A)
