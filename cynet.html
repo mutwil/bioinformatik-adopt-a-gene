@@ -289,7 +289,7 @@
     // hover tooltips: gene description on nodes, relationship description on edges
     cy.on("mouseover", "node", function (e) {
       var n = e.target, de = n.data("de");
-      showTip("<b>" + esc(n.data("label")) + "</b> <span class='agi'>" + esc(n.id()) + "</span>" + (de ? "<br>" + esc(de) : "<br><span class='agi'>(no description)</span>"), e);
+      showTip("<b>" + esc(n.data("label")) + "</b> <span class='agi'>" + esc(n.id()) + "</span>" + "<br>" + esc(de || "Unknown function"), e);
     });
     cy.on("mouseover", "edge", function (e) {
       var ed = e.target, kind = ed.data("kind");

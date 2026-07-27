@@ -59,6 +59,7 @@ organ_cols <- setdiff(names(m), "gene_id")          # every column except gene_i
 EXPR <- as.matrix(m[, organ_cols])                  # numeric matrix (needed for cor()/apply())
 rownames(EXPR) <- m$gene_id
 desc <- setNames(info$description, info$gene_id)     # quick lookup: gene_id -> description
+desc[is.na(desc) | desc == "" | desc == "nan"] <- "Unknown function"   # never show 'nan' as a function
 sym  <- setNames(info$symbol,      info$gene_id)
 sym[is.na(sym) | sym == "nan"] <- ""                 # treat missing symbols as blank (so labels fall back to AGI)
 # The curated GRN names (SND1, LAC4, NST2, ...) are authoritative for the GRN nodes, so the network
@@ -190,7 +191,8 @@ cynet <- function(edges, hub = NULL, id = "cy", title = "", metric = NULL,
   pick <- function(v, d){ if (is.null(v)) return(rep(d, length(nodes))); x <- v[nodes]; x[is.na(x)] <- d; x }
   fillv <- pick(node_fill, ""); sizev <- pick(node_size, 0)
   bordv <- pick(node_border, ""); lwdv <- pick(node_lwd, 0)
-  dev  <- desc[nodes]; dev[is.na(dev)] <- ""; dev <- clean(substr(dev, 1, 90))          # gene description -> node tooltip
+  dev  <- desc[nodes]; dev[is.na(dev) | dev == "" | dev == "nan"] <- "Unknown function"  # gene description -> node tooltip
+  dev  <- clean(substr(dev, 1, 90))
   base_lbl <- ifelse(ty == "coexpression", "co-expression (correlated profiles)",       # relationship -> edge tooltip
               ifelse(ty == "PPI", "physical interaction (BioGRID)",
               ifelse(ty == "GRN_activates", "activates (regulatory, text-mined)",
@@ -858,6 +860,10 @@ say(length(nb) > 1 && nrow(edges) > 0,
 
 > **🔬 One knob, one network.** `MY_CUTOFF` does two jobs at once — it decides which genes are *in* (those correlated with yours) **and** which pairs get an edge. The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module grows toward a broader neighbourhood. Because these genes are *defined* by being co-expressed with yours, the network stays **densely connected** even at high cutoffs — that density is the hallmark of a real functional module, not a bug. **Drag nodes apart** in the viewer to read it; **start around `0.9` and explore** — a very low cutoff pulls in many genes and makes a large, slow mesh.
 
+> **🎛 The network viewer — your explorer for all of Week 2.** This same viewer appears under every network from here on. **Hover** a node for its gene description, or an edge for what the link means; **drag** to rearrange, **scroll** to zoom. The **Colour nodes by** panel repaints the graph by a **network metric** (defined below), recomputed **live** on whatever is shown; **⛶ Full screen** gives a big view and **📷 PNG** saves it for your dossier. *(Layer toggles — co-expression · PPI · regulation — appear once you add those layers in N2–N3.)*
+
+> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network (one connected module = 1 component; if the graph splits, each island is its own colour). Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
+
 ### M4.W2.E3 · N2 — Add the physical layer (BioGRID PPI)
 
 Your co-expression edges (N1) say "these genes behave alike." Now overlay **physical** protein–protein interactions from BioGRID — where two neighbours actually *touch*. N2 draws an edge wherever **any two** genes in your neighbourhood interact — not only those touching your gene (so the CESA4/7/8 triangle appears even if your gene is not a CESA). **Many genes have no BioGRID interactions at all** — an empty layer is a real finding. *(Run N1 first so `edges` and `nb` exist.)*
@@ -934,9 +940,7 @@ say(nrow(all_edges) > 0,
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
-Put numbers on **your own** module. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`) are **provided for you** — this cell just calls them to answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? *(The cell has nothing to fill in, so its code starts **folded** — hit **Show R code** if you want to read it.)* And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
-
-> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network. Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
+You've been *exploring* these metrics visually in the viewer since N1. This cell writes the **verdict for your dossier in words** — the one thing the viewer's colours don't say out loud. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`, **provided for you**) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, which neighbour is its **secondary bridge**, and — from N3 — is your gene a **target** (regulated), a **regulator**, or a **leaf**? *(Nothing to fill in, so the code starts **folded** — hit **Show R code** to read it.)* It then redraws your **whole network** (all three layers), opened on **betweenness**, so you can keep exploring.
 
 ```{webr}
 if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
