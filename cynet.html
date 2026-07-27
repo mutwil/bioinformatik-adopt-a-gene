@@ -16,6 +16,8 @@
     background:rgba(20,22,26,.96); color:#fff; font:12px/1.45 system-ui,sans-serif; padding:7px 10px;
     border-radius:7px; box-shadow:0 3px 14px rgba(0,0,0,.35); }
   #cynet-tip .agi{ opacity:.62; font-weight:400; }
+  #cynet-tip .tipm{ margin-top:5px; padding-top:5px; border-top:1px solid rgba(255,255,255,.22); font-size:11px; line-height:1.55; opacity:.95; }
+  #cynet-tip .tipm .k{ opacity:.7; }
 </style>
 <script>
 (function () {
@@ -140,31 +142,60 @@
   }
   var CPAL = ["#4e79a7","#f28e2b","#59a14f","#e15759","#b07aa1","#76b7b2","#edc948","#ff9da7","#9c755f","#bab0ac"];
 
-  function applyMetric(cy, on, metric, legend) {
-    if (metric === "plain") { cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); }); legend.innerHTML = ""; return; }
-    var g = adjFrom(cy, on), ids = g.ids, adjSet = g.adj, val = {}, isComp = false, compK = 0;
-    if (!ids.length) { legend.innerHTML = ""; return; }
-    if (metric === "degree") { ids.forEach(function (n) { val[n] = adjSet[n].size; }); }
-    else if (metric === "components") { var r = componentsJS(ids, adjSet); val = r.comp; compK = r.k; isComp = true; }
-    else if (metric === "betweenness") { val = betweennessJS(ids, adjSet); }
-    else if (metric === "clustering") { val = clusteringJS(ids, adjSet); }
+  function r1(x) { return Math.round(x * 10) / 10; }
 
-    if (isComp) {
+  // compute ALL metrics for the current view once, cache per node (for both colouring and tooltips)
+  function computeMetrics(cy, on) {
+    var g = adjFrom(cy, on), ids = g.ids, adj = g.adj, N = ids.length;
+    var btw = betweennessJS(ids, adj), comp = componentsJS(ids, adj);
+    cy.nodes().forEach(function (n) { n.scratch("_m", null); });     // clear (hidden/out-of-view nodes)
+    ids.forEach(function (id) {
+      var nb = Array.from(adj[id]), k = nb.length, poss = k * (k - 1) / 2, links = 0;
+      for (var i = 0; i < k; i++) for (var j = i + 1; j < k; j++) if (adj[nb[i]].has(nb[j])) links++;
+      cy.getElementById(id).scratch("_m", {
+        N: N, deg: k, clusLinks: links, clusPoss: poss, clus: poss > 0 ? links / poss : 0,
+        btw: btw[id], comp: comp.comp[id], ncomp: comp.k
+      });
+    });
+  }
+
+  // tooltip lines: each metric's value AND how it was computed (e.g. degree 0.20 = 2/10)
+  function metricLines(m) {
+    var np = m.N - 1, L = [];
+    L.push("degree <b>" + m.deg + "</b>" + (np > 0 ? " <span class='k'>= " + m.deg + "/" + np + " = " + (m.deg / np).toFixed(2) + "</span>" : ""));
+    L.push("clustering <b>" + m.clus.toFixed(2) + "</b> " +
+           (m.clusPoss > 0 ? "<span class='k'>= " + m.clusLinks + "/" + m.clusPoss + " neighbour-pairs linked</span>"
+                           : "<span class='k'>(needs ≥2 neighbours)</span>"));
+    var bmax = np >= 2 ? np * (m.N - 2) / 2 : 0;
+    L.push("betweenness <b>" + r1(m.btw) + "</b>" +
+           (bmax > 0 ? " <span class='k'>= " + r1(m.btw) + "/" + r1(bmax) + " = " + (m.btw / bmax).toFixed(2) + " of shortest paths</span>" : ""));
+    L.push("component <b>" + m.comp + "</b> <span class='k'>of " + m.ncomp + "</span>");
+    return L.join("<br>");
+  }
+
+  // colour nodes by a metric, reading the cached values (computeMetrics ran on the last view change)
+  function applyMetric(cy, metric, legend) {
+    if (metric === "plain") { cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); }); legend.innerHTML = ""; return; }
+    var ids = []; cy.nodes().forEach(function (n) { if (n.scratch("_m")) ids.push(n.id()); });
+    if (!ids.length) { legend.innerHTML = ""; return; }
+    var key = metric === "degree" ? "deg" : metric === "betweenness" ? "btw" : metric === "clustering" ? "clus" : "comp";
+    var valOf = function (id) { return cy.getElementById(id).scratch("_m")[key]; };
+    if (metric === "components") {
+      var k0 = cy.getElementById(ids[0]).scratch("_m").ncomp;
       ids.forEach(function (id) { var n = cy.getElementById(id);
-        n.style("background-color", CPAL[(val[id] - 1) % CPAL.length]); n.style("width", 28); n.style("height", 28); });
-      legend.innerHTML = "<b>Components</b>: " + compK + " disconnected part" + (compK === 1 ? "" : "s") + " in the current view.";
+        n.style("background-color", CPAL[(valOf(id) - 1) % CPAL.length]); n.style("width", 28); n.style("height", 28); });
+      legend.innerHTML = "<b>Components</b>: " + k0 + " disconnected part" + (k0 === 1 ? "" : "s") + " in the current view.";
       return;
     }
-    var arr = ids.map(function (id) { return val[id]; });
-    var mn = Math.min.apply(null, arr), mx = Math.max.apply(null, arr), top = ids[0];
-    ids.forEach(function (id) { if (val[id] > val[top]) top = id; });
-    ids.forEach(function (id) {                       // colour ONLY the nodes in the current view (no NaN on hidden ones)
-      var t = (mx > mn) ? (val[id] - mn) / (mx - mn) : 0.5, n = cy.getElementById(id);
+    var arr = ids.map(valOf), mn = Math.min.apply(null, arr), mx = Math.max.apply(null, arr), top = ids[0];
+    ids.forEach(function (id) { if (valOf(id) > valOf(top)) top = id; });
+    ids.forEach(function (id) {                        // colour ONLY the nodes in the current view
+      var t = (mx > mn) ? (valOf(id) - mn) / (mx - mn) : 0.5, n = cy.getElementById(id);
       n.style("background-color", heatJS(t)); n.style("width", 20 + 30 * t); n.style("height", 20 + 30 * t);
     });
-    var fmt = function (x) { return metric === "clustering" ? x.toFixed(2) : Math.round(x * 10) / 10; };
+    var fmt = function (x) { return metric === "clustering" ? x.toFixed(2) : r1(x); };
     legend.innerHTML = "<b>" + MNAME[metric] + "</b>: " + fmt(mn) + " (light/small) → " + fmt(mx) +
-                       " (dark/large) · top: <b>" + esc(cy.getElementById(top).data("label")) + "</b> (" + fmt(val[top]) + ")";
+                       " (dark/large) · top: <b>" + esc(cy.getElementById(top).data("label")) + "</b> (" + fmt(valOf(top)) + ")";
   }
 
   // ---- controls ----------------------------------------------------------
@@ -203,7 +234,7 @@
       a.download = (cap.dataset.title || "network").replace(/[^\w-]+/g, "_") + ".png"; a.click();
     });
 
-    function recolor() { applyMetric(cy, on, metric, legend); }
+    function recolor() { applyMetric(cy, metric, legend); }
     function hideIsolated() {                   // hide nodes with no edge in the switched-on layers
       var deg = {}; cy.nodes().forEach(function (n) { deg[n.id()] = 0; });
       cy.edges().forEach(function (e) {
@@ -216,6 +247,7 @@
     function applyVisibility() {
       cy.edges().forEach(function (e) { e.style("display", on[LAYER_OF(e.data("kind"))] ? "element" : "none"); });
       hideIsolated();                           // drop disconnected nodes so layouts only place connected ones
+      computeMetrics(cy, on);                   // recompute all node metrics for THIS view (for colour + tooltips)
       recolor();
     }
 
@@ -290,8 +322,10 @@
 
     // hover tooltips: gene description on nodes, relationship description on edges
     cy.on("mouseover", "node", function (e) {
-      var n = e.target, de = n.data("de");
-      showTip("<b>" + esc(n.data("label")) + "</b> <span class='agi'>" + esc(n.id()) + "</span>" + "<br>" + esc(de || "Unknown function"), e);
+      var n = e.target, de = n.data("de"), m = n.scratch("_m");
+      var html = "<b>" + esc(n.data("label")) + "</b> <span class='agi'>" + esc(n.id()) + "</span><br>" + esc(de || "Unknown function");
+      if (m) html += "<div class='tipm'>" + metricLines(m) + "</div>";   // values + how each was calculated
+      showTip(html, e);
     });
     cy.on("mouseover", "edge", function (e) {
       var ed = e.target, kind = ed.data("kind");
