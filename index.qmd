@@ -176,7 +176,7 @@ draw_network <- function(edges, hub = NULL, main = "", max_nodes = 44,
 
 # cynet(): emit a network as a text marker that cynet.html turns into an INTERACTIVE cytoscape.js
 # graph (drag / zoom / pan) showing the network you just built.
-cynet <- function(edges, hub = NULL, id = "cy", title = "",
+cynet <- function(edges, hub = NULL, id = "cy", title = "", metric = NULL,
                   node_fill = NULL, node_size = NULL, node_border = NULL, node_lwd = NULL){
   edges <- edges[as.character(edges$source) != as.character(edges$target), , drop = FALSE]
   if (nrow(edges) == 0){ cat("(no edges to draw yet)\n"); return(invisible(NULL)) }
@@ -195,7 +195,8 @@ cynet <- function(edges, hub = NULL, id = "cy", title = "",
                ',"col":"', fillv, '","sz":', sizev, ',"bc":"', bordv, '","bw":', lwdv, '}', collapse = ",")
   ej <- paste0('{"s":"', src, '","t":"', tgt, '","ty":"', ty, '"}', collapse = ",")
   cat("\n@@CYNET@@", '{"id":"', id, '","title":"', clean(title),
-      '","nodes":[', nj, '],"edges":[', ej, ']}', "@@END@@\n", sep = "")
+      '","metric":"', if (is.null(metric)) "" else metric, '"',
+      ',"nodes":[', nj, '],"edges":[', ej, ']}', "@@END@@\n", sep = "")
   invisible(NULL)
 }
 
@@ -844,12 +845,15 @@ say(exists("edges") && nrow(edges) > 0,
 
 Co-expression (N1) and PPI (N2) are **undirected** — they cannot say who controls whom. Now add the **regulatory** layer from **PlantConnectome** (directed, signed, PubMed-cited edges text-mined from tens of thousands of papers). The cell reports two things: **who regulates your gene** (and what it regulates), and — the strongest signal — **how many regulatory edges fall *between two of your co-expressed genes*** (co-expression **and** regulation on the same pair is the best convergence you can show). **Many genes have none** (housekeeping genes, or genes the literature hasn't resolved) — an empty layer is a real finding, not a failure. *(Run N1 first so `nb` exists.)*
 
+The viewer now draws **all three layers at once** — grey/blue/green edges. Use its **Layers** panel to switch **Co-expression · PPI · Regulation** on and off and see how they overlap: does a regulatory edge sit on top of a co-expression edge? That overlap is the convergence you're hunting for.
+
 ```{webr}
-if (!exists("nb")) stop("Run N1 first so 'nb' (your neighbourhood) exists.")
+if (!exists("nb") || !exists("edges")) stop("Run N1 (and N2) first so 'nb' and 'edges' exist.")
 rg     <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$target_AGI %in% nb, ]  # edges touching your module
 within <- rg[rg$source_AGI %in% nb & rg$target_AGI %in% nb, ]      # BOTH ends co-expressed -> regulation AMONG your module
 my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])         # who regulates your gene
 my_tgts <- unique(rg$target_AGI[rg$source_AGI == MY_GENE])         # what your gene regulates
+grn_drawn <- data.frame(source = character(0), target = character(0), type = character(0))  # the GRN edges we'll draw
 if (nrow(rg) == 0) {
   cat(sprintf("PlantConnectome has no regulatory edges touching %s's module.\n", MY_NAME))
   cat("Common for housekeeping genes (ribosomes, histones) or genes the literature hasn't resolved — the absence is a finding.\n")
@@ -860,21 +864,30 @@ if (nrow(rg) == 0) {
   pri   <- rbind(within, rg[rg$source_AGI == MY_GENE | rg$target_AGI == MY_GENE, ], rg)   # draw the interesting edges first
   pri   <- pri[!duplicated(paste(pri$source_AGI, pri$target_AGI)), ]
   drawn <- head(pri, 70)                                            # cap the drawing so it stays readable
-  reg_edges <- data.frame(source = drawn$source_AGI, target = drawn$target_AGI, type = drawn$type)
-  cynet(reg_edges, hub = MY_GENE, id = "cy_n3",
-        title = paste(MY_NAME, "regulation — green activates, red represses, grey regulates;",
-                      if (nrow(rg) > 70) paste("top 70 of", nrow(rg)) else "PlantConnectome"))
-  say(TRUE, sprintf("%d regulatory edge(s) around your module, %d of them among co-expressed genes — directed, signed, PubMed-cited (unlike co-expression, N1).", nrow(rg), nrow(within)), "-")
+  grn_drawn <- data.frame(source = drawn$source_AGI, target = drawn$target_AGI, type = drawn$type)
 }
+
+# draw ALL THREE layers together — co-expression + PPI (from N1/N2) + regulation (green/red/grey).
+# In the viewer, use the "Layers" panel to switch each on/off; "Colour nodes by" recomputes metrics live.
+base_edges <- edges[edges$type %in% c("coexpression","PPI"), c("source","target","type"), drop = FALSE]
+all_edges  <- rbind(base_edges, grn_drawn)
+cynet(all_edges, hub = MY_GENE, id = "cy_n3",
+      title = paste(MY_NAME, "integrated network — toggle Co-expression / PPI / Regulation",
+                    if (nrow(rg) > 70) paste("(top 70 of", nrow(rg), "GRN edges)") else ""))
+
+say(nrow(all_edges) > 0,
+    sprintf("integrated network: %d co-expression/PPI edge(s) + %d regulatory edge(s); %d regulatory edge(s) fall among your co-expressed genes. Toggle the layers to see where regulation lands on top of co-expression.",
+            nrow(base_edges), nrow(grn_drawn), nrow(within)),
+    "run N1 (and N2) first so 'nb' and 'edges' exist, then re-run.")
 ```
 
 > **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). You'll meet a hand-curated, experiment-typed gold-standard network in the **optional MYB46 appendix**.
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
-Put numbers on **your own** module. The base-R helpers below (`build_adj`, `betweenness_base`, `clustering_matrix` — black boxes, just call them) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? The cell then **plots your network with the metrics on it** (node size = degree, fill = betweenness). And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**?
+Put numbers on **your own** module. The base-R helpers below (`build_adj`, `betweenness_base`, `clustering_matrix` — black boxes, just call them) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, and which neighbour is its **secondary bridge**? And from N3: is your gene a **target** (regulated), a **regulator**, or a **leaf**? The cell then draws **your whole network** (all three layers) in the viewer — where you can **toggle each layer** and **recolour the nodes by any metric** (degree, betweenness, clustering, components), recomputed live for whichever layers you switch on. It opens coloured by **betweenness**.
 
-> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star).
+> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network. Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
 
 ```{webr}
 if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
@@ -914,7 +927,7 @@ components_base <- function(A) {
   comp
 }
 
-# ---- your CO-EXPRESSION module: clique or star, hub/bridge, drawn with metrics on it ----
+# ---- your CO-EXPRESSION module: clique or star, hub/bridge (the numbers for your dossier) ----
 co <- edges[edges$type == "coexpression", c("source","target"), drop = FALSE]
 nn <- length(unique(c(co$source, co$target)))
 if (nn > 2 && MY_GENE %in% c(co$source, co$target)) {
@@ -928,14 +941,7 @@ if (nn > 2 && MY_GENE %in% c(co$source, co$target)) {
       cat(sprintf("Secondary bridge: %s (betweenness %.1f) — the neighbour the others most pass through.\n",
                   lab(names(which.max(others))), max(others)))
     else cat("No secondary bridge — a near-pure star; the neighbours barely interconnect.\n")
-    nrm  <- function(v) if (diff(range(v)) > 0) (v - min(v)) / diff(range(v)) else rep(.5, length(v))
-    heat <- colorRampPalette(c("#f7f7f7","#fdae6b","#e6550d","#a50f15"))(24)
-    g <- names(deg)
-    cynet(co, hub = MY_GENE, id = "cy_n4",
-          title = paste(MY_NAME, "network — node size: degree | fill: betweenness (reddest = bottleneck)"),
-          node_fill = setNames(heat[1 + round(nrm(btw[g]) * 23)], g),
-          node_size = setNames(24 + 34 * nrm(deg[g]), g))
-  } else cat("Module >80 genes — raise MY_CUTOFF in N1 for a crisper core to measure the bridge and plot the metrics.\n")
+  } else cat("Module >80 genes — raise MY_CUTOFF in N1 for a crisper core (base-R betweenness is slow above 80).\n")
 } else cat("Co-expression module too small — lower MY_CUTOFF in N1 and re-run.\n")
 
 # ---- your REGULATORY position (from N3). Most genes are TARGETS or LEAVES — only TFs are masters ----
@@ -947,7 +953,13 @@ if (exists("my_regs")) {
   cat(sprintf("Regulatory position: %d regulator(s) in, %d target(s) out -> %s.\n", ni, no, role))
 } else cat("Run N3 to read your regulatory position.\n")
 
-say(nn > 2, "measured YOUR network — its shape (clique/star), hub/bridge, and your gene's regulatory role. These go straight into your dossier; every gene is different.",
+# ---- draw YOUR whole network — toggle the layers & recolour by a metric in the viewer ----
+all_edges <- rbind(edges[edges$type %in% c("coexpression","PPI"), c("source","target","type"), drop = FALSE],
+                   if (exists("grn_drawn")) grn_drawn else NULL)
+cynet(all_edges, hub = MY_GENE, id = "cy_n4", metric = "betweenness",
+      title = paste(MY_NAME, "network — toggle Co-expression / PPI / Regulation, colour by a metric"))
+
+say(nn > 2, "measured YOUR network — its shape (clique/star), hub/bridge, and your gene's regulatory role. Now recolour it by degree, betweenness, clustering, or components in the viewer, and toggle the layers to see how the same gene's role changes. These go straight into your dossier; every gene is different.",
     "run N1 (and N3) first, then re-run.")
 ```
 

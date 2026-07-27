@@ -1,10 +1,15 @@
 <!-- interactive network bridge: webR R cells emit a @@CYNET@@{json}@@END@@ marker via cat();
      this script catches it in the DOM, strips the raw marker, and renders an interactive
-     cytoscape.js graph (drag / zoom / pan) right below the cell output. -->
+     cytoscape.js graph (drag / zoom / pan) right below the cell output.
+     The viewer adds LAYER toggles (co-expression / PPI / regulation) and a COLOUR-BY-METRIC
+     panel (degree / betweenness / clustering / components) that recomputes the metric, in the
+     browser, on whichever layers are currently switched on — using the same algorithms as the
+     lesson's base-R helpers (undirected adjacency, Brandes/2 betweenness) so the numbers match. -->
 <script src="cytoscape.min.js"></script>
 <script>
 (function () {
   var RE = /@@CYNET@@([\s\S]*?)@@END@@/;
+  var EXPENSIVE_CAP = 120;   // above this many nodes, skip live betweenness/clustering (too slow in-browser)
 
   // selectable layouts — students switch when the default piles nodes up
   var LAYOUTS = {
@@ -16,27 +21,184 @@
     Grid:       { name:"grid", padding:24, avoidOverlap:true },
     Hierarchy:  { name:"breadthfirst", directed:true, padding:24, spacingFactor:1.2 }
   };
-  function buildControls(cap, cy) {
+
+  // ---- edge-layer helpers ------------------------------------------------
+  function LAYER_OF(kind) {
+    if (!kind) return "coexp";
+    if (kind.indexOf("GRN") === 0) return "grn";
+    if (kind === "PPI") return "ppi";
+    return "coexp";
+  }
+  var LAYER_META = {
+    coexp: { label:"Co-expression", color:"#8a8a8a" },
+    ppi:   { label:"PPI",           color:"#2c7fb8" },
+    grn:   { label:"Regulation",    color:"#2e8b2e" }
+  };
+  var MNAME = { degree:"Degree", betweenness:"Betweenness", clustering:"Clustering", components:"Components" };
+
+  // ---- graph metrics (match the base-R helpers: undirected, Brandes/2) ---
+  function adjFrom(cy, on) {                       // adjacency (Set per node) over the SWITCHED-ON layers
+    var adj = {}, ids = [];
+    cy.nodes().forEach(function (n) { var id = n.id(); ids.push(id); adj[id] = new Set(); });
+    cy.edges().forEach(function (e) {
+      if (!on[LAYER_OF(e.data("kind"))]) return;
+      var s = e.data("source"), t = e.data("target");
+      if (s === t || !adj[s] || !adj[t]) return;
+      adj[s].add(t); adj[t].add(s);
+    });
+    return { adj: adj, ids: ids };
+  }
+  function betweennessJS(ids, adjSet) {           // Brandes (unweighted), halved for undirected — as in R
+    var adj = {}; ids.forEach(function (n) { adj[n] = Array.from(adjSet[n]); });
+    var CB = {}; ids.forEach(function (n) { CB[n] = 0; });
+    ids.forEach(function (s) {
+      var S = [], P = {}, sigma = {}, d = {}, Q = [];
+      ids.forEach(function (w) { P[w] = []; sigma[w] = 0; d[w] = -1; });
+      sigma[s] = 1; d[s] = 0; Q.push(s);
+      while (Q.length) {
+        var v = Q.shift(); S.push(v); var nb = adj[v];
+        for (var i = 0; i < nb.length; i++) { var w = nb[i];
+          if (d[w] < 0) { d[w] = d[v] + 1; Q.push(w); }
+          if (d[w] === d[v] + 1) { sigma[w] += sigma[v]; P[w].push(v); } }
+      }
+      var delta = {}; ids.forEach(function (w) { delta[w] = 0; });
+      for (var j = S.length - 1; j >= 0; j--) { var w = S[j], pp = P[w];
+        for (var k = 0; k < pp.length; k++) { var u = pp[k]; delta[u] += (sigma[u] / sigma[w]) * (1 + delta[w]); }
+        if (w !== s) CB[w] += delta[w]; }
+    });
+    ids.forEach(function (n) { CB[n] /= 2; });
+    return CB;
+  }
+  function clusteringJS(ids, adjSet) {            // local clustering coefficient (≈1 clique, ≈0 star)
+    var cc = {};
+    ids.forEach(function (n) {
+      var nb = Array.from(adjSet[n]), k = nb.length;
+      if (k < 2) { cc[n] = 0; return; }
+      var links = 0;
+      for (var i = 0; i < k; i++) for (var j = i + 1; j < k; j++) if (adjSet[nb[i]].has(nb[j])) links++;
+      cc[n] = links / (k * (k - 1) / 2);
+    });
+    return cc;
+  }
+  function componentsJS(ids, adjSet) {            // connected components (BFS)
+    var comp = {}, k = 0;
+    ids.forEach(function (s) {
+      if (comp[s] !== undefined) return;
+      k++; var Q = [s]; comp[s] = k;
+      while (Q.length) { var u = Q.shift();
+        adjSet[u].forEach(function (w) { if (comp[w] === undefined) { comp[w] = k; Q.push(w); } }); }
+    });
+    return { comp: comp, k: k };
+  }
+
+  // ---- colour scales -----------------------------------------------------
+  var HEAT = [[247,247,247],[253,174,107],[230,85,13],[165,15,21]];   // R: f7f7f7 fdae6b e6550d a50f15
+  function heatJS(t) {
+    t = Math.max(0, Math.min(1, t)); var seg = HEAT.length - 1;
+    var x = t * seg, i = Math.min(Math.floor(x), seg - 1), f = x - i, a = HEAT[i], b = HEAT[i + 1];
+    return "rgb(" + Math.round(a[0]+(b[0]-a[0])*f) + "," + Math.round(a[1]+(b[1]-a[1])*f) + "," + Math.round(a[2]+(b[2]-a[2])*f) + ")";
+  }
+  var CPAL = ["#4e79a7","#f28e2b","#59a14f","#e15759","#b07aa1","#76b7b2","#edc948","#ff9da7","#9c755f","#bab0ac"];
+  function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // recolour/resize the nodes by the chosen metric, computed on the switched-on layers
+  function applyMetric(cy, on, metric, legend) {
+    if (metric === "plain") { cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); }); legend.innerHTML = ""; return; }
+    var g = adjFrom(cy, on), ids = g.ids, adjSet = g.adj, val = {}, isComp = false, compK = 0;
+    if (metric === "degree") { ids.forEach(function (n) { val[n] = adjSet[n].size; }); }
+    else if (metric === "components") { var r = componentsJS(ids, adjSet); val = r.comp; compK = r.k; isComp = true; }
+    else if (ids.length > EXPENSIVE_CAP) {
+      cy.nodes().forEach(function (n) { n.removeStyle("background-color width height"); });
+      legend.innerHTML = "⚠ " + ids.length + " nodes — too many for live " + metric + ". Raise the cutoff (N1) for a crisper core, or use Degree / Components.";
+      return;
+    }
+    else if (metric === "betweenness") { val = betweennessJS(ids, adjSet); }
+    else if (metric === "clustering") { val = clusteringJS(ids, adjSet); }
+
+    if (isComp) {
+      cy.nodes().forEach(function (n) { n.style("background-color", CPAL[(val[n.id()] - 1) % CPAL.length]); n.style("width", 28); n.style("height", 28); });
+      legend.innerHTML = "<b>Components</b>: " + compK + " disconnected part" + (compK === 1 ? "" : "s") + " in the visible layers.";
+      return;
+    }
+    var arr = ids.map(function (n) { return val[n]; });
+    var mn = Math.min.apply(null, arr), mx = Math.max.apply(null, arr), top = ids[0];
+    ids.forEach(function (n) { if (val[n] > val[top]) top = n; });
+    cy.nodes().forEach(function (n) {
+      var t = (mx > mn) ? (val[n.id()] - mn) / (mx - mn) : 0.5;
+      n.style("background-color", heatJS(t)); n.style("width", 20 + 30 * t); n.style("height", 20 + 30 * t);
+    });
+    var fmt = function (x) { return metric === "clustering" ? x.toFixed(2) : Math.round(x * 10) / 10; };
+    legend.innerHTML = "<b>" + MNAME[metric] + "</b>: " + fmt(mn) + " (light/small) → " + fmt(mx) +
+                       " (dark/large) · top: <b>" + esc(cy.getElementById(top).data("label")) + "</b> (" + fmt(val[top]) + ")";
+  }
+
+  // ---- controls (layout + layer toggles + metric panel + legend) ---------
+  function addRow(cap) { var d = document.createElement("div"); d.style.cssText = "padding:2px 2px;"; cap.appendChild(d); return d; }
+  function mkbtn(row, label, fn) {
+    var b = document.createElement("button"); b.textContent = label;
+    b.style.cssText = "margin-left:5px;margin-top:3px;font:600 11px system-ui;color:#1a202c;border:1px solid #cbd5e0;border-radius:5px;background:#fff;cursor:pointer;padding:2px 8px;";
+    if (fn) { b.onmouseover = function () { b.style.filter = "brightness(.96)"; }; b.onmouseout = function () { b.style.filter = ""; }; b.onclick = fn; }
+    row.appendChild(b); return b;
+  }
+
+  function buildControls(cap, cy, data) {
     cap.innerHTML = "";
+    var kinds = {}; cy.edges().forEach(function (e) { kinds[LAYER_OF(e.data("kind"))] = true; });
+    var present = ["coexp","ppi","grn"].filter(function (l) { return kinds[l]; });
+    var on = { coexp:true, ppi:true, grn:true };
+    var metric = (data && data.metric) ? data.metric : "plain";
+
+    var row0 = addRow(cap), row2 = addRow(cap), legend = addRow(cap);
+    legend.style.cssText = "font-size:11px;color:#444;padding:2px 2px;min-height:14px;";
+
+    // row0 — title + layouts + fit + PNG
     var t = document.createElement("span");
     t.textContent = "🕸 " + (cap.dataset.title || "network") + "  —  drag · scroll-zoom · layout:";
-    cap.appendChild(t);
-    function mk(label, fn) {
-      var b = document.createElement("button");
-      b.textContent = label;
-      b.style.cssText = "margin-left:5px;font:600 11px system-ui;color:#1a202c;border:1px solid #cbd5e0;border-radius:5px;background:#fff;cursor:pointer;padding:2px 8px;";
-      b.onmouseover = function () { b.style.background = "#eef2f7"; };
-      b.onmouseout  = function () { b.style.background = "#fff"; };
-      b.onclick = fn; cap.appendChild(b);
-    }
-    Object.keys(LAYOUTS).forEach(function (name) { mk(name, function () { cy.layout(LAYOUTS[name]).run(); }); });
-    mk("⤢ fit", function () { cy.fit(undefined, 20); });
-    mk("📷 PNG", function () {                          // one-click export for the graded dossier screenshot
+    row0.appendChild(t);
+    Object.keys(LAYOUTS).forEach(function (name) { mkbtn(row0, name, function () { cy.layout(LAYOUTS[name]).run(); }); });
+    mkbtn(row0, "⤢ fit", function () { cy.fit(undefined, 20); });
+    mkbtn(row0, "📷 PNG", function () {
       var a = document.createElement("a");
       a.href = cy.png({ full: true, scale: 2, bg: "#fff" });
-      a.download = (cap.dataset.title || "network").replace(/[^\w-]+/g, "_") + ".png";
-      a.click();
+      a.download = (cap.dataset.title || "network").replace(/[^\w-]+/g, "_") + ".png"; a.click();
     });
+
+    function recolor() { applyMetric(cy, on, metric, legend); }
+    function setLayers() {
+      cy.edges().forEach(function (e) { e.style("display", on[LAYER_OF(e.data("kind"))] ? "element" : "none"); });
+      recolor();
+    }
+
+    // row1 — layer toggles (only when ≥2 layers are present)
+    if (present.length >= 2) {
+      var row1 = document.createElement("div"); row1.style.cssText = "padding:2px 2px;"; cap.insertBefore(row1, row2);
+      var l1 = document.createElement("span"); l1.textContent = "Layers: "; l1.style.fontWeight = "600"; row1.appendChild(l1);
+      present.forEach(function (l) {
+        var meta = LAYER_META[l];
+        var cnt = cy.edges().filter(function (e) { return LAYER_OF(e.data("kind")) === l; }).length;
+        var b = mkbtn(row1, meta.label + " (" + cnt + ")", null);
+        function paint() { b.style.background = on[l] ? meta.color : "#fff"; b.style.color = on[l] ? "#fff" : "#555"; b.style.borderColor = meta.color; }
+        b.onclick = function () { on[l] = !on[l]; paint(); setLayers(); };
+        paint();
+      });
+    }
+
+    // row2 — colour-by-metric panel
+    var l2 = document.createElement("span"); l2.textContent = "Colour nodes by: "; l2.style.fontWeight = "600"; row2.appendChild(l2);
+    var mbtns = {};
+    [["plain","Plain"],["degree","Degree"],["betweenness","Betweenness"],["clustering","Clustering"],["components","Components"]]
+      .forEach(function (pair) {
+        var key = pair[0], b = mkbtn(row2, pair[1], null); mbtns[key] = b;
+        b.onclick = function () { metric = key; paintMetric(); recolor(); };
+      });
+    function paintMetric() {
+      Object.keys(mbtns).forEach(function (k) {
+        var a = (k === metric); mbtns[k].style.background = a ? "#2c5282" : "#fff";
+        mbtns[k].style.color = a ? "#fff" : "#1a202c"; mbtns[k].style.borderColor = a ? "#2c5282" : "#cbd5e0";
+      });
+    }
+    paintMetric();
+    setLayers();     // initial paint (applies data.metric if given)
   }
 
   function render(div, data) {
@@ -133,7 +295,7 @@
     box.parentNode.insertBefore(cap, box.nextSibling);
     box.parentNode.insertBefore(div, cap.nextSibling);
 
-    function mount() { var cy = render(div, data); buildControls(cap, cy); }
+    function mount() { var cy = render(div, data); buildControls(cap, cy, data); }
     if (window.cytoscape) { mount(); return; }
     var tries = 0, iv = setInterval(function () {
       if (window.cytoscape) { clearInterval(iv); mount(); }
