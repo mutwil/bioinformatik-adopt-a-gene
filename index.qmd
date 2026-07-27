@@ -946,7 +946,7 @@ say(nrow(all_edges) > 0,
 
 ### M4.W2.E5 · N4 — Measure YOUR gene's network
 
-You've been *exploring* these metrics visually in the viewer since N1. This cell writes the **verdict for your dossier in words** — the one thing the viewer's colours don't say out loud. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`, **provided for you**) answer: is your **co-expression module** (N1) a tight **clique** or a loose **star**, which neighbour is its **secondary bridge**, and — from N3 — is your gene a **target** (regulated), a **regulator**, or a **leaf**? *(Nothing to fill in, so the code starts **folded** — hit **Show R code** to read it.)* It then redraws your **whole network** (all three layers), opened on **betweenness**, so you can keep exploring.
+Now put numbers on **your own** module and read what they mean. **No new viewer** — you explored your network in N1–N3 above (hover any node there for its live metrics). This cell prints your gene's **verdict in words**, and the **reference below** explains each term with an example so you can interpret it. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`, **provided for you**) report whether your **co-expression module** is a tight **clique** or a loose **star**, its **secondary bridge**, and — from N3 — whether your gene is a **target**, a **regulator**, or a **leaf**. *(Nothing to fill in, so the code starts **folded** — hit **Show R code** to read it.)*
 
 ```{webr}
 if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
@@ -983,28 +983,32 @@ if (exists("my_regs")) {
   cat("Note: 'regulator' isn't only TFs — kinases, hormones and retrograde signals regulate genes too; but only a TF binds a promoter directly, so verify a non-TF's out-edges.\n")
 } else cat("Run N3 to read your regulatory position.\n")
 
-# ---- draw YOUR whole network — toggle the layers & recolour by a metric in the viewer ----
-all_edges <- rbind(edges[edges$type %in% c("coexpression","PPI"), c("source","target","type","desc"), drop = FALSE],
-                   if (exists("grn_drawn")) grn_drawn else NULL)
-cynet(all_edges, hub = MY_GENE, id = "cy_n4", metric = "betweenness",
-      title = paste(MY_NAME, "network — toggle Co-expression / PPI / Regulation, colour by a metric"))
-
-say(nn > 2, "measured YOUR network — its shape (clique/star), hub/bridge, and your gene's regulatory role. Now recolour it by degree, betweenness, clustering, or components in the viewer, and toggle the layers to see how the same gene's role changes. These go straight into your dossier; every gene is different.",
+say(nn > 2, "measured YOUR network — its shape (clique vs star), its secondary bridge, and your gene's regulatory role. Use the reference below to interpret each number, then write them into your dossier; every gene is different.",
     "run N1 (and N3) first, then re-run.")
 ```
+
+**Reading your numbers — what each term means, with an example:**
+
+- **Degree** — how many genes your gene links to directly. *In the MYB46 wall network, MYB46 links to 16 genes (a hub); a peripheral gene like COBL4 links to 1.*
+- **Hub** — a node with unusually high degree. *MYB46 is the wall network's hub. Note: your adopted gene is the hub of its **own** module by construction — you built the module around it, so that's expected, not a finding.*
+- **Clustering → clique vs star** — of your gene's neighbours, how many link to *each other*? **≈1 = a clique** (everyone connected to everyone — a tight, coherent module; e.g. the **CESA4/7/8** cellulose-synthase trio, which all co-express mutually). **≈0 = a star** (neighbours link to your gene but not to each other — spokes with no rim).
+- **Betweenness → bottleneck** — how many of the network's shortest paths pass *through* a node. High = a **bottleneck** that separate parts must route through. *MYB46's betweenness is 144.8 (≈18× the next gene) — it is the sole link between the NAC master switches and the wall enzymes.*
+- **Secondary bridge** — because your gene is a hub by construction, the useful question is which **other** neighbour has the highest betweenness — the connector *between* sub-groups of your module.
+- **Components** — the number of disconnected pieces. One coherent module = **1 component**. *Delete the hub MYB46 and the wall network breaks into 13 components — it was the linchpin (an "articulation point").*
+- **Target / regulator / leaf** *(from N3)* — most genes are **targets** (something regulates them) or **leaves** (nothing in your module regulates them — normal for a structural or metabolic gene). Only a **regulator** points *out* to others — a TF like MYB46, *but also a kinase, hormone or signal*. *A non-TF that appears to regulate is usually an indirect or text-mined effect to verify (N3).*
 
 > **Into your dossier:** your module's shape (clique vs star), its secondary bridge, and your gene's regulatory role (usually **target** or **leaf** — most genes are regulated, not regulators). Every gene gives a different answer — that is your result to present.
 
 ### M4.W2.E6 · N5 — What the three edge types mean
 
-An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the regulatory layer licenses a knockout prediction.
+An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the regulatory layer predicts the *direction* of a knockout's effect.
 
 | | **Co-expression** | **PPI (BioGRID)** | **GRN (regulatory)** |
 |---|---|---|---|
-| Edge means | mRNA levels co-vary | proteins physically interact | a TF controls a target's transcription |
-| Directed? | **No** | **No** | **Yes** (TF → target) |
+| Edge means | mRNA levels co-vary | proteins physically interact | one gene controls another's expression (TF, kinase, signal…) |
+| Directed? | **No** | **No** | **Yes** (regulator → target) |
 | Sign | ± correlation | none | + activates / − represses |
-| Predict a knockout? | no (correlative) | no (physical) | **yes** (a testable causal prediction) |
+| Knockout prediction | *guilt by association* — a shared process, so maybe a **similar phenotype** | a shared complex / function (partners often share a phenotype) | **the target's change** — KO an activator → target **↓**, KO a repressor → target **↑** |
 | Confirmed by | RNA-seq correlation | Y2H, AP-MS | ChIP, EMSA, transactivation |
 
 Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN gives the most direct evidence of control.* (Even then a GRN edge only *licenses* a knockout hypothesis — **redundancy** can mask the phenotype.) Two paradoxes from the data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** (in BioGRID) — a TF binds its target's DNA, not its protein — so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
