@@ -25,17 +25,17 @@ live:
 
 # Welcome
 
-This page **runs R live in your browser** (via webR) — nothing to install. First you'll learn the core RNA-seq skills — **normalization and exploration (PCA & clustering)** — then you *adopt* a gene (it can be from **any** plant process) and characterise it through **co-expression → network → interpretation**, building a *gene dossier*. A curated **secondary-cell-wall regulatory network** is the shared case study for how *regulation* works.
+First, you'll learn the core RNA-seq skills — **normalization and exploration (PCA & clustering)** — then you *adopt* a gene (it can be from **any** plant process) and characterise it through **co-expression → network → interpretation**, building a *gene dossier*.
 
 **How it works**
 
 - Edit the code where you see `______`, then press **Run** (▶). Cells share state, so run them **top to bottom**.
-- Most code cells are **commented line-by-line**, so you can follow the R even if a function is new. A few Week-2 cells use pre-written **"black-box" helper functions** (e.g. betweenness, shortest paths) that you only need to *call*, not read — those are labelled as such. **Long cells that only run machinery and have nothing to fill in start with their code folded** — just press **Run**, or click **Show R code** to read them.
+- Most code cells are **commented line-by-line**, so you can follow the R even if a function is new.
 - When a cell has a blank to fill, **running it prints ✅ if your answer is valid, or a hint** — no separate step.
-- The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant. (A few setup cells are hidden to keep things tidy.)
-- A floating **📋 Dossier** panel (bottom-left) collects your findings as you go — it **autosaves**, you can **download** it, and **"Check with AI"** gives formative feedback (no answers — it coaches). The dossier is your **assessed deliverable** for the conference.
+- The heavy upstream steps (kallisto read-mapping, DESeq2) were **pre-computed** for you — this page loads the resulting tables **automatically when it opens**, so everything is instant.
+- A floating **📋 Dossier** panel (bottom-left) collects your findings as you go — it **autosaves**, you can **download** it, and **"Check with AI"** gives formative feedback (no answers — it coaches).
 
-> The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). The differential-expression table is a small **illustrative example** (the real one comes from the server pipeline — see the teacher guide).
+> The expression matrix, protein-interaction edges and GO sets are **real** (Klepikova *Arabidopsis* atlas E-MTAB-7978, BioGRID, GO). Expect some results to be noisy and harder to interpret.
 
 ---
 
@@ -212,7 +212,7 @@ cynet <- function(edges, hub = NULL, id = "cy", title = "", metric = NULL,
   invisible(NULL)
 }
 
-# ---- base-R network helpers (used by N4 + the MYB46 appendix) — defined here so the cells stay short ----
+# ---- base-R network helpers (used by M4.W2.E5 + the MYB46 appendix) — defined here so the cells stay short ----
 build_adj <- function(edges, directed = FALSE) {
   nodes <- sort(unique(c(edges$source, edges$target)))
   A <- matrix(0L, length(nodes), length(nodes), dimnames = list(nodes, nodes))
@@ -255,59 +255,55 @@ cat(sprintf("✅ Data loaded: %d genes × %d organ samples. You're ready.\n",
 
 ## Weekly schedule
 
-**Provisional schedule** (may be adjusted during the teaching days). **Instructor:** Marek Mutwil (mutwil@plen.ku.dk).
+**Provisional schedule** (may be adjusted during the teaching days). **Instructor:** Marek Mutwil (mutwil@plen.ku.dk) — you can also find me and the TAs on Discord: <https://discord.gg/8agczv6vN8>.
 
-Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions)** — ending in a **student conference**. Every student *adopts a gene* and carries it from normalization → EDA → co-expression → databases → network → interpretation into a **1-page dossier**; the curated **MYB46 secondary-cell-wall network** is the shared case study. The exercise codes below (**M4.W1.E1 … M4.W2.E9**) match the section headings on this page; **M4F#** = lectures.
+Module 4 runs over **two weeks — uge 43–44, Tuesdays + Thursdays (4 sessions)** — ending in a **student conference**. Every student *adopts a gene* and carries it from normalization → EDA → co-expression → databases → network → interpretation into a **1-page dossier**.
 
 ### Week 1 — Gene expression analysis · Tuesday 21 Oct & Thursday 23 Oct
 
 **Tuesday, 21 Oct — Basic gene expression analysis (09:00–12:00)**
-*Reading: `transcriptomic_databases_plants.pdf`, "TPM vs RPKM explained".*
+*Optional reading: `transcriptomic_databases_plants.pdf`, "TPM vs RPKM explained".*
 
-- **09:00 – 09:50** — Lecture **M4F1**: Transcriptomics — background and theory *(kallisto = the origin of the counts)*
+- **09:00 – 09:50** — Lecture **M4F1**: Transcriptomics — background and theory
 - **09:50 – 10:05** — Break
-- **10:05 – 10:20** — Lecture **M4F2**: Normalization metrics in RNA-seq *(depth, length; RPKM/FPKM → TPM)*
-- **10:20 – 12:00** — Exercise **M4.W1.E1**: *Calculating the TPM value* — raw counts → RPK → TPM → log → z-score; find the outlier
+- **10:05 – 10:20** — Lecture **M4F2**: Normalization metrics in RNA-seq
+- **10:20 – 12:00** — Exercise **M4.W1.E1**: Normalizing RNA-seq data — raw counts → RPK → TPM → log → z-score
 
 **Thursday, 23 Oct — EDA, claim a gene, databases (09:00–16:00)**
-*Reading: `co-expression analysis.pdf`, `bulk atlas.pdf`, `cell atlas.pdf`.*
+*Optional reading: `co-expression analysis.pdf`, `bulk atlas.pdf`, `cell atlas.pdf`.*
 
 - **09:00 – 10:15** — Lecture **M4F3**: Exploratory Data Analysis (EDA) & data preprocessing
 - **10:15 – 10:30** — Break
-- **10:30 – 12:00** — Exercise **M4.W1.E2**: PCA & clustering *(detect & remove the Gene8 artefact)*
+- **10:30 – 12:00** — Exercise **M4.W1.E2**: PCA & clustering
 - **12:00 – 13:00** — Lunch
 - **13:00 – 13:55** — Lecture **M4F4**: Basic transcriptomics analyses & online databases
 - **13:55 – 14:10** — Break
 - **14:10 – 15:00** — Exercise **M4.W1.E3–E4**: Claim a gene + build its co-expression neighbourhood
 - **15:00 – 15:15** — Break
-- **15:15 – 16:00** — Exercise **M4.W1.E5**: Transcriptomic databases *(D1–D2; D3 as homework)*
+- **15:15 – 16:00** — Exercise **M4.W1.E5**: Transcriptomic databases
 
 ### Week 2 — Biological networks & conference · Tuesday 28 Oct & Thursday 30 Oct
 
 **Tuesday, 28 Oct — Networks & group work (09:00–12:00)**
-*Reading: biological networks (M4F5 slides); the MYB46-GRN concept.*
+*Optional reading: biological networks (M4F5 slides).*
 
-- **09:00 – 09:50** — Lecture **M4F5**: Biological networks & the MYB46 gene-regulatory network
+- **09:00 – 09:50** — Lecture **M4F5**: Biological networks
 - **09:50 – 12:00** — **Group work**: build & measure your gene's network (**M4.W2.E1–E5**)
-    - **N0–N1** — reclaim your gene, then build its **co-expression** network
-    - **N2** — overlay the **BioGRID PPI** layer
-    - **N3** — add your gene's **regulatory** layer (PlantConnectome)
-    - **N4** — **measure** your network (clique/star, bridge, regulatory role)
-
-*Flex / homework:* **M4.W2.E6** (N5 — edge types) + the **optional MYB46 appendix** and the exam-style questions. **Before Thursday:** finish your 1-page dossier and prepare a **5-min talk** — screenshot your network with the 📷 PNG button and AI-check the dossier.
+    - **M4.W2.E1–E2** — reclaim your gene, then build its **co-expression** network
+    - **M4.W2.E3** — overlay the **BioGRID PPI** layer
+    - **M4.W2.E4** — add your gene's **regulatory** layer (PlantConnectome)
+    - **M4.W2.E5** — **measure** your network (clique/star, bridge, regulatory role)
 
 **Thursday, 30 Oct — Presentations, exam Q&A, evaluation (09:00–~15:00)**
 
-- **09:00 – 12:00** — **Group presentations** (student conference): 10 groups × ~5 min (+ ~2 min Q&A) — your gene, where it's expressed, its co-expression module, and (bonus) its place in / contrast to the MYB46 network
+- **09:00 – 12:00** — **Group presentations** (student conference): 10 groups × ~10 min (+ ~5 min Q&A) — your gene, where it's expressed, and its biological-network interpretation
 - **12:00 – 13:00** — Lunch
-- **13:00 – 14:30** — **Exam Q&A** + individual dossier feedback (bring your questions; teacher synthesis of the different gene modules side by side)
+- **13:00 – 14:30** — **Exam Q&A** + individual dossier feedback
 - **14:30 – 15:00** — **Course evaluation**
-
-> **On this page:** the in-browser R exercises (**M4.W1.E1–E5**, **M4.W2.E1–E6**), the web **database** worksheet, the **exam-style** self-tests, and two optional appendices (the **MYB46 GRN** worked example and **GO over-representation**) at the end.
 
 ---
 
-# Week 1 — uge 43 · clean data → what does my gene do?
+# Week 43 · Let's normalize and interpret RNA-seq data
 
 ## 📅 Tuesday 21 Oct · 09:00–12:00 {.dayband}
 
@@ -317,7 +313,7 @@ Today you do **M4.W1.E1** only — normalization.
 
 ### M4.W1.E1 — Normalization: raw counts → TPM → log → z-score
 
-This stage builds the standard normalization pipeline one metric at a time, and shows the matrix as a heatmap after each step so you can *see* what every transformation fixes. The aim is for you to understand **why** each metric exists, not just how to type it.
+This stage builds the standard normalization pipeline one metric at a time, and shows the matrix as a heatmap after each step so you can *see* what every transformation fixes. The aim is for you to understand **why** each metric exists, not just how to calculate it.
 
 kallisto gives you **estimated counts** per gene. You **cannot compare counts directly** — two things confound them that have nothing to do with biology:
 
@@ -601,16 +597,16 @@ say(exists("groups") && length(unique(groups)) == 3,
 
 ### M4.W1.E3 — Claim your gene
 
-You've got the skills — now make it personal. Pick **one** gene — your TA spreads them so every group gets a **different biology**. These span very different processes; your job is to *discover* what yours does and where it acts.
+You've got the skills — now your group should pick **one** gene. On Discord, lay claim to a gene in the Bioinformatik channel — your group will present it on Thursday. These genes span very different processes; your job is to *discover* what yours does and where it acts.
 
-**Secondary cell wall** *(the Week-2 network case study)*:
+**Secondary cell wall**:
 
 - `CESA7 AT5G17420` — cellulose synthase
 - `IRX9 AT2G37090` — xylan biosynthesis
 - `LAC4 AT2G38080` — laccase (lignin)
 - `MYB46 AT5G12870` — master TF (the GRN hub)
 
-**Other processes** *(each a different module)*:
+**Other processes**:
 
 - `CAB1 AT1G29930` — photosynthesis
 - `AP3 AT3G54340` — flower (B-class organ identity; co-expresses with its partner **PI** — try cutoff ~0.80)
@@ -621,14 +617,12 @@ You've got the skills — now make it personal. Pick **one** gene — your TA sp
 - `HTA6 AT5G59870` — histone H2A (cell cycle / DNA replication)
 - `TT4 AT5G13930` — flavonoid / anthocyanin biosynthesis
 
-**Ribosomal proteins — two compartments** *(a built-in comparison)*:
+**Ribosomal proteins — two compartments**:
 
 - `RPL19A AT1G02780` — cytosolic (translation)
 - `RPL15 AT3G25920` — plastid / chloroplast
 
-*In this developmental atlas the **cytosolic** ribosome tracks the cell's growth / translation programme, while the **plastid** ribosome tracks **photosynthesis** (chloroplast biogenesis) — adopt both to see the split. (The **mitochondrial** ribosome co-varies with the cytosolic one, so it isn't a separate module here — and ribosomal genes have little documented regulation, so their **N3 layer is often empty**: a real "housekeeping" finding.)*
-
-**Instructions:** replace the `______` with your gene's AGI code, then **Run** — the cell tells you if your gene is valid.
+**Instructions:** replace the `______` with your gene's AGI (Arabidopsis Gene Identifier, looking like ATxGxxxxx) code, then **Run** — the cell tells you if your gene is valid.
 
 ```{webr}
 MY_GENE <- "______"        # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
@@ -645,7 +639,7 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
 An AGI locus looks like `AT` + chromosome (1–5) + `G` + five digits, in quotes: `"AT5G17420"`.
 </details>
 
-**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene are enriched for ______, so my gene acts in ______.* *(Open the **📋 Dossier** panel, bottom-left, and fill the "Hypothesis" field — it autosaves and an AI tutor can check it.)*
+**✍️ Dossier:** write your hypothesis — *genes co-expressed with my gene should have functions involved in ______.* *(Open the **📋 Dossier** panel, bottom-left, and fill the "Hypothesis" field — it autosaves and an AI tutor can check it.)*
 
 ---
 
@@ -677,7 +671,7 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 > Now look at rows 2–12: do they form **one biological programme**? For a wall gene you'll see a tight secondary-cell-wall module — other `CESA`s, laccases, xylan / `FLA` / `IRX` genes. **For another process** the module is different but just as tight: a *photosynthesis* gene pulls in `LHCB`/photosystem genes, a *histone* pulls in other histones + `PCNA` (DNA replication), a *ribosomal* protein pulls in other `RPL`/`RPS` genes (translation), a *defence* gene pulls in pathogen-response genes. **Your job is to name the one process those neighbours share** — "these are mostly photosynthesis genes", "these are mostly ribosomal proteins", "these are mostly cell-wall genes". That short label *is* your gene's predicted function, and it goes straight into your dossier. You do **not** need to recognise every gene in the list — recognising a handful is enough to name the module.
 
-**🤔 Look at the PCC of your top neighbour (row 2) — it will be high. Does a high correlation *prove* that the two proteins interact, or that one regulates the other?**
+**🤔 Look at the PCC of your top neighbour (row 2) — it should be high. Does a high correlation *prove* that the two proteins interact, or that one regulates the other?**
 
 <details><summary>💡 Hint</summary>No — a high correlation only means the two genes share an expression <i>pattern</i>. That is <i>consistent with</i> a functional link, but it could equally come from both being switched on by the same upstream regulator, or both being specific to the same tissue. Proof needs <b>physical</b> (PPI) or <b>directed</b> (regulatory) evidence — which you add in <b>Week 2</b>, where you turn this ranked list into a real network and see where co-expression does and doesn't line up with mechanism.</details>
 
@@ -685,55 +679,59 @@ say(nrow(nbhd) > 0 && nbhd$gene[1] == HUB && round(nbhd$PCC[1], 3) == 1,
 
 ---
 
-### M4.W1.E5 · Database exercises — the database half of your dossier (D1–D3)
+### M4.W1.E5 · Database exercises — the database half of your dossier
 
-Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these three short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. Each step puts the co-expression list you built in **M4.W1.E4** to the test — you stay on **your own gene** the whole way through, and you carry it into Week 2.
+Every number so far came from **one** atlas. Real evidence is a *consensus* across resources. In these short **web** exercises (no coding — just clicking) you cross-examine **your adopted gene** in the major plant databases and fill **one results table**: the database half of your gene dossier. You stay on **your own gene** the whole way through, and carry it into Week 2.
 
-**📋 Your database dossier — the 6 things to record.** Work down this list as you do D1 → D3 and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
+**📋 Your database dossier — the 6 things to record.** Work down this list **in order** — it is exactly the order of the four steps below — and write your answers in the **📋 Dossier panel** (bottom-left of this page) or on paper. The last column shows what a *complete* answer looks like, using **CESA7** as the worked example — your gene will have different answers, but the same shape. *(This is the database part of your dossier — 20% of the grade.)*
 
 | # | What to record | Where to get it | Example — if your gene were **CESA7** |
 |---|---|---|---|
-| 1 | Protein domain (Pfam) | **D1** → PEO | cellulose synthase (`Cellulose_synt`) |
-| 2 | Highest-expressing organ | **D1** → ePlant *(re-checked in D3)* | mature / inflorescence stem |
-| 3 | Highest cell type / tissue (finer than the organ) | **D1** → ePlant *(Root eFP or another tissue view)* | root xylem |
-| 4 | Top 3 co-expressed genes (databases) | **D2** → CoNekT | CESA4, CESA8, FLA11 |
-| 5 | Does the top organ agree across all 3 databases? | **D3** | yes |
-| 6 | **Your one-line function + the evidence for it** | synthesis of 1–5 | *"Secondary-wall cellulose synthase — stem/xylem expression (eFP+PEO+EBI), CESA4/CESA8 co-expression reproduced in CoNekT, and a cellulose-synthase Pfam domain."* |
+| 1 | Protein domain (Pfam) | **Step 1** — PEO | cellulose synthase (`Cellulose_synt`) |
+| 2 | Highest-expressing organ | **Step 2** — PEO + ePlant + EBI | mature / inflorescence stem |
+| 3 | Highest cell type / tissue (finer than the organ) | **Step 3** — ePlant | root xylem |
+| 4 | Top 3 co-expressed genes | **Step 4** — CoNekT | CESA4, CESA8, FLA11 |
+| 5 | Does the top organ agree across the databases? | **Step 2** | yes |
+| 6 | **Your one-line function + the evidence for it** | synthesis of 1–5 | *"Secondary-wall cellulose synthase — stem/xylem expression (ePlant + PEO + EBI), CESA4/CESA8 co-expression reproduced in CoNekT, and a cellulose-synthase Pfam domain."* |
 
-#### D1 — What is my gene, and where is it on?  *(ePlant eFP + PEO)*
+#### Step 1 — What is my gene? Protein domain (Pfam)  *(PEO)*
 
-1. **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → search your gene (e.g. `AT5G17420` CESA7, `AT5G12870` MYB46) → **Plant eFP**: record the **highest organ** + colour scale.
-2. Now go finer than the organ: open the **cell-type / tissue-level views** (e.g. **Tissue-Specific Root eFP**) and record the **highest-expressing cell type or tissue** you can find for your gene. *(A secondary-cell-wall gene lights up the root **xylem**, where thick lignified walls are built; a photosynthesis gene the leaf mesophyll; a seed gene the embryo or endosperm. If your gene is simply **not expressed in root**, that is a real result — record its top tissue from the Plant eFP instead and say so.)*
-3. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record **(a)** highest organ (agrees with ePlant?); **(b)** the **top 3 co-expressed genes** (how many SCW genes do you already recognise — other `CESA`s, `IRX9`, `COBL4`, `KNAT7`, `MYB46/83`?); **(c)** the **protein domain** (Pfam) — the annotation skills from the database & sequence modules.
+**PEO** ([peo.ku.dk](https://peo.ku.dk/)) → search your locus (e.g. `AT5G17420` CESA7, `AT5G12870` MYB46) → record the **protein domain (Pfam)**. This is your gene's molecular identity — the annotation skill from the database & sequence modules.
 
 ::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
-a wall gene peaks in **inflorescence/mature stem** and localises to root **xylem**; its PEO co-expressed list is full of SCW genes and the domain matches the family (cellulose-synthase for a CESA, MYB DNA-binding for MYB46, laccase for LAC4). **Other genes tell their own consistent story** — e.g. CAB1 peaks in *leaves* with *photosynthesis* neighbours; a histone peaks in dividing tissue with other histones; a ribosomal protein with the translation module. Whatever your gene, the databases should *agree* on its tissue, partners and domain.
+The domain matches the gene family: a cellulose-synthase domain for a CESA, a MYB DNA-binding domain for MYB46, a laccase domain for LAC4, a light-harvesting / chlorophyll-binding domain for a photosynthesis gene. Whatever your gene, the domain is the first hard fact about *what kind of protein* it is.
 :::
-> **→ Dossier:** Pfam domain · highest organ · highest cell type / tissue · top 3 co-expressed.
+> **→ Dossier:** Pfam domain.
 
-#### D2 — Who does my gene work with?  *(CoNekT)*
+#### Step 2 — Where is it expressed? Highest organ  *(PEO + ePlant, cross-checked in EBI)*
+
+1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → same locus → record the **highest-expressing organ**.
+2. **ePlant** ([bar.utoronto.ca/eplant](https://bar.utoronto.ca/eplant/)) → search your gene → **Plant eFP** → record the **highest organ** + colour scale. Does it agree with PEO?
+3. **EBI Expression Atlas** → `ebi.ac.uk/gxa/genes/<your AGI>` (e.g. [ebi.ac.uk/gxa/genes/AT5G17420](https://www.ebi.ac.uk/gxa/genes/AT5G17420)) → Baseline → top tissue. A third, independent opinion — do all three converge?
+
+::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
+A wall gene peaks in **inflorescence / mature stem**, and PEO, ePlant and EBI should all agree on it (the *second*-ranked organs may differ — that's the noisy tail near the detection floor, and it's fine). **Other genes tell their own consistent story** — CAB1 peaks in *leaves*, a seed gene in the *seed / embryo*, a defence gene under *pathogen* conditions. The **top-organ agreement** is what carries your conclusion.
+:::
+> **→ Dossier:** highest organ · does it agree across PEO / ePlant / EBI?
+
+#### Step 3 — Where exactly? Highest cell type / tissue  *(ePlant)*
+
+Back in **ePlant**, go finer than the organ: open the **cell-type / tissue-level views** (e.g. **Tissue-Specific Root eFP**) and record the **highest-expressing cell type or tissue** you can find. *(A secondary-cell-wall gene lights up the root **xylem**, where thick lignified walls are built; a photosynthesis gene the leaf mesophyll; a seed gene the embryo or endosperm. If your gene is simply **not expressed in root**, that is a real result — record its top tissue from the Plant eFP instead and say so.)*
+
+::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
+The finer the shared context, the stronger the evidence: a gene that is stem-high *and* xylem-specific is more convincingly a wall gene than one that is merely stem-abundant. Not every gene resolves to a single cell type — record the finest level you can find.
+:::
+> **→ Dossier:** highest cell type / tissue.
+
+#### Step 4 — Who does my gene work with? Top 3 co-expressed genes  *(CoNekT)*
 
 1. **CoNekT** ([conekt.ku.dk](https://conekt.ku.dk/)) → search your gene → open its **co-expression neighbourhood** → **download the direct neighbours as a text file** (the neighbourhood table has an export / download option).
 2. Open the file: note the neighbours you **recognise** and the **process they point to**, and record your **top 3 co-expressed genes**.
 
 ::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
-CoNekT returns a tight set of partners pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your M4.W1.E4 list did, that agreement is real evidence. *(Building and measuring the network itself is next week — this week just collect and eyeball the partner list.)*
+CoNekT returns a tight set of partners pointing at a single process — for a wall gene other wall genes, for a photosynthesis gene the light-harvesting set, for a ribosomal protein other ribosomal proteins. CoNekT is built from a **different** set of experiments than our atlas, so if it names the same process your **M4.W1.E4** list did, that agreement is real evidence. *(Building and measuring the network itself is next week — this week just collect and eyeball the partner list.)*
 :::
 > **→ Dossier:** top 3 co-expressed genes from CoNekT (keep the downloaded neighbour file as your record).
-
-#### D3 — Cross-database consistency  *(PEO + EBI Expression Atlas + CoNekT)*
-
-1. **PEO** ([peo.ku.dk](https://peo.ku.dk/)) → your gene → top organ.
-2. **EBI Expression Atlas** → `ebi.ac.uk/gxa/genes/<your AGI>` (e.g. [ebi.ac.uk/gxa/genes/AT5G17420](https://www.ebi.ac.uk/gxa/genes/AT5G17420)) → Baseline → top tissue.
-3. **CoNekT** → your gene → specificity → top organ.
-4. Fill a 3-row table: *database | top organ | agrees?*
-
-::: {.callout-tip collapse="true" title="✅ Expected — open after you've looked"}
-all three converge on **stem**; the second-ranked organs may differ.
-:::
-> **→ Dossier:** "top organ — agrees across 3 DBs? yes / no".
-
-> **Demo only (not assessed):** **Genevestigator** needs free academic registration → projector-only.
 
 > **✍️ Dossier:** your completed results table is the **database cross-check** graded at the conference (rubric criterion 3). *(The database exam questions are in the **Week-1 exam-style questions** block at the end of the week.)*
 
@@ -741,7 +739,7 @@ all three converge on **stem**; the second-ranked organs may differ.
 
 ### 📝 Week 1 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-Close the week the way the exam tests it — these cover **all of Week 1**: **M4.W1.E1–E4** **and** the database exercises (**E5**). Answer in 2–4 sentences; the model answers and their points match the grading. **(8 questions · 31 p.)**
+These exemplary exam questions cover **all of Week 1**: **M4.W1.E1–E4** **and** the database exercises (**E5**). Answer in 2–4 sentences; the model answers and their points match the grading. **(8 questions · 31 p.)** Of course, for the real exam you'll get different questions — this is just the ballpark to expect.
 
 #### Data, normalization & exploration (M4.W1.E1–E2)
 
@@ -761,7 +759,7 @@ Close the week the way the exam tests it — these cover **all of Week 1**: **M4
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Each bar = the share of total variance that component captures; PC1 + PC2 = 83 %, so the 2-D plot is a <b>faithful</b> summary — most structure lives in two dimensions (2 p). (b) Variance spread evenly across many PCs → the data is genuinely high-dimensional, no 2-D plot represents it, and you should distrust any clustering read off it (1 p). (c) The Gene8 spike — and TPM's deflation of every other gene in Root2 — made Root2's whole profile an outlier, so PC1 captured that artefact rather than tissue (1 p).</details>
 
-#### Gene function: co-expression & databases (M4.W1.E4 + D1–D3)
+#### Gene function: co-expression & databases (M4.W1.E4 + M4.W1.E5)
 
 **Q5 (4 p) — Co-expression = guilt by association.** (a) What does a tight co-expression neighbourhood let you infer about your gene, and what does it *not*? (b) Your top neighbour has PCC 0.97. Give **two distinct** explanations that produce this *without* the two genes physically interacting, and say why correlation alone cannot tell "A regulates B" from "a third factor drives both".
 
@@ -783,35 +781,31 @@ Close the week the way the exam tests it — these cover **all of Week 1**: **M4
 
 ---
 
-# Week 2 — uge 44 · gene-regulatory networks
+# Week 44 · Biological networks
 
 ## 📅 Tuesday 28 Oct · 09:50–12:00 {.dayband}
 
 ::: {.dayband-sub}
-Group work — today you do **M4.W2.E1 → M4.W2.E5** (N0 → N4) on **your own** gene. **E6** (edge types) and the optional **MYB46 appendix** are flex / homework.
+Group work — today you do **M4.W2.E1 → M4.W2.E5** on **your own** gene. The optional **MYB46 appendix** is flex / homework.
 :::
 
 ### Build & measure your gene's network  *(R, interactive in the browser)*
 
-You build and measure **your own gene's** network, layer by layer: its co-expression neighbourhood (**N1**), a **physical** layer from BioGRID (**N2**), and a **regulatory** layer for your gene from PlantConnectome (**N3**). Then you **measure** it (**N4**) — is your module a clique or a star, and does anything regulate your gene? **N5** spells out what the three edge types do and don't license. *(An optional appendix at the end shows the hand-curated **MYB46 GRN** as a gold-standard example to compare with your own.)*
+You build and measure **your own gene's** network, layer by layer: first you retrieve your gene from last week (**M4.W2.E1**), then you examine its **co-expression** neighbourhood (**M4.W2.E2**), overlay a **physical** layer from BioGRID (**M4.W2.E3**), and add a **regulatory** layer from PlantConnectome (**M4.W2.E4**). Then you **measure** it (**M4.W2.E5**) — is your module a clique or a star, and does anything regulate your gene? *(An optional appendix at the end shows the hand-curated **MYB46 GRN** as a gold-standard example to compare with your own; **what the three edge types mean** is a statement you'll discuss in Thursday's presentation.)*
 
-Each build step (**N1 → N2 → N3**) **draws the network right in the page** — drag nodes, scroll to zoom, and use the **layout buttons** (Spread / Circle / Concentric / Grid / Hierarchy) if it looks crowded — so you watch your gene's network grow layer by layer: co-expression, then physical (PPI), then regulatory.
+Each build step (**M4.W2.E2 → E4**) **draws the network right in the page** — drag nodes, scroll to zoom, and use the **layout buttons** (Spread / Circle / Concentric / Grid / Hierarchy) if it looks crowded — so you watch your gene's network grow layer by layer: co-expression, then physical (PPI), then regulatory.
 
-> **By the end of Week 2 you can:** (1) build and read a co-expression network for *your own* gene; (2) tell co-expression, physical (PPI) and regulatory (GRN) edges apart, and say what each does and doesn't license; (3) find a **hub**, a **bottleneck** (betweenness) and an **articulation point**, and explain why removing MYB46 shatters the cascade; (4) explain why you **cannot** read a regulatory *sign* or *direction* off a correlation.
-
----
-
-> **How to run today.** Work through **N0 → N4** below as a group — organise yourselves however you like. Everything you produce feeds your **1-page gene dossier** (the 📋 panel, bottom-left), which you **hand in on Thursday**, not today. **N5** (edge types) and the optional **MYB46 appendix** are flex / homework.
->
-> *Reloaded the page, or hit an "object not found" error? webR forgets all state on reload — just re-run **N0 → N4** top-to-bottom once.*
+> **By the end of this week you can:** (1) build and read a co-expression network for *your own* gene; (2) tell co-expression, physical (PPI) and regulatory (GRN) edges apart, and say what each does and doesn't license; (3) find a **hub** and a **bottleneck** (betweenness); (4) explain why you **cannot** read a regulatory *sign* or *direction* off a correlation.
 
 ---
 
-### M4.W2.E1 · N0 — (Re)claim your gene
+> **How to run today.** Work through the exercises below as a group — organise yourselves however you like. Everything you produce feeds your **1-page gene dossier** (the 📋 panel, bottom-left), which you **hand in as a group on Thursday**.
+
+---
+
+### M4.W2.E1 — (Re)claim your gene
 
 webR forgets everything when the page reloads, so **set your gene here** before the network steps — whether you're continuing from Week 1 or starting a fresh session. Use **the same gene you claimed in M4.W1.E3** (any gene from that pool).
-
-> **Got an "object not found" error later, or reloaded the page?** webR forgets all state on reload — just re-run **N0 → N1 → N2 → N3 → N4** top-to-bottom once, then continue.
 
 ```{webr}
 MY_GENE <- "______"        # <- the AGI locus CODE, e.g. "AT5G17420"  (must be exact - this is what looks the gene up)
@@ -822,13 +816,13 @@ say(grepl("^AT[1-5CM]G[0-9]{5}$", MY_GENE) && MY_GENE %in% rownames(EXPR),
     "pick a gene from the pool above (e.g. MY_GENE <- \"AT5G17420\") and re-run.")
 ```
 
-### M4.W2.E2 · N1 — Build your co-expression network
+### M4.W2.E2 — Build your co-expression network
 
-webR forgets on reload, so we recompute how strongly **every** gene correlates with yours, then build a network with **one knob**: a correlation **cutoff** that decides *both* which genes are in (all genes correlated with your gene above it) *and* which gene-pairs get an edge. Raise the cutoff → fewer, tighter genes; lower it → more. *(Run N0 first so `MY_GENE` is set.)*
+Build a network with **one knob**: a correlation **cutoff** that decides *both* which genes are in (all genes correlated with your gene above it) *and* which gene-pairs get an edge.
 
 ```{webr}
-if (!exists("MY_GENE")) stop("Run N0 first to set your gene (MY_GENE).")
-HUB    <- MY_GENE                                  # your adopted gene (from N0)
+if (!exists("MY_GENE")) stop("Run M4.W2.E1 first to set your gene (MY_GENE).")
+HUB    <- MY_GENE                                  # your adopted gene (from M4.W2.E1)
 target <- EXPR[HUB, ]                              # its expression across every organ
 pcc    <- apply(EXPR, 1, function(r) suppressWarnings(cor(r, target)))  # corr of EVERY gene with yours
 pcc[is.na(pcc)] <- 0                               # a flat gene gives NA -> treat as uncorrelated
@@ -864,19 +858,17 @@ say(length(nb) > 1 && nrow(edges) > 0,
     "fill MY_CUTOFF (e.g. 0.9). If you get almost nothing, lower it.")
 ```
 
-> **🔬 One knob, one network.** `MY_CUTOFF` does two jobs at once — it decides which genes are *in* (those correlated with yours) **and** which pairs get an edge. The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module grows toward a broader neighbourhood. Because these genes are *defined* by being co-expressed with yours, the network stays **densely connected** even at high cutoffs — that density is the hallmark of a real functional module, not a bug. **Drag nodes apart** in the viewer to read it; **start around `0.9` and explore** — a very low cutoff pulls in many genes and makes a large, slow mesh.
+> **🔬 One knob, one network.** `MY_CUTOFF` does two jobs at once — it decides which genes are *in* (those correlated with yours) **and** which pairs get an edge. The guide printed above shows how many genes join at each cutoff — **raise** `MY_CUTOFF` and only the most tightly co-expressed genes remain (a small, clean core); **lower** it and the module grows toward a broader neighbourhood. **Drag nodes apart** in the viewer to read it.
 
-> **🎛 The network viewer — your explorer for all of Week 2.** This same viewer appears under every network from here on. **Hover** a node for its gene description, or an edge for what the link means; **drag** to rearrange, **scroll** to zoom. The **Colour nodes by** panel repaints the graph by a **network metric** (defined below), recomputed **live** on whatever is shown; **⛶ Full screen** gives a big view and **📷 PNG** saves it for your dossier. *(Layer toggles — co-expression · PPI · regulation — appear once you add those layers in N2–N3.)*
+> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star). Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
 
-> **🔑 Vocabulary:** **degree** = edges at a node · **hub** = high-degree node · **betweenness** = how many shortest paths pass *through* a node (a *bottleneck*) · **clustering** = do my neighbours link to *each other*? (≈1 clique, ≈0 star) · **components** = separate disconnected pieces of the network (one connected module = 1 component; if the graph splits, each island is its own colour). Paint any of these onto your graph with the viewer's **Colour nodes by** panel — it recomputes for the layers you have toggled on, so the *same* gene can be a bottleneck in one layer and a leaf in another.
+### M4.W2.E3 — Add the physical layer (BioGRID PPI)
 
-### M4.W2.E3 · N2 — Add the physical layer (BioGRID PPI)
-
-Your co-expression edges (N1) say "these genes behave alike." Now overlay **physical** protein–protein interactions from BioGRID — where two neighbours actually *touch*. N2 draws an edge wherever **any two** genes in your neighbourhood interact — not only those touching your gene (so the CESA4/7/8 triangle appears even if your gene is not a CESA). **Many genes have no BioGRID interactions at all** — an empty layer is a real finding. *(Run N1 first so `edges` and `nb` exist.)*
+Your co-expression edges (**M4.W2.E2**) say "these genes behave alike." Now overlay **physical** protein–protein interactions from BioGRID. **Note that many genes have no BioGRID interactions at all** — an empty layer is a real finding.
 
 ```{webr}
-if (!exists("edges") || !exists("nb")) stop("Run N1 first so 'edges' and 'nb' exist.")
-edges <- edges[edges$type == "coexpression", , drop = FALSE]   # start fresh from your N1 co-expression edges
+if (!exists("edges") || !exists("nb")) stop("Run M4.W2.E2 first so 'edges' and 'nb' exist.")
+edges <- edges[edges$type == "coexpression", , drop = FALSE]   # start fresh from your co-expression edges (M4.W2.E2)
 # overlay BioGRID physical interactions where BOTH partners are in your neighbourhood
 pp <- ppi[ppi$source %in% nb & ppi$target %in% nb, c("source","target")]
 if (nrow(pp) > 0) {
@@ -896,17 +888,17 @@ cynet(edges, hub = MY_GENE, id = "cy_n2", title = "Layers 1+2: co-expression (gr
 
 say(exists("edges") && nrow(edges) > 0,
     paste0("physical layer done — ", sum(edges$type == "PPI"), " PPI edge(s) among your neighbours. Zero is itself a finding: BioGRID coverage is sparse for many genes (even MYB46 has none). If CESA4/7/8 are here, their PPI triangle appears."),
-    "run N1 first so 'edges' and 'nb' exist, then re-run.")
+    "run M4.W2.E2 first so 'edges' and 'nb' exist, then re-run.")
 ```
 
-### M4.W2.E4 · N3 — Add the regulatory layer  *(PlantConnectome)*
+### M4.W2.E4 — Add the regulatory layer  *(PlantConnectome)*
 
-Co-expression (N1) and PPI (N2) are **undirected** — they cannot say who controls whom. Now add the **regulatory** layer from **PlantConnectome** (directed, signed, PubMed-cited edges text-mined from tens of thousands of papers). The cell reports two things: **who regulates your gene** (and what it regulates), and — the strongest signal — **how many regulatory edges fall *between two of your co-expressed genes*** (co-expression **and** regulation on the same pair is the best convergence you can show). **Many genes have none** (housekeeping genes, or genes the literature hasn't resolved) — an empty layer is a real finding, not a failure. *(Run N1 first so `nb` exists.)*
+Co-expression (**M4.W2.E2**) and PPI (**M4.W2.E3**) are **undirected** — they cannot say who controls whom. Now add the **regulatory** layer from **PlantConnectome** (directed, signed, PubMed-cited edges text-mined from tens of thousands of papers). The cell reports two things: **who regulates your gene** (and what it regulates), and — the strongest signal — **how many regulatory edges fall *between two of your co-expressed genes*** (co-expression **and** regulation on the same pair is the best convergence you can show). **Many genes have none** (housekeeping genes, or genes the literature hasn't resolved) — an empty layer is a real finding, not a failure.
 
 The viewer now draws **all three layers at once** — grey/blue/green edges. Use its **Layers** panel to switch **Co-expression · PPI · Regulation** on and off and see how they overlap: does a regulatory edge sit on top of a co-expression edge? That overlap is the convergence you're hunting for.
 
 ```{webr}
-if (!exists("nb") || !exists("edges")) stop("Run N1 (and N2) first so 'nb' and 'edges' exist.")
+if (!exists("nb") || !exists("edges")) stop("Run M4.W2.E2 (and E3) first so 'nb' and 'edges' exist.")
 rg     <- connectome_grn[connectome_grn$source_AGI %in% nb | connectome_grn$target_AGI %in% nb, ]  # edges touching your module
 within <- rg[rg$source_AGI %in% nb & rg$target_AGI %in% nb, ]      # BOTH ends co-expressed -> regulation AMONG your module
 my_regs <- unique(rg$source_AGI[rg$target_AGI == MY_GENE])         # who regulates your gene
@@ -928,7 +920,7 @@ if (nrow(rg) == 0) {
                           stringsAsFactors = FALSE)
 }
 
-# draw ALL THREE layers together — co-expression + PPI (from N1/N2) + regulation (green/red/grey).
+# draw ALL THREE layers together — co-expression + PPI (from M4.W2.E2/E3) + regulation (green/red/grey).
 # In the viewer, use the "Layers" panel to switch each on/off; "Colour nodes by" recomputes metrics live.
 base_edges <- edges[edges$type %in% c("coexpression","PPI"), c("source","target","type","desc"), drop = FALSE]
 all_edges  <- rbind(base_edges, grn_drawn)
@@ -939,17 +931,17 @@ cynet(all_edges, hub = MY_GENE, id = "cy_n3",
 say(nrow(all_edges) > 0,
     sprintf("integrated network: %d co-expression/PPI edge(s) + %d regulatory edge(s); %d regulatory edge(s) fall among your co-expressed genes. Toggle the layers to see where regulation lands on top of co-expression.",
             nrow(base_edges), nrow(grn_drawn), nrow(within)),
-    "run N1 (and N2) first so 'nb' and 'edges' exist, then re-run.")
+    "run M4.W2.E2 (and E3) first so 'nb' and 'edges' exist, then re-run.")
 ```
 
-> **Text-mined = a lead, not proof.** PlantConnectome is read from sentences by an LLM, so treat one edge as a hypothesis to verify; the strong signal is **convergence** (a regulatory edge that is *also* a co-expression or PPI edge). **Extra caution if your gene is *not* a transcription factor but appears to *regulate* others** (out-edges): only a TF binds a promoter directly, so a non-TF's out-edges are usually indirect, signalling (e.g. photosynthetic *retrograde* signals), or mis-parsed direction — watch for the *same pair pointing both ways in one paper*, a classic artefact. You'll meet a hand-curated, experiment-typed gold-standard network in the **optional MYB46 appendix**.
+> The strong signal is **convergence** — a regulatory edge that is *also* a co-expression or PPI edge. Text-mined edges are leads, not proof: treat one as a hypothesis to verify, and be extra cautious if your gene is *not* a transcription factor yet appears to *regulate* others (only a TF binds a promoter directly, so a non-TF's out-edges are usually indirect or mis-parsed). A hand-curated, experiment-typed gold-standard network is in the **optional MYB46 appendix**.
 
-### M4.W2.E5 · N4 — Measure YOUR gene's network
+### M4.W2.E5 — Measure YOUR gene's network
 
-Now put numbers on **your own** module and read what they mean. **No new viewer** — you explored your network in N1–N3 above (hover any node there for its live metrics). This cell prints your gene's **verdict in words**, and the **reference below** explains each term with an example so you can interpret it. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`, **provided for you**) report whether your **co-expression module** is a tight **clique** or a loose **star**, its **secondary bridge**, and — from N3 — whether your gene is a **target**, a **regulator**, or a **leaf**. *(Nothing to fill in, so the code starts **folded** — hit **Show R code** to read it.)*
+Now put numbers on **your own** module and read what they mean. **No new viewer** — you explored your network in M4.W2.E2–E4 above (hover any node there for its live metrics). This cell prints your gene's **verdict in words**, and the **reference below** explains each term with an example so you can interpret it. The base-R helpers (`build_adj`, `betweenness_base`, `clustering_matrix`, **provided for you**) report whether your **co-expression module** is a tight **clique** or a loose **star**, its **secondary bridge**, and — from M4.W2.E4 — whether your gene is a **target**, a **regulator**, or a **leaf**. *(Nothing to fill in, so the code starts **folded** — hit **Show R code** to read it.)*
 
 ```{webr}
-if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run N0, N1, N2 first.")
+if (!exists("edges") || !exists("nb") || !exists("MY_GENE")) stop("Run M4.W2.E1, E2, E3 first.")
 
 # build_adj / betweenness_base / clustering_matrix / components_base are provided for you
 # (defined on page load — unfold "The base-R network helpers" above if you want to read them).
@@ -968,10 +960,10 @@ if (nn > 2 && MY_GENE %in% c(co$source, co$target)) {
       cat(sprintf("Secondary bridge: %s (betweenness %.1f) — the neighbour the others most pass through.\n",
                   lab(names(which.max(others))), max(others)))
     else cat("No secondary bridge — a near-pure star; the neighbours barely interconnect.\n")
-  } else cat("Module >80 genes — raise MY_CUTOFF in N1 for a crisper core (base-R betweenness is slow above 80).\n")
-} else cat("Co-expression module too small — lower MY_CUTOFF in N1 and re-run.\n")
+  } else cat("Module >80 genes — raise MY_CUTOFF in M4.W2.E2 for a crisper core (base-R betweenness is slow above 80).\n")
+} else cat("Co-expression module too small — lower MY_CUTOFF in M4.W2.E2 and re-run.\n")
 
-# ---- your REGULATORY position (from N3). 'Regulator' is NOT only TFs (kinases, hormones, retrograde
+# ---- your REGULATORY position (from M4.W2.E4). 'Regulator' is NOT only TFs (kinases, hormones, retrograde
 #      signals regulate too); and a non-TF with out-edges is usually indirect / signalling / a mining artefact ----
 if (exists("my_regs")) {
   ni <- length(my_regs); no <- length(my_tgts)
@@ -981,27 +973,32 @@ if (exists("my_regs")) {
                                  "a TARGET — your gene is regulated by others in the module"
   cat(sprintf("Regulatory position: %d regulator(s) in, %d target(s) out -> %s.\n", ni, no, role))
   cat("Note: 'regulator' isn't only TFs — kinases, hormones and retrograde signals regulate genes too; but only a TF binds a promoter directly, so verify a non-TF's out-edges.\n")
-} else cat("Run N3 to read your regulatory position.\n")
+} else cat("Run M4.W2.E4 to read your regulatory position.\n")
 
 say(nn > 2, "measured YOUR network — its shape (clique vs star), its secondary bridge, and your gene's regulatory role. Use the reference below to interpret each number, then write them into your dossier; every gene is different.",
-    "run N1 (and N3) first, then re-run.")
+    "run M4.W2.E2 (and E4) first, then re-run.")
 ```
 
 **Reading your numbers — what each term means, with an example:**
 
-- **Degree** — how many genes your gene links to directly. *In the MYB46 wall network, MYB46 links to 16 genes (a hub); a peripheral gene like COBL4 links to 1.*
-- **Hub** — a node with unusually high degree. *MYB46 is the wall network's hub. Note: your adopted gene is the hub of its **own** module by construction — you built the module around it, so that's expected, not a finding.*
+- **Degree** — how many genes your gene links to directly.
+- **Hub** — a node with unusually high degree.
 - **Clustering → clique vs star** — of your gene's neighbours, how many link to *each other*? **≈1 = a clique** (everyone connected to everyone — a tight, coherent module; e.g. the **CESA4/7/8** cellulose-synthase trio, which all co-express mutually). **≈0 = a star** (neighbours link to your gene but not to each other — spokes with no rim).
-- **Betweenness → bottleneck** — how many of the network's shortest paths pass *through* a node. High = a **bottleneck** that separate parts must route through. *MYB46's betweenness is 144.8 (≈18× the next gene) — it is the sole link between the NAC master switches and the wall enzymes.*
+- **Betweenness → bottleneck** — how many of the network's shortest paths pass *through* a node. High = a **bottleneck** that separate parts must route through.
 - **Secondary bridge** — because your gene is a hub by construction, the useful question is which **other** neighbour has the highest betweenness — the connector *between* sub-groups of your module.
-- **Components** — the number of disconnected pieces. One coherent module = **1 component**. *Delete the hub MYB46 and the wall network breaks into 13 components — it was the linchpin (an "articulation point").*
-- **Target / regulator / leaf** *(from N3)* — most genes are **targets** (something regulates them) or **leaves** (nothing in your module regulates them — normal for a structural or metabolic gene). Only a **regulator** points *out* to others — a TF like MYB46, *but also a kinase, hormone or signal*. *A non-TF that appears to regulate is usually an indirect or text-mined effect to verify (N3).*
+- **Target / regulator / leaf** — most genes are **targets** (something regulates them) or **leaves**. Only a **regulator** points *out* to others — a TF like MYB46, *but also a kinase, hormone or signal*.
 
-> **Into your dossier:** your module's shape (clique vs star), its secondary bridge, and your gene's regulatory role (usually **target** or **leaf** — most genes are regulated, not regulators). Every gene gives a different answer — that is your result to present.
+> **Into your dossier:** your module's shape (clique vs star) and your gene's regulatory role (usually **target** or **leaf** — most genes are regulated, not regulators). Every gene gives a different answer — that is your result to present.
 
-### M4.W2.E6 · N5 — What the three edge types mean
+## 📅 Thursday 30 Oct · 09:00–15:00 {.dayband}
 
-An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the regulatory layer predicts the *direction* of a knockout's effect.
+::: {.dayband-sub}
+Presentations, exam Q&A and course evaluation. **Bring a finished group's dossier and a 10-min talk** — close out the dossier below *before* today.
+:::
+
+### The three edge types — the point to make in your talk
+
+*This is not an exercise but a **statement** — a point to make and defend in your Thursday presentation.* An edge isn't just a line — its meaning is fixed by **what it represents, whether it's directed, and what experiment made it**. Only the regulatory layer predicts the *direction* of a knockout's effect.
 
 | | **Co-expression** | **PPI (BioGRID)** | **GRN (regulatory)** |
 |---|---|---|---|
@@ -1011,15 +1008,9 @@ An edge isn't just a line — its meaning is fixed by **what it represents, whet
 | Knockout prediction | *guilt by association* — a shared process, so maybe a **similar phenotype** | a shared complex / function (partners often share a phenotype) | **the target's change** — KO an activator → target **↓**, KO a repressor → target **↑** |
 | Confirmed by | RNA-seq correlation | Y2H, AP-MS | ChIP, EMSA, transactivation |
 
-Causal ranking: **GRN > PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN gives the most direct evidence of control.* (Even then a GRN edge only *licenses* a knockout hypothesis — **redundancy** can mask the phenotype.) Two paradoxes from the data: **(1)** MYB46 *regulates* CESA7 but has **zero PPI edges** (in BioGRID) — a TF binds its target's DNA, not its protein — so the absence is informative, not a gap. **(2)** CESA4/7/8 are linked in **all three** layers (co-expression + PPI triangle + shared MYB46 regulator) — three independent assays converging is far stronger than any one edge.
+Causal ranking: **GRN, PPI > co-expression** — *co-expression finds candidates, PPI shows partnerships, GRN gives direct evidence of control.*
 
-> **✍️ For your dossier — your network vs the gold standard.** Name **one** structural feature *your* co-expression module (N1 / N4) has that the MYB46 cascade lacks, and **one** the cascade has that yours lacks. *(Think: undirected vs directed, unsigned vs signed, dense clique vs sparse star — and what happens when you delete the single most central node: your module degrades gradually, the cascade shatters the moment MYB46 goes.)*
-
-## 📅 Thursday 30 Oct · 09:00–15:00 {.dayband}
-
-::: {.dayband-sub}
-Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 5-min talk** — close it out below *before* today.
-:::
+> **💬 Discuss in your talk.** Where do *your* gene's edges sit on this table? Which layers did your gene actually have — many genes have only co-expression — and what can, and can't, you claim from each? Name **one** thing a co-expression edge in your module does *not* license.
 
 ### Close the dossier
 
@@ -1030,23 +1021,22 @@ Presentations, exam Q&A and course evaluation. **Bring a finished dossier and a 
 1. **What & where:** your gene's molecular identity (its Pfam domain) and where it acts — its top organ plus the finest cell type / tissue you could find, from eFP / PEO.
 2. **Its module:** your top co-expressed genes and the **process** they name. Does it match your M4.W1.E3 hypothesis?
 3. **Cross-check:** do the databases (eFP / PEO / CoNekT / EBI) **agree** on your gene's tissue, partners and domain?
-4. **Correlation vs regulation** *(from the MYB46 case study)*: why is co-expression **not** proof that one gene regulates another? Use the MYB46→CESA / KNAT7 ⊣ CESA8 example.
-5. **Verdict:** does the evidence **confirm or revise** your hypothesis? Name **≥3** evidence types — any three of: expression pattern, a co-expression neighbour, a database hit, a PPI / regulatory edge, and (*only if you ran the Appendix*) an enriched GO term.
+4. **Verdict:** does the evidence **confirm or revise** your hypothesis? Name **≥3** evidence types — any three of: expression pattern, a co-expression neighbour, a database hit, and a PPI / regulatory edge.
 
 **📄 Assemble your 1-page dossier (the conference hand-in).** Fill these in the **📋 Dossier** panel (bottom-left) as you go — it autosaves, you can **Download** it, and **Check with AI** gives formative feedback. Transfer them onto one page, in order (template: `Module4_GeneDossier_and_Rubric`):
 
 1. **Data quality** (M4.W1.E2) — one line: the `Gene8` artefact you detected and removed, and why.
 2. **Hypothesis** (M4.W1.E3) — your adopted gene + your one-line guess at its function.
 3. **Co-expression** (M4.W1.E4) — your top-5 neighbours + the module they name.
-4. **Database cross-check** (M4.W1.E5 · D1–D3) — your filled results table.
-5. **Network** (M4.W2 · N1–N5) — a screenshot of *your gene's* network **and one metric you measured on it in N4** (its clique-vs-star clustering, its secondary bridge, or your regulatory role), plus (optionally) one insight from the **MYB46 appendix example** (the hub / the KNAT7 ⊣ CESA8 brake).
+4. **Database cross-check** (M4.W1.E5) — your filled results table.
+5. **Network** (M4.W2) — a screenshot of *your gene's* network **and one metric you measured on it in M4.W2.E5** (its clique-vs-star clustering, its secondary bridge, or your regulatory role), plus (optionally) one insight from the **MYB46 appendix example** (the hub / the KNAT7 ⊣ CESA8 brake).
 6. **Verdict** (M4.W2) — confirm or revise, naming ≥3 evidence types.
 
-> **Graded (5 criteria):** data quality & normalization reasoning (15%) · **your gene's expression + co-expression** characterisation (30%) · **database cross-check (20%)** · interpretation — correlation-vs-regulation + a verdict with named evidence (20%) · communication & Q&A (15%). You present this at the **student conference** (~5-min group talk).
+> **Graded (5 criteria):** data quality & normalization reasoning (15%) · **your gene's expression + co-expression** characterisation (30%) · **database cross-check (20%)** · interpretation — correlation-vs-regulation + a verdict with named evidence (20%) · communication & Q&A (15%). You present this at the **student conference** (~10-min group talk).
 
 ### 📝 Week 2 — exam-style questions  *(assessed; 2025-exam style, point-scored)*
 
-The network half of the exam. Answer in 2–4 sentences; points match the grading. *(A larger 18-question bank exists in the teacher materials; these seven are the core.)* These questions probe the **shared** MYB46 GRN — the concepts transfer to any gene; your **own** gene is assessed in the dossier.
+The network half of the exam. Answer in 2–4 sentences; points match the grading.
 
 **W2·Q1 (4 p) — Read the hub.** In the MYB46 GRN, MYB46 has the highest **out-degree**, the highest **betweenness**, and a **near-zero clustering coefficient**. Interpret each metric biologically, then say what network position they describe together.
 
@@ -1056,9 +1046,9 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Degree counts only a node's immediate links; <b>betweenness</b> depends on whether it lies on shortest paths *between other* nodes (a bridge), and <b>clustering</b> on whether its own neighbours interlink — both are about global position, not local count (2 p). (b) KNAT7 sits inside a triangle (its neighbours connect to each other → high clustering) and on no unique shortest path (→ ~0 betweenness): it is <b>embedded/peripheral</b>, not a bottleneck, so removing it leaves the network connected (1 component) (2 p).</details>
 
-**W2·Q3 (4 p) — Name the motif.** MYB46 activates **both** CESA8 and KNAT7, and KNAT7 represses CESA8. (a) Name this motif. (b) Why is it *not* negative feedback, and what behaviour does it produce?
+**W2·Q3 (4 p) — Convergent evidence.** In your integrated network, CESA4, CESA7 and CESA8 are connected in **all three** layers at once — co-expression, a BioGRID PPI triangle, and a shared MYB46 regulator. (a) Why is a relationship supported by all three layers far stronger than one supported by co-expression alone? (b) Give one biological reason two genes can be tightly co-expressed yet share **no** PPI and **no** regulatory edge.
 
-<details><summary>✅ Model answer (4 p)</summary>(a) An <b>incoherent feed-forward loop</b> (type-1 IFFL) (2 p). (b) It is feed-<i>forward</i>, not feedback: MYB46 sits upstream of both arms and KNAT7 never acts back on MYB46. It gives a <b>self-limiting / pulse-like</b> activation of CESA8 — a built-in brake that sharpens the response rather than a sustained on/off loop (2 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) Each layer is an <b>independent assay</b> measuring a different thing — mRNA covariation, physical protein contact, and transcriptional control. Independent methods converging on the same pair makes a shared-complex / shared-function conclusion far less likely to be an artefact of any one method (2 p). (b) They are <b>co-regulated by a common upstream factor</b> (or simply specific to the same tissue / condition): their profiles rise and fall together without their proteins ever touching or one controlling the other — correlation from a shared driver, not a direct link (2 p).</details>
 
 **W2·Q4 (4 p) — Robustness.** Deleting MYB46 *in silico* splits the network into 13 components; deleting a single CESA barely changes it. (a) What does this say about each node's role and the network's fragility? (b) What is the one-word graph term for a node like MYB46?
 
@@ -1068,13 +1058,13 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 <details><summary>✅ Model answer (4 p)</summary>(a) Both are switched on by the same upstream master, MYB46 (which activates KNAT7 *and* CESA8) — the shared driver makes them rise together across tissues, and that correlation dominates over KNAT7's direct repressive effect (the incoherent feed-forward structure — see the MYB46 appendix) (2 p). (b) Co-expression **sign and direction carry no regulatory meaning**: a positive correlation can hide a repression, and you cannot read activation/repression or who-regulates-whom off a correlation — only directed, signed (GRN/perturbation) evidence can (2 p).</details>
 
-**W2·Q6 (5 p) — Physical vs regulatory edges.** In your network CESA4/7/8 are joined by **BioGRID PPI** edges (N2), but MYB46 reaches its targets only through the **curated GRN** (the MYB46 appendix) — never by a PPI edge. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) What experiment type draws the MYB46→CESA edge instead? (c) What general rule about reading a single edge type follows?
+**W2·Q6 (5 p) — Physical vs regulatory edges.** In your network CESA4/7/8 are joined by **BioGRID PPI** edges, but MYB46 reaches its targets only through the **curated GRN** — never by a PPI edge. (a) Mechanistically, why does a TF have **no** physical-interaction edge to the genes it controls? (b) What experiment type draws the MYB46→CESA edge instead? (c) What general rule about reading a single edge type follows?
 
 <details><summary>✅ Model answer (5 p)</summary>(a) A TF binds its target gene's <b>promoter DNA</b>, not the target's protein; PPI assays (Y2H, AP-MS) detect protein–protein contact, so a regulatory TF→target link is invisible to them (2 p). (b) A curated <b>GRN</b> edge from ChIP-seq / EMSA / transactivation, showing MYB46 binds the SMRE/M46RE elements in the CESA promoters (2 p). (c) Each edge type carries only <b>one</b> kind of evidence; the absence of a PPI edge is not absence of a relationship — read which layer an edge comes from and combine them (1 p).</details>
 
 **W2·Q7 (4 p) — Synthesis (your gene).** (a) In one sentence, state your gene's function and name **three independent evidence types** from your dossier that support it. (b) Which of those is the **weakest** for *proving* the function, and why?
 
-<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + CoNekT), <b>physical / regulatory</b> (the CESA PPI triangle in N2 + a MYB46→CESA regulatory edge in N3) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof; a physical (BioGRID PPI) or ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
+<details><summary>✅ Model answer (4 p)</summary>(a) One defensible claim + three correctly-typed evidence lines — e.g. <i>"CESA7 is a secondary-wall cellulose synthase acting in stem xylem"</i>: <b>expression</b> (stem/xylem peak across ePlant + PEO + EBI), <b>co-expression</b> (the CESA4/8 module reproduced in your atlas + CoNekT), <b>physical / regulatory</b> (the CESA PPI triangle in M4.W2.E3 + a MYB46→CESA regulatory edge in M4.W2.E4) — 3 p, 1 per correctly-typed type. (b) <b>Co-expression is weakest</b> — it is only correlation (guilt by association), consistent with but not proof; a physical (BioGRID PPI) or ChIP/EMSA-backed regulatory edge is far stronger (1 p).</details>
 
 > **✍️ Dossier:** these seven are exactly what the conference panel asks — bring named evidence (a metric, an experiment, a reference) to each answer.
 
@@ -1087,9 +1077,9 @@ The network half of the exam. Answer in 2–4 sentences; points match the gradin
 
 # Appendix — the MYB46 GRN: a gold-standard example  *(optional)*
 
-*A fully hand-curated, experiment-typed regulatory network — the opposite of the text-mined layer you built in N3. Compare its clean shape with your own network (N4). Uses the same network helpers and the `grn` table — both loaded when the page opens.*
+*A fully hand-curated, experiment-typed regulatory network — the opposite of the text-mined layer you built in M4.W2.E4. Compare its clean shape with your own network (M4.W2.E5). Uses the same network helpers and the `grn` table — both loaded when the page opens.*
 
-Your regulatory network (N3) came from **text-mining**. Here is the opposite — the **hand-curated MYB46 secondary-cell-wall GRN**, every edge backed by a named experiment (ChIP / EMSA / transactivation). Measured with the **same helpers** (N4), it is a textbook **hub-and-spoke**: MYB46 is the **hub** *and* **bottleneck** *and* a **star**, and the single **articulation point**.
+Your regulatory network (M4.W2.E4) came from **text-mining**. Here is the opposite — the **hand-curated MYB46 secondary-cell-wall GRN**, every edge backed by a named experiment (ChIP / EMSA / transactivation). Measured with the **same helpers** (M4.W2.E5), it is a textbook **hub-and-spoke**: MYB46 is the **hub** *and* **bottleneck** *and* a **star**, and the single **articulation point**.
 
 ```{webr}
 if (!exists("grn")) stop("Reload the page — the curated GRN table loads on page open.")
@@ -1118,7 +1108,7 @@ cynet(grn_edges, hub = "AT5G12870", id = "cy_n5",
       node_fill = setNames(heat[1 + round(nrm(btw[nn2]) * 23)], nn2),
       node_size = setNames(24 + 34 * nrm(deg[nn2]), nn2))
 say(names(which.max(btw)) == "AT5G12870",
-    sprintf("MYB46 is the hub + bottleneck + star and the only cut-vertex (remove -> %d pieces). A curated, experiment-typed network — the gold standard your PlantConnectome edges (N3) approximate.", frag),
+    sprintf("MYB46 is the hub + bottleneck + star and the only cut-vertex (remove -> %d pieces). A curated, experiment-typed network — the gold standard your PlantConnectome edges (M4.W2.E4) approximate.", frag),
     "expected MYB46 on top — did 'grn' load (it loads on page open)?")
 ```
 
@@ -1128,7 +1118,7 @@ say(names(which.max(btw)) == "AT5G12870",
 
 # Appendix — Functional enrichment (GO over-representation)
 
-*Optional extension (also covered in more depth in the Big Data course). Run it any time **after** you've claimed a gene — M4.W1.E3 in Week 1 or N0 in Week 2 — it needs `MY_GENE`, `EXPR` and `gene_sets`, which are all in place by then.*
+*Optional extension (also covered in more depth in the Big Data course). Run it any time **after** you've claimed a gene — M4.W1.E3 in Week 1 or M4.W2.E1 in Week 2 — it needs `MY_GENE`, `EXPR` and `gene_sets`, which are all in place by then.*
 
 Is your gene's neighbourhood **over-represented** for a biological process? The **hypergeometric test** (the one-sided Fisher exact test) answers it. Picture an urn:
 
